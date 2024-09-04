@@ -1,0 +1,39 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "grafana-public") }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "grafana-public") }}
+  chart:
+    spec:
+      chart: grafana
+      version: 6.58.8
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+  interval: 1h0m0s
+  targetNamespace: {{ .Release.Namespace }}
+  values:
+    ingress:
+      enabled: true
+      hosts:
+        - dashboard-public.{{ .Values.global.baseDomain }}
+      annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.grafanaPublic.ingress.annotations) | nindent 8 }}
+      tls:
+        - hosts:
+          - dashboard-public.{{ .Values.global.baseDomain }}
+          secretName: dashboard-public.{{ .Values.global.baseDomain }}-tls
+    grafana.ini:
+      auth.anonymous:
+        enabled: true
+      security:
+        allow_embedding: true
+    resources: {{- $.Values.grafanaPublic.resources | toYaml | nindent 6 }}
+    rbac:
+      create: false
+    plugins:
+      {{- include "common.tplvalues.render" (dict "value" .Values.grafana.plugins "context" .) | nindent 6 }}
+    datasources:
+      {{- .Values.grafanaPublic.datasources | toYaml | nindent 6 -}}

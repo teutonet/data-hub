@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+name=sensor-dev-db
+
+docker \
+	run \
+	--rm \
+	--detach \
+	--name $name \
+	--network=host \
+	-e POSTGRES_PASSWORD=postgres \
+	bitnami/postgresql:16.1.0-debian-11-r15
+
+trap "docker rm -f $name" EXIT
+
+until docker exec $name sleep 2
+do
+	sleep 1
+done
+
+until docker exec -tie PGPASSWORD=postgres $name psql postgres postgres
+do
+	sleep 1
+done

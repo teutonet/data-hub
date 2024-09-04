@@ -1,0 +1,23 @@
+{{- if .Values.objectStorage.enabled -}}
+---
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: {{ printf "%s-oidc-admin" (include "common.names.fullname" .) | quote }}
+spec:
+  store: bucket
+  displayName: "OIDC Admin"
+  capabilities:
+    oidc-provider: "*"
+    roles: "*"
+---
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: {{ printf "%s-bucket-admin" (include "common.names.fullname" .) | quote }}
+spec:
+  store: bucket
+  displayName: "Bucket Admin"
+  capabilities:
+    buckets: "*"
+{{- end -}}

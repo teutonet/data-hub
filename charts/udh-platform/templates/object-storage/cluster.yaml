@@ -1,0 +1,155 @@
+{{- if .Values.objectStorage.enabled -}}
+{{- $rgwSecretSpec := (merge (dict "name" "rgw-secret") .) -}}
+{{- $rgwSecret := include "udh.secret" $rgwSecretSpec }}
+{{ include "udh.secretManifest" (merge (dict "value" $rgwSecret) $rgwSecretSpec) }}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: {{ printf "%s-rook" (include "common.names.fullname" .) | quote }}
+spec:
+  interval: 1h0m0s
+  url: https://charts.rook.io/release
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ printf "%s-rook-ceph-cluster" (include "common.names.fullname" .) | quote }}
+spec:
+  releaseName: rook-ceph-cluster
+  chart:
+    spec:
+      chart: rook-ceph-cluster
+      version: v1.13.x
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ printf "%s-rook" (include "common.names.fullname" .) | quote }}
+  interval: 1h0m0s
+  values:
+    cephClusterSpec:
+      {{- if .Values.objectStorage.allowDeletion }}
+      cleanupPolicy:
+        confirmation: yes-really-destroy-data
+      {{- end }}
+      removeOSDsIfOutAndSafeToRemove: true
+      cephConfig:
+        global:
+          osd_pool_default_size: "1"
+          mon_warn_on_pool_no_redundancy: "false"
+          rgw_sts_key: {{ $rgwSecret | quote }}
+          rgw_s3_auth_use_sts: "true"
+      mon:
+        volumeClaimTemplate:
+          spec:
+            resources:
+              requests:
+                storage: {{ .Values.objectStorage.monStorage }}
+      mgr:
+        count: 1
+        modules:
+          - name: rook
+            enabled: true
+      storage:
+        useAllDevices: false
+        storageClassDeviceSets:
+          - name: set1
+            count: 1
+            portable: true
+            tuneDeviceClass: true
+            tuneFastDeviceClass: false
+            encrypted: false
+            placement:
+              topologySpreadConstraints:
+                - maxSkew: 1
+                  topologyKey: kubernetes.io/hostname
+                  whenUnsatisfiable: ScheduleAnyway
+                  labelSelector:
+                    matchExpressions:
+                      - key: app
+                        operator: In
+                        values:
+                          - rook-ceph-osd
+            preparePlacement:
+              podAntiAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  - weight: 100
+                    podAffinityTerm:
+                      labelSelector:
+                        matchExpressions:
+                          - key: app
+                            operator: In
+                            values:
+                              - rook-ceph-osd
+                          - key: app
+                            operator: In
+                            values:
+                              - rook-ceph-osd-prepare
+                      topologyKey: kubernetes.io/hostname
+              topologySpreadConstraints:
+                - maxSkew: 1
+                  topologyKey: kubernetes.io/hostname
+                  whenUnsatisfiable: DoNotSchedule
+                  labelSelector:
+                    matchExpressions:
+                      - key: app
+                        operator: In
+                        values:
+                          - rook-ceph-osd-prepare
+            volumeClaimTemplates:
+              - metadata:
+                  name: data
+                spec:
+                  resources:
+                    requests:
+                      storage: {{ .Values.objectStorage.storage }}
+                  volumeMode: Block
+                  accessModes:
+                    - ReadWriteOnce
+        onlyApplyOSDPlacement: false
+    toolbox:
+      enabled: true
+    dashboard:
+      enabled: false
+    cephBlockPools: []
+    cephFileSystems: []
+    cephObjectStores:
+      - name: bucket
+        spec:
+          metadataPool:
+            failureDomain: host
+            replicated:
+              size: 1 # backing rbd volume is replicated
+          dataPool:
+            failureDomain: host
+            replicated:
+              size: 1 # backing rbd volume is replicated
+          gateway:
+            port: 80
+            resources:
+              limits:
+                cpu: 2000m
+                memory: 2Gi
+              requests:
+                cpu: 1000m
+                memory: 1Gi
+            instances: 1
+            priorityClassName: system-cluster-critical
+        storageClass:
+          enabled: true
+          name: {{ include "udh.objectstore.storageclass" . }}
+          reclaimPolicy: Retain
+          volumeBindingMode: Immediate
+        ingress:
+          enabled: true
+          annotations:
+            nginx.ingress.kubernetes.io/proxy-body-size: "0"
+            kubernetes.io/tls-acme: "true"
+          host:
+            name: storage.{{ .Values.global.baseDomain }}
+            path: /
+          tls:
+          - hosts:
+              - storage.{{ .Values.global.baseDomain }}
+            secretName: storage.{{ .Values.global.baseDomain }}-tls
+{{- end -}}

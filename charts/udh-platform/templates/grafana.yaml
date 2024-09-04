@@ -1,0 +1,89 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+  chart:
+    spec:
+      chart: grafana
+      version: 6.58.8
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+  interval: 1h0m0s
+  targetNamespace: {{ .Release.Namespace }}
+  values:
+    ingress:
+      enabled: true
+      hosts:
+        - {{ include "data-hub.grafana.hostname" . }}
+      annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.grafana.ingress.annotations) | nindent 8 }}
+        nginx.ingress.kubernetes.io/auth-response-headers: Authorization, X-Auth-Request-Preferred-Username, X-Auth-Request-Email
+        nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$escaped_request_uri
+        nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
+        nginx.ingress.kubernetes.io/configuration-snippet: |
+          auth_request_set $name_upstream_1 $upstream_cookie__oauth2_proxy_1;
+
+          access_by_lua_block {
+            if ngx.var.name_upstream_1 ~= "" then
+              ngx.header["Set-Cookie"] = "_oauth2_proxy_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
+            end
+          }
+      tls:
+        - hosts:
+          - {{ include "data-hub.grafana.hostname" . }}
+          secretName: {{ include "data-hub.grafana.hostname" . }}-tls
+    persistence:
+      enabled: true
+    deploymentStrategy:
+      type: Recreate
+    resources: {{- $.Values.grafana.resources | toYaml | nindent 6 }}
+    rbac:
+      create: false
+    plugins:
+      {{- include "common.tplvalues.render" (dict "value" .Values.grafana.plugins "context" .) | nindent 6}}
+    extraSecretMounts:
+      - name: secret-files-postgres
+        mountPath: /etc/secrets/postgres
+        secretName: {{ printf "grafana-owner-user.%s-postgres.credentials.postgresql.acid.zalan.do" (include "common.names.fullname" .) | quote }}
+        readOnly: true
+      - name: secret-files-smtp
+        mountPath: /etc/secrets/smtp
+        secretName: {{ include "data-hub.name" (dict "context" . "name" "grafana-smtp-secret") }}
+        readOnly: true
+    grafana.ini:
+      server:
+        root_url: https://{{ include "data-hub.grafana.hostname" . }}/
+      auth.proxy:
+        enabled: true
+        header_name: X-Auth-Request-Preferred-Username
+        header_property: username
+        auto_sign_up: false
+        sync_ttl: 60
+        headers: Name:X-Auth-Request-Email Email:X-Auth-Request-Email
+        enable_login_token: false
+      database:
+        type: postgres
+        name: grafana
+        ssl_mode: require
+        user: $__file{/etc/secrets/postgres/username}
+        password: $__file{/etc/secrets/postgres/password}
+        host: {{ printf "%s-postgres:5432" (include "common.names.fullname" .) }}
+      smtp:
+        enabled: {{ .Values.grafana.smtp.enabled }}
+        from_address: {{ .Values.grafana.smtp.from_adress }}
+        from_name: {{ .Values.grafana.smtp.from_name }}
+        host: {{ .Values.grafana.smtp.host }}
+        user: {{ .Values.grafana.smtp.user }}
+        password: $__file{/etc/secrets/smtp/password}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "grafana-smtp-secret") }}
+  namespace: {{ .Release.Namespace }}
+stringData:
+  password: {{ .Values.grafana.smtp.password | quote}}

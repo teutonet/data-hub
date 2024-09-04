@@ -1,0 +1,35 @@
+{{- define "sensor-ingestion.prometheusWriter.hostname" -}}
+api.{{ .Values.global.baseDomain }}
+{{- end -}}
+{{- if .Values.sensorIngestion.prometheusWriter.ingress.enabled -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-prometheus-writer" (include "common.names.fullname" .) | quote }}
+  annotations:
+    {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.prometheusWriter.ingress.annotations "context" .) | nindent 4 }}
+spec:
+  rules:
+  - host: {{ include "sensor-ingestion.prometheusWriter.hostname" . }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ printf "%s-prometheus-writer" (include "common.names.fullname" .) | quote }}
+            port:
+              number: 80
+        path: /api/v1/write
+        pathType: Exact
+      - backend:
+          service:
+            name: {{ printf "%s-prometheus-writer" (include "common.names.fullname" .) | quote }}
+            port:
+              number: 80
+        path: /readyz
+        pathType: Exact
+  tls:
+  - hosts:
+    - {{ include "sensor-ingestion.prometheusWriter.hostname" . }}
+    secretName: {{ include "sensor-ingestion.prometheusWriter.hostname" . }}-tls
+{{- end -}}

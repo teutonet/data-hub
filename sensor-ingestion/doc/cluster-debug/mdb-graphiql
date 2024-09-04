@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+cat <<.
+open http://localhost:5000/
+go to REQUEST HEADERS at the bottom
+paste {"Authorization": "Bearer YOUR_ACCESS_TOKEN"}
+ensure Headers SAVED (button at the top)
+refresh page to load schema
+.
+
+exec kubectl port-forward -n dev svc/udh-mdb 5000:80

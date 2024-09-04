@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Docker wrapper to run mdb-postgraphile in dev mode (without tokens and watching for schema changes)
+
+: "${IMAGE=sensor-dev-postgraphile}"
+
+set -eu -o pipefail
+
+docker build -t "$IMAGE" "$(dirname "$0")"
+
+cat <<"."
+
+Develop at http://localhost:5000/
+
+Set `projects` header for RLS instead of providing a customized access token.
+
+.
+
+exec \
+	docker run \
+	$([[ -t 0 ]] && echo --tty) --interactive \
+	--rm \
+	--network=host \
+	--init \
+	-e DEV_LOCAL=true \
+	-e PGHOST=localhost \
+	-e PGDATABASE=postgres \
+	-e PGSCHEMA=sensor \
+	-e PGUSER=postgraphile \
+	-e PGPASSWORD=postgraphile \
+	-e PGOWNERUSER=postgres \
+	-e PGOWNERPASSWORD=postgres \
+	-e WATCH=true \
+	-e DEBUG=true \
+	-e GRAPHIQL=true \
+	"$IMAGE" \
+	"$@"

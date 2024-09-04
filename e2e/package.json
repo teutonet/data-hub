@@ -1,0 +1,29 @@
+{
+	"name": "e2e",
+	"version": "0.0.1",
+	"scripts": {
+		"e2e:gen": "npx playwright codegen -b firefox data-hub.local --ignore-https-errors",
+		"lint:fix": "eslint --max-warnings 0 --fix --cache test",
+		"lint:check": "eslint --max-warnings 0 --cache test"
+	},
+	"dependencies": {
+		"@playwright/test": "1.42.1",
+		"axios": "1.6.8",
+		"playwright": "1.42.1"
+	},
+	"devDependencies": {
+		"@types/node": "20.11.28",
+		"@typescript-eslint/eslint-plugin": "7.6.0",
+		"@typescript-eslint/parser": "7.6.0",
+		"eslint": "8.57.0"
+	},
+	"keywords": [],
+	"author": "",
+	"lint-staged": {
+		"*.{js,ts}": [
+			"eslint --cache --fix",
+			"../node_modules/.bin/prettier --write"
+		],
+		"*.{cjs,json,css,scss,htm,html,md,yml,yaml}": "../node_modules/.bin/prettier --write"
+	}
+}

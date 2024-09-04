@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#
+# call without args for postgraphile user, with args for postgres admin
+#
+
+set -eu -o pipefail
+
+if [[ $# -gt 0 ]]
+then
+	user=postgres
+	pwkey=postgres-password
+else
+	user=postgraphile
+	pwkey=password
+fi
+
+exec kubectl exec -ti udh-mdb-postgresql-0 -- env PGPASSWORD=`kubectl -n dev get secret udh-mdb-postgresql -ojsonpath='{.data.'$pwkey'}' | base64 -d` psql mdb $user

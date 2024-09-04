@@ -1,0 +1,114 @@
+{{- define "sensor-ingestion.mdb.commonEnv" -}}
+- name: PGHOST
+  value: {{ printf "%s-udh-platform-postgres" .Release.Name }}
+- name: PGDATABASE
+  value: mdb
+- name: NODE_ENV
+  value: production
+{{- end -}}
+{{- if .Values.sensorIngestion.metadataDB.enabled -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-mdb-postgraphile" (include "common.names.fullname" .) | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: postgraphile
+    app.kubernetes.io/part-of: metadata-db
+spec:
+  replicas: {{ .Values.sensorIngestion.metadataDB.postgraphile.replicas }}
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgraphile
+      app.kubernetes.io/part-of: metadata-db
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: postgraphile
+        app.kubernetes.io/part-of: metadata-db
+        {{- include "sensor-ingestion.standard.networkLabels" (merge (dict "networkLabels" (list "http")) .) | nindent 8 }}
+    spec:
+      {{- include "sensor-ingestion.securityContext" . | nindent 6 }}
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.sensorIngestion.metadataDB.migrations.image .Values.sensorIngestion.metadataDB.postgraphile.image) "global" .Values.global) | indent 6 | trimAll " " }}
+      initContainers:
+      - name: migrations
+        {{- include "sensor-ingestion.standard.image" (dict "image" .Values.sensorIngestion.metadataDB.migrations.image "context" .) | nindent 8 }}
+        args: [migrate]
+        env:
+          {{- include "sensor-ingestion.mdb.commonEnv" . | nindent 10 }}
+          - name: PGUSER
+            valueFrom:
+              secretKeyRef:
+                name: {{ printf "postgres.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                key: username
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ printf "postgres.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                key: password
+        resources: {{- .Values.sensorIngestion.metadataDB.migrations.resources | toYaml | nindent 10 }}
+      containers:
+      - name: postgraphile
+        image: {{ include "udh-platform.images.image" (dict "imageRoot" .Values.sensorIngestion.metadataDB.postgraphile.image "global" .Values.global) }}
+        ports:
+        - containerPort: 5000
+          name: api
+        env:
+          {{- include "sensor-ingestion.mdb.commonEnv" . | nindent 10 }}
+          - name: LOGLEVEL
+            value: {{ coalesce .Values.sensorIngestion.metadataDB.postgraphile.loglevel .Values.global.loglevel | quote }}
+          - name: PGUSER
+            valueFrom:
+              secretKeyRef:
+                name: {{ printf "postgraphile.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                key: username
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ printf "postgraphile.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                key: password
+          - name: GRAPHIQL
+            value: "true"
+          - name: AUTH_AUDIENCE
+            value: {{ .Values.sensorIngestion.metadataDB.postgraphile.auth.audience | quote }}
+          - name: AUTH_ISSUER
+            value: {{ .Values.global.auth.issuer | quote }}
+          {{- if .Values.fakeCa.name }}
+          - name: NODE_EXTRA_CA_CERTS
+            value: /tls/ca.crt
+          {{- end }}
+        {{- if .Values.fakeCa.name }}
+        volumeMounts:
+          - mountPath: /tls
+            readOnly: true
+            name: ca-cert
+        {{- end }}
+        resources: {{- .Values.sensorIngestion.metadataDB.postgraphile.resources | toYaml | nindent 10 }}
+        {{- include "sensor-ingestion.standard.probes" . | nindent 8 }}
+      {{- if .Values.fakeCa.name }}
+      volumes:
+        - name: ca-cert
+          secret:
+            secretName: {{ .Values.fakeCa.name }}
+            items:
+              - key: ca.crt
+                path: ca.crt
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-mdb" (include "common.names.fullname" .) | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: postgraphile
+    app.kubernetes.io/part-of: metadata-db
+spec:
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgraphile
+    app.kubernetes.io/part-of: metadata-db
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+{{- end }}
+{{ include "sensor-ingestion.standard.pdb" (merge (dict "name" "metadataDB" "component" "postgraphile") .) }}

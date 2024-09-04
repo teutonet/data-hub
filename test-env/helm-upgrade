@@ -1,0 +1,38 @@
+#!/bin/bash
+
+source "$(dirname "$BASH_SOURCE")/.common"
+
+cd "$REPO"
+
+CHART_PATH=charts/udh-platform
+
+digest_for_image() {
+    docker image inspect -f'{{index .RepoDigests 0}}' $1 | cut -d "@" -f 2
+}
+
+image_opts=""
+for dockerfile in `find -name Dockerfile`
+do
+  context=`dirname $dockerfile`
+  repo=${context#./}
+  image=$REGISTRY/$repo
+
+  image_value_path="`valuePath $repo`"
+  # hack since the directory structure doesn't follow the usualy convention
+  if [[ "$image_value_path" == "keycloakExtensions" ]]
+  then
+    image_value_path="keycloak.extensions"
+  fi
+  image_opts="$image_opts --set $image_value_path.image.repository=$repo"
+  image_opts="$image_opts --set $image_value_path.image.digest=`digest_for_image $image`"
+  image_opts="$image_opts --set $image_value_path.image.registry=$REGISTRY"
+done
+
+# echo $image_opts
+
+helm dependency update $CHART_PATH
+helm upgrade --install --create-namespace -n udh local $CHART_PATH -f $CHART_PATH/values.yaml -f $CHART_PATH/values-local.yaml $image_opts
+
+# ensures that all ingresses have been created before the domains are written to /etc/hosts
+kubectl wait --for=condition=Ready -n udh helmrelease --all --timeout=-1s
+

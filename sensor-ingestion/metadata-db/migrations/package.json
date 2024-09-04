@@ -1,0 +1,10 @@
+{
+	"name": "graphile-migrate-lib",
+	"version": "0.0.1",
+	"private": true,
+	"description": "",
+	"author": "",
+	"dependencies": {
+		"graphile-migrate": "1.4.1"
+	}
+}

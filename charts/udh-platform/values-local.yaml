@@ -1,0 +1,107 @@
+global:
+  baseDomain: data-hub.local
+  udhImageRegistry: "localimage.test"
+  auth:
+    issuer: https://login.data-hub.local/realms/udh
+    readyPath: /
+  smtp_base_domain: udh-platform@teuto.net
+  storageClass: standard
+  sslInsecureSkipVerify: true
+  ingress:
+    annotations:
+      kubernetes.io/tls-acme: "true"
+      cert-manager.io/issuer: "udh-test-iss"
+grafana:
+  smtp:
+    enabled: true
+    from_adress: alert@example.com
+    from_name: grafana-local
+    host: feature-mailhog
+    user: ""
+    password: ""
+keycloak:
+  extensions:
+    image:
+      registry: "localimage.test"
+      pullPolicy: IfNotPresent
+      repository: "keycloak-extensions"
+      tag: ""
+      digest: ""
+  testUsers:
+    data-hub-admin:
+      username: data-hub-admin
+      email: data-hub-admin@example.com
+      password: admin
+      clientRoles:
+        realm-management:
+          - manage-realm
+          - query-users
+          - manage-users
+          - query-groups
+    demo:
+      username: demo
+      email: demo-udh-platform@example.com
+      password: demo
+  smtp:
+    fromDisplayName: keycloak-local
+    host: feature-mailhog
+    auth: false
+    ssl: false
+
+mailhog:
+  enabled: true
+  replicas: 2
+  ingress:
+    enabled: true
+
+fakeCa:
+  enabled: true
+  generate: true
+  name: "udh-test-iss"
+
+objectStorage:
+  enabled: false
+
+grafanaPublicSync:
+  syncIntervalSeconds: 3
+  image:
+    repository: grafana-public-sync
+    pullPolicy: IfNotPresent
+
+mimir:
+  minimal: true
+
+geojsonExport:
+  image:
+    repository: geojson-export
+    pullPolicy: IfNotPresent
+
+sensorIngestion:
+  metadataDB:
+    migrations:
+      image:
+        registry: "localhost:5000"
+        pullPolicy: IfNotPresent
+        repository: sensor-ingestion/metadata-db/migrations
+    frontend:
+      image:
+        registry: "localhost:5000"
+        pullPolicy: IfNotPresent
+        repository: sensor-ingestion/metadata-db/frontend
+      sentry:
+        dsn: "https://b9d6941e30a946fbb7015038e4b7d923@glitchtip.stg.teuto.dev/5"
+    postgraphile:
+      image:
+        registry: "localhost:5000"
+        pullPolicy: IfNotPresent
+        repository: sensor-ingestion/metadata-db/postgraphile
+  lorawanReceiver:
+    image:
+      pullPolicy: IfNotPresent
+      repository: lorawan-receiver
+  prometheusWriter:
+    prometheus:
+      url: https://prometheus.data-hub.local/api/v1/write
+    image:
+      pullPolicy: IfNotPresent
+      repository: prometheus-remote-write

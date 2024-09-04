@@ -1,0 +1,676 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "udh-platform configuration",
+  "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "udhImageTag": {
+          "type": "string"
+        },
+        "udhImageRegistry": {
+          "type": "string"
+        },
+        "smtp_base_domain": {
+          "type": "string"
+        },
+        "imageCredentials": {
+          "type": "object",
+          "description": "A map of credentials to be used",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string",
+                "examples": [
+                  "docker.io"
+                ]
+              },
+              "username": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              }
+            },
+            "baseDomain": {
+              "type": "string"
+            },
+            "required": [
+              "host",
+              "username",
+              "password"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "babashka": {
+          "type": "object",
+          "image": {
+            "$ref": "#/$defs/image"
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "keycloak": {
+      "type": "object",
+      "properties": {
+        "realm": {
+          "type": "string"
+        },
+        "extensions": {
+          "type": "object",
+          "image": {
+            "$ref": "#/$defs/image"
+          }
+        },
+        "smtp": {
+          "type": "object",
+          "properties": {
+            "fromDisplayName": {
+              "type": "string"
+            },
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "ssl": {
+              "type": "boolean"
+            },
+            "auth": {
+              "type": "boolean"
+            },
+            "user": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "mailhog": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "replicas": {
+          "type": "integer"
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "properites": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "annotations": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "objectStorage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "allowDeletion": {
+          "type": "boolean"
+        },
+        "monStorage": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "string"
+        }
+      }
+    },
+    "hubFrontend": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": {
+          "type": "integer"
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "annotations": {
+              "type": "object"
+            }
+          }
+        },
+        "image": {
+          "$ref": "#/$defs/image"
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "grafana": {
+      "ingress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "grafanaPublic": {
+      "ingress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "prometheus": {
+      "ingress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "sensorIngestion": {
+      "metadataDB": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "frontend": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "image": {
+                "$ref": "#/$defs/image"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "replicas": {
+                "type": "integer"
+              },
+              "ingress": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "annotations": {
+                    "type": "object"
+                  }
+                }
+              },
+              "sentry": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "dsn": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "migrations": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "image": {
+                "$ref": "#/$defs/image"
+              },
+              "resources": {
+                "type": "object"
+              }
+            }
+          },
+          "postgraphile": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "replicas": {
+                "type": "integer"
+              },
+              "auth": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "audience": {
+                    "type": "string"
+                  }
+                }
+              },
+              "ingress": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "annotations": {
+                    "type": "object"
+                  },
+                  "client": {
+                    "type": "string"
+                  },
+                  "scope": {
+                    "type": "string"
+                  }
+                }
+              },
+              "image": {
+                "$ref": "#/$defs/image"
+              },
+              "resources": {
+                "type": "object"
+              },
+              "loglevel": {
+                "$ref": "#/$defs/loglevel"
+              }
+            }
+          }
+        }
+      },
+      "prometheusWriter": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "replicas": {
+            "type": "integer"
+          },
+          "outOfOrderSeconds": {
+            "type": "integer",
+            "description": "Allowed maximum age of a sample, older samples will be moved to be within the range. Should be lower than the configured maximum in Prometheus."
+          },
+          "alwaysUpdatePayload": {
+            "type": "boolean",
+            "description": "If set to true, will always update the payload of each thing when a new message is received"
+          },
+          "image": {
+            "$ref": "#/$defs/image"
+          },
+          "ingress": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "annotations": {
+                "type": "object"
+              }
+            }
+          },
+          "prometheus": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "forwardToken": {
+                "type": "boolean"
+              },
+              "url": {
+                "type": "string"
+              },
+              "readyPath": {
+                "type": "string"
+              }
+            }
+          },
+
+          "resources": {
+            "type": "object"
+          },
+          "loglevel": {
+            "$ref": "#/$defs/loglevel"
+          }
+        }
+      },
+      "sensorThingsWriter": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "replicas": {
+            "type": "integer"
+          },
+          "image": {
+            "$ref": "#/$defs/image"
+          },
+          "auth": {
+            "$ref": "#/$defs/auth"
+          },
+          "authMode": {
+            "type": "string"
+          },
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "user": {
+                "$ref": "#/$defs/user"
+              },
+              "url": {
+                "type": "string"
+              },
+              "readyPath": {
+                "type": "string"
+              }
+            }
+          },
+          "resources": {
+            "type": "object"
+          },
+          "loglevel": {
+            "$ref": "#/$defs/loglevel"
+          }
+        }
+      },
+      "lorawanReceiver": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "replicas": {
+            "type": "integer"
+          },
+          "targets": {
+            "$ref": "#/$defs/targets"
+          },
+          "ingress": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "annotations": {
+                "type": "object"
+              }
+            }
+          },
+          "image": {
+            "$ref": "#/$defs/image"
+          },
+          "resources": {
+            "type": "object"
+          },
+          "loglevel": {
+            "$ref": "#/$defs/loglevel"
+          }
+        }
+      },
+      "owmCollector": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "targets": {
+            "$ref": "#/$defs/targets"
+          },
+          "image": {
+            "$ref": "#/$defs/image"
+          },
+          "resources": {
+            "type": "object"
+          },
+          "apiUrl": {
+            "type": "string"
+          },
+          "apiKey": {
+            "$ref": "#/$defs/secret"
+          },
+          "coordinates": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lat": {
+                "type": "number"
+              },
+              "lon": {
+                "type": "number"
+              }
+            }
+          },
+          "auth": {
+            "$ref": "#/$defs/auth"
+          },
+          "loglevel": {
+            "$ref": "#/$defs/loglevel"
+          }
+        }
+      },
+      "rudisCollector": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "targets": {
+            "$ref": "#/$defs/targets"
+          },
+          "image": {
+            "$ref": "#/$defs/image"
+          },
+          "resources": {
+            "type": "object"
+          },
+          "apiUrl": {
+            "type": "string"
+          },
+          "apiKey": {
+            "$ref": "#/$defs/secret"
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "auth": {
+            "$ref": "#/$defs/auth"
+          },
+          "loglevel": {
+            "$ref": "#/$defs/loglevel"
+          }
+        }
+      },
+      "rtbReceiver": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "mqttClients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "host": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "number"
+                },
+                "tls": {
+                  "type": "boolean"
+                },
+                "user": {
+                  "$ref": "#/$defs/user"
+                },
+                "appid": {
+                  "type": "string"
+                }
+              },
+              "required": ["host", "port", "tls", "user", "appid"]
+            }
+          },
+          "targets": {
+            "$ref": "#/$defs/targets"
+          },
+          "image": {
+            "$ref": "#/$defs/image"
+          },
+          "auth": {
+            "$ref": "#/$defs/auth"
+          },
+          "resources": {
+            "type": "object"
+          },
+          "loglevel": {
+            "$ref": "#/$defs/loglevel"
+          }
+        }
+      },
+      "common": {}
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z]([-a-z0-9]{0,62}[a-z0-9])?$"
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string",
+          "description": "The host of the registry",
+          "examples": [
+            "docker.io"
+          ]
+        },
+        "pullPolicy": {
+          "type": "string",
+          "examples": [
+            "Always"
+          ]
+        },
+        "repository": {
+          "type": "string",
+          "description": "The image path in the registry",
+          "examples": [
+            "bitnami/kubectl"
+          ]
+        },
+        "tag": {
+          "type": "string"
+        },
+        "digest": {
+          "type": "string"
+        },
+        "pullSecrets": {
+          "$ref": "#/$defs/pullSecrets"
+        }
+      }
+    },
+    "pullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "targets": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "user": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "password": {
+            "$ref": "#/$defs/secret"
+          }
+        }
+      },
+      "secret": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "auth": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "client": {
+            "type": "string"
+          },
+          "clientSecret": {
+            "$ref": "#/$defs/secret"
+          }
+        }
+      },
+      "loglevel": {
+        "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+      }
+  }
+}

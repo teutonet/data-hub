@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source "$(dirname "$BASH_SOURCE")/.common"
+
+cd "$REPO"
+
+: ${TAG=latest}
+
+$KUBECTL port-forward -n kube-system svc/registry 5000:80 1>/dev/null &
+PID_PORT_FORWARD=$!
+trap "kill $PID_PORT_FORWARD" EXIT
+
+build () {
+  context=$1
+  image=$REGISTRY/$context:$TAG
+
+  tar chC $context --exclude-vcs{,-ignores} . | docker build -t $image -
+
+  docker push "$image"
+}
+
+if (($#))
+then
+  for dir in "$@"
+  do
+    build "$dir"
+  done
+else
+  for dockerfile in `find -name Dockerfile`
+  do
+    context=`dirname $dockerfile`
+    context=${context#./}
+
+    build "$context"
+  done
+fi

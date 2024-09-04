@@ -1,0 +1,224 @@
+openapi: 3.0.3
+info:
+  title: LoRaWAN Receiver
+  description: |-
+    This service can accept LoRaWAN sensor data over HTTP.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.0.1
+externalDocs:
+  description: GitLab project
+  url: https://gitlab.com/urban-data-hub/sensor-ingestion
+servers:
+  - url: /api/v1
+paths:
+  /sensordata/v3: &v3
+    post:
+      summary: Add sensor data
+      description: |
+        Process LoRaWAN sensor data and forward it to the configured targets
+        using the credentials provided through Basic authentication.
+        Please use this via the v3 path.
+      tags: [sensordata]
+      requestBody:
+        description: Sensor data to add
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensordataV3'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+      security:
+        - BasicAuth: []
+  /sensordata: *v3
+  /sensordata/element:
+    post:
+      summary: Add sensor data (Element IoT)
+      description: |
+        Process LoRaWAN sensor data and forward it to the configured targets
+        using the credentials provided through Basic authentication.
+        Please use this via the v3 path.
+      tags: [sensordata]
+      requestBody:
+        description: Sensor data to add
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensordataElement'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+      security:
+        - BasicAuth: []
+  /sensordata/regiopole:
+    post:
+      summary: Add sensor data (Regiopole)
+      description: |
+        Process LoRaWAN sensor data and forward it to the configured targets
+        using the credentials provided through Basic authentication.
+      tags: [sensordata]
+      requestBody:
+        description: Sensor data to add
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensordataRegiopole'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+      security:
+        - BasicAuth: []
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+  schemas:
+    SensordataV3:
+      type: object
+      properties:
+        end_device_ids:
+          type: object
+          properties:
+            device_id:
+              type: string
+            application_ids:
+              type: object
+              properties:
+                application_id:
+                  type: string
+              required:
+                - application_id
+            dev_eui:
+              type: string
+          required:
+            - application_ids
+            - dev_eui
+            - device_id
+        received_at:
+          type: string
+          format: date-time
+        uplink_message:
+          type: object
+          properties:
+            rx_metadata:
+              type: array
+              items:
+                type: object
+            decoded_payload:
+              type: object
+            locations:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  latitude:
+                    type: number
+                  longitude:
+                    type: number
+                  altitude:
+                    type: number
+                  source:
+                    type: string
+          required:
+            - decoded_payload
+            - rx_metadata
+      required:
+        - end_device_ids
+        - received_at
+        - uplink_message
+    SensordataElement:
+      type: object
+      properties:
+        app_id:
+          type: string
+        dev_id:
+          type: string
+        hardware_serial:
+          type: string
+        payload_fields:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+              - type: object
+                properties:
+                  value:
+                    oneOf:
+                      - type: string
+                      - type: number
+                required:
+                  - value
+        metadata:
+          type: object
+          properties:
+            time:
+              type: string
+              format: date-time
+            latitude:
+              oneOf:
+                - type: number
+                - type: string
+            longitude:
+              oneOf:
+                - type: number
+                - type: string
+          required:
+            - time
+      required:
+        - app_id
+        - dev_id
+        - hardware_serial
+        - payload_fields
+        - metadata
+    SensordataRegiopole:
+      type: object
+      properties:
+        device_ids:
+          type: object
+          properties:
+            device_id:
+              type: string
+            application_id:
+              type: string
+            dev_eui:
+              type: string
+          required:
+            - application_id
+            - dev_eui
+            - device_id
+        received_at:
+          type: string
+          format: date-time
+        decoded_payload:
+          type: object
+        location:
+          type: object
+          properties:
+            latitude:
+              oneOf:
+                - type: number
+                - type: string
+            longitude:
+              oneOf:
+                - type: number
+                - type: string
+          required:
+            - latitude
+            - longitude
+      required:
+        - device_ids
+        - received_at
+        - decoded_payload

@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+source "$(dirname "$BASH_SOURCE")/.common"
+
+cd "$REPO"
+
+: ${MINIKUBE_RESOURCE_CPU:=4}
+: ${MINIKUBE_RESOURCE_RAM:=8192}
+: ${KUBERNETES_VERSION:=v1.30.2}
+: ${TELEPRESENCE:=1}
+
+error () {
+  printf %s\\n "$1" >&2
+  exit 1
+}
+
+# required tools
+
+echo "Checking for SOPS"
+if ! command -v sops &> /dev/null
+then
+  echo "SOPS is not installed, exiting"
+  echo "install it with 'pacman -Suy sops'"
+  exit
+fi
+
+echo "Checking for Helm"
+if ! command -v helm &> /dev/null
+then
+  echo "Helm is not installed, exiting"
+  echo "install it with 'pacman -Suy helm'"
+  exit
+fi
+
+echo "Checking for jq"
+if ! command -v jq &> /dev/null
+then
+  echo "jq is not installed, exiting"
+  echo "install it with 'pacman -Suy jq'"
+  exit
+fi
+
+echo "Checking for Minikube"
+if ! command -v minikube &> /dev/null
+then
+  echo "Minikube is not installed, exiting"
+  echo "install it with 'pacman -Suy minikube'"
+  exit
+fi
+
+echo "Checking for Helm-secrets"
+if ! helm plugin list | grep -q 'secrets';
+then
+  echo "Helm-secrets is not installed, exiting"
+  echo "please check https://github.com/jkroepke/helm-secrets for installing it"
+  exit
+fi
+
+minikube_started=false
+if [[ `minikube status | grep '\(host\|kubelet\|apiserver\): Running' | wc -l` -eq 3 ]]
+then
+  echo "minikube already running"
+else
+  echo "force docker-driver"
+  minikube config set driver docker
+
+  echo "starting minikube"
+  minikube start --network-plugin=cni --cpus=${MINIKUBE_RESOURCE_CPU} --memory=${MINIKUBE_RESOURCE_RAM} --kubernetes-version=${KUBERNETES_VERSION}
+
+  minikube_started=true
+fi
+
+if $minikube_started || [ ${MINIKUBE_SETUP:-0} -eq 1 ]
+then
+  echo "enabling ingress controller"
+  minikube addons enable ingress
+
+  # snippet annotations are disabled by default
+  $KUBECTL -n ingress-nginx get configmaps ingress-nginx-controller -ojson | jq '.data["allow-snippet-annotations"] = "true"' | $KUBECTL apply -f -
+
+  echo "enabling metrics-server"
+  minikube addons enable metrics-server
+
+  echo "enabling minikube registry"
+  minikube addons enable registry
+
+  echo "enabling cert-manager"
+  helm upgrade cert-manager --version "1.5.4" --install --create-namespace -n cert-manager cert-manager --repo https://charts.jetstack.io --set installCRDs=true --wait
+
+  echo "enabling postgres operator"
+  helm upgrade postgres-operator --version "1.9.0" --install --create-namespace -n postgres postgres-operator --repo https://opensource.zalando.com/postgres-operator/charts/postgres-operator/ --wait
+
+  echo "installing calico"
+  $KUBECTL apply -f https://raw.githubusercontent.com/projectcalico/calico/$CALICO_VERSION/manifests/calico.yaml
+
+  echo "install flux"
+  $KUBECTL apply -f https://github.com/fluxcd/flux2/releases/download/$FLUX_VERSION/install.yaml
+
+  if [ $TELEPRESENCE -eq 1 ]; then
+    echo "prepare telepresence"
+    which telepresence
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      telepresence helm install || true
+    fi
+  fi
+fi
+
+# Verify k8s version
+installed_kubernetes_version=$($KUBECTL version -o json 2> /dev/null | jq -r '.serverVersion.gitVersion')
+if [[ $installed_kubernetes_version != $KUBERNETES_VERSION ]]
+then
+  echo "Wrong kubernetes version, you need a server version of $KUBERNETES_VERSION but you have $installed_kubernetes_version, consider minikube delete and retrying."
+fi
+
+# make test domain available inside cluster
+if ! $KUBECTL -n kube-system get configmap coredns -oyaml | grep -qF "rewrite name regex ^.*data-hub.local\\.$ ingress-nginx-controller.ingress-nginx.svc.cluster.local answer auto"
+then
+  $KUBECTL -n kube-system get configmap coredns -oyaml \
+  | sed 's/^\( *\)loadbalance/\1rewrite name regex ^.*data-hub.local\\.$ ingress-nginx-controller.ingress-nginx.svc.cluster.local answer auto\n\0/g' \
+  | $KUBECTL apply -f -
+  $KUBECTL rollout restart -n kube-system deployment coredns
+fi
+
+# workaround, never resolve .intra domains because they cause problems on manjaro
+if ! $KUBECTL -n kube-system get configmap coredns -oyaml | grep 'template ANY ANY intra' -q
+then
+  $KUBECTL -n kube-system get configmap coredns -oyaml \
+  | sed 's/^        forward/        template ANY ANY intra {\n           rcode NXDOMAIN\n        }\n        forward/' \
+  | $KUBECTL apply -f -
+fi

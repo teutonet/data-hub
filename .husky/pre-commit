@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+
+npx lint-staged
+
+
+

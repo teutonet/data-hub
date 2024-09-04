@@ -1,0 +1,140 @@
+---
+{{- $name := "mdb-frontend" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+    app.kubernetes.io/part-of: metadata-db
+data:
+  config.js: | 
+    window._env_ = {
+        OIDC_AUTHORITY: {{ .Values.global.auth.issuer | quote }},
+        OIDC_CLIENT: "mdb-frontend",
+        GRAPHQL_WS_ENDPOINT: "wss://{{ printf "%s.%s" $name .Values.global.baseDomain }}/graphql",
+        GRAPHQL_HTTP_ENDPOINT: "//{{ printf "%s.%s" $name .Values.global.baseDomain }}/graphql",
+        KEYCLOAK_URL: {{ printf "//login.%s/admin/udh/console" .Values.global.baseDomain | quote }},
+        GRAFANA_URL: {{ printf "//dashboard.%s" .Values.global.baseDomain | quote }},
+        JUPYTERHUB_URL: {{ printf "//jupyterhub.%s" .Values.global.baseDomain | quote }},
+        MDB_GRAPHIQL_URL: {{ printf "//mdb.%s" .Values.global.baseDomain | quote }},
+        SENTRY_DSN: {{ .Values.sensorIngestion.metadataDB.frontend.sentry.dsn | quote }},
+        API_BASE_URL: {{ printf "https://api.%s/api/v1/sensordata" .Values.global.baseDomain | quote }},
+    };
+  config.toml: | 
+    [advanced]
+
+    [[advanced.headers]]
+    source = "/config.js"
+    headers = { Cache-Control = "no-store" }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+    app.kubernetes.io/part-of: metadata-db
+spec:
+  replicas: {{ .Values.sensorIngestion.metadataDB.frontend.replicas | default 1 | int }}
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+      app.kubernetes.io/part-of: metadata-db
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+        app.kubernetes.io/part-of: metadata-db
+    spec:
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.sensorIngestion.metadataDB.frontend.image) "global" .Values.global) | indent 6 | trimAll " " }}
+      containers:
+      - name: frontend
+        image: {{ include "udh-platform.images.image" (dict "imageRoot" .Values.sensorIngestion.metadataDB.frontend.image "global" .Values.global) }}
+        ports:
+          - containerPort: 8080
+            name: http
+        env:
+          - name: SERVER_PORT
+            value: "8080"
+          - name: "SERVER_FALLBACK_PAGE"
+            value: "/public/index.html"
+          - name: SERVER_LOG_LEVEL
+            value: "info"
+          - name: SERVER_CONFIG_FILE
+            value: "/config.toml"
+        volumeMounts:
+          - name: config
+            mountPath: /public/config.js
+            subPath: config.js
+            readOnly: true
+          - name: config
+            mountPath: /config.toml
+            subPath: config.toml
+            readOnly: true
+        resources: {{- toYaml .Values.sensorIngestion.metadataDB.frontend.resources | nindent 10 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ printf "%s-%s" (include "common.names.fullname" .) $name | quote }}
+
+---
+{{- $serviceName := printf "%s-%s" (include "common.names.fullname" .) $name -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $serviceName }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+    app.kubernetes.io/part-of: metadata-db
+spec:
+  ports:
+  - port: 80
+    name: http
+    targetPort: http
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+    app.kubernetes.io/part-of: metadata-db
+---
+{{- $host := include "sensor-ingestion.mdb.frontend.hostname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-frontend" (include "common.names.fullname" .) | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+    app.kubernetes.io/part-of: metadata-db
+  annotations: 
+    {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.frontend.ingress.annotations "context" .) | nindent 4 }}
+spec:
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - backend: {{- include "common.ingress.backend" (dict "serviceName"  $serviceName "servicePort" "http" "context" .) | nindent 14 }}
+            pathType: Prefix
+            path: /
+          - backend: {{- include "common.ingress.backend" (dict "serviceName" (printf "%s-mdb" (include "common.names.fullname" .)) "servicePort" 80 "context" .) | nindent 14 }}
+            pathType: Prefix
+            path: /graphql
+  tls:
+  - hosts:
+    - {{ $host }}
+    secretName: {{ $host }}-tls
+---
+{{- $host := .Values.global.baseDomain -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-landing-page" (include "common.names.fullname" .) }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  annotations: 
+    {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.frontend.ingress.annotations "context" .) | nindent 4 }}
+    nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "https://%s/" (include "sensor-ingestion.mdb.frontend.hostname" .) | quote }}
+spec:
+  rules:
+  - host: {{ $host | quote }}
+  tls:
+  - hosts:
+    - {{ $host }}
+    secretName: {{ $host }}-tls

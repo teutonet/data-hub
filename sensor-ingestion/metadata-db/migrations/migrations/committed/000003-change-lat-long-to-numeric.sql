@@ -1,0 +1,7 @@
+--! Previous: sha1:8958f4c152de8ac7669897b34e1eb9b50c96844b
+--! Hash: sha1:75043793167664beddc6b631aec4c224c4e22028
+--! Message: change lat/long to NUMERIC
+
+ALTER TABLE sensor.thing
+ALTER COLUMN lat  TYPE NUMERIC(14,12) USING  lat::NUMERIC,
+ALTER COLUMN long TYPE NUMERIC(15,12) USING long::NUMERIC;

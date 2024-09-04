@@ -1,0 +1,4 @@
+{:paths ["src/main/resources" "src/test/clojure"]
+ :tasks {:requires ([test-grafana][test-resources])
+         grafana-integration-tests (test-grafana/run-tests)
+         resource-integration-tests (test-resources/run-tests)}}

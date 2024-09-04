@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-pod-config
+stringData: {{ if .Values.database.backup.awsAccessKey }}
+  AWS_ACCESS_KEY_ID: {{ .Values.database.backup.awsAccessKey | quote }}
+  AWS_INSTANCE_PROFILE: "0"
+  AWS_S3_FORCE_PATH_STYLE: "true"
+  AWS_SECRET_ACCESS_KEY: {{ .Values.database.backup.awsSecretKey | quote }}
+  USE_WALG: "true"
+  USE_WALG_BACKUP: "true"
+  USE_WALG_RESTORE: "true"
+  WAL_S3_BUCKET: {{ .Values.database.backup.bucketName | quote }}
+  WALE_S3_ENDPOINT: {{ .Values.database.backup.endpoint | quote }}
+  WALG_DISABLE_S3_SSE: "true"
+  CLONE_AWS_ACCESS_KEY_ID: {{ .Values.database.backup.awsAccessKey | quote }}
+  CLONE_AWS_INSTANCE_PROFILE: "0"
+  CLONE_AWS_S3_FORCE_PATH_STYLE: "true"
+  CLONE_AWS_SECRET_ACCESS_KEY: {{ .Values.database.backup.awsSecretKey | quote }}
+  CLONE_USE_WALG: "true"
+  CLONE_USE_WALG_BACKUP: "true"
+  CLONE_USE_WALG_RESTORE: "true"
+  {{ if and .Values.database.recovery .Values.database.recovery.enabled | default false -}}
+  CLONE_WAL_S3_BUCKET: {{ .Values.database.recovery.bucketName | quote }}
+  {{- end }}
+  CLONE_AWS_ENDPOINT: {{ .Values.database.backup.endpoint | quote }}
+  CLONE_WALG_S3_SSE: ""
+  CLONE_WALG_DISABLE_S3_SSE: "true"
+  {{ end }}
+---
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: {{ printf "%s-postgres" (include "common.names.fullname"  .) | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  # I have no clue what this does
+  teamId: postgres
+  dockerImage: {{ include "common.images.image" ( dict "imageRoot" .Values.database.image ) }}
+  volume:
+    size: {{ .Values.database.persistence.size }}
+  numberOfInstances: {{ .Values.database.replicas }}
+  users:
+    postgraphile: []
+  preparedDatabases:
+    grafana:
+      defaultUsers: true
+    keycloak:
+      defaultUsers: true
+    mdb:
+      defaultUsers: true
+  postgresql:
+    version: {{ .Values.database.version | quote }}
+  resources: {{- .Values.database.resources | toYaml | nindent 4 }}
+  {{ if and .Values.database.recovery .Values.database.recovery.enabled | default false -}}
+  clone:
+    uid: {{ .Values.database.recovery.uid | quote | required "recovery.uid neets to be defined when recovery is enabled."}}
+    cluster: {{ .Values.database.recovery.clusterName | quote | required "recovery.clusterName neets to be defined when recovery is enabled."}}
+  {{- if .Values.database.recovery.timestamp }}
+    timestamp: {{ .Values.database.recovery.timestamp | quote }}
+  {{- end }}
+    s3_endpoint: {{ .Values.database.backup.endpoint | quote }}
+    s3_access_key_id: {{ .Values.database.backup.awsAccessKey | quote }}
+    s3_secret_access_key: {{ .Values.database.backup.awsSecretKey | quote }}
+    s3_wal_path: {{ printf "s3://%s/%s" .Values.database.recovery.bucketName .Values.database.recovery.walPath }}
+    s3_force_path_style: true
+  {{ end }}

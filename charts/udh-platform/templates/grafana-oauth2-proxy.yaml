@@ -1,0 +1,75 @@
+{{- $cookieSecretGrafanaOauthProxySpec := (merge (dict "name" "cookie-secret-grafana-oauth") .) -}}
+{{- $cookieSecretGrafanaOauthProxy := include "udh.secret" $cookieSecretGrafanaOauthProxySpec }}
+{{ include "udh.secretManifest" (merge (dict "value" $cookieSecretGrafanaOauthProxy) $cookieSecretGrafanaOauthProxySpec) }}
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "grafana-auth") }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "grafana-auth") }}
+  chart:
+    spec:
+      chart: oauth2-proxy
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ include "data-hub.name" (dict "context" . "name" "oauth2") }}
+  interval: 1h0m0s
+  dependsOn:
+    - name: {{ include "data-hub.name" (dict "context" . "name" "keycloak") }}
+  values:
+    config:
+      clientID: grafana
+      cookieSecret: {{ $cookieSecretGrafanaOauthProxy | quote }}
+    extraEnv:
+      - name: OAUTH2_PROXY_PROVIDER
+        value: keycloak-oidc
+      - name: OAUTH2_PROXY_REDIRECT_URL
+        value: https://{{ include "data-hub.grafana.hostname" . }}/oauth2/callback
+      - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+        value: https://{{ include "data-hub.keycloak.hostname" . }}/realms/{{ .Values.keycloak.realm }}
+      - name: OAUTH2_PROXY_COOKIE_CSRF_PER_REQUEST
+        value: "true"
+      - name: OAUTH2_PROXY_SKIP_PROVIDER_BUTTON
+        value: "true"
+      - name: OAUTH2_PROXY_CODE_CHALLENGE_METHOD
+        value: S256
+      - name: OAUTH2_PROXY_SET_XAUTHREQUEST
+        value: "true"
+      - name: OAUTH2_PROXY_SCOPE
+        value: "openid email profile"
+    {{- if .Values.fakeCa.name }}
+    extraVolumeMounts:
+      - mountPath: /tls
+        readOnly: true
+        name: ca-cert
+    extraVolumes:
+      - name: ca-cert
+        secret:
+          secretName: {{ .Values.fakeCa.name }}
+          items:
+            - key: ca.crt
+              path: ca.crt
+    extraArgs: ["--provider-ca-file=/tls/ca.crt"]
+    {{- end }}
+    resources: {{- $.Values.grafanaOauth2Proxy.resources | toYaml | nindent 6 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "grafana-auth") }}
+  annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.grafana.ingress.annotations) | nindent 4 }}
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "64k"
+spec:
+  rules:
+  - host: {{ include "data-hub.grafana.hostname" . }}
+    http:
+      paths:
+      - path: /oauth2
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "data-hub.name" (dict "context" . "name" "grafana-auth-oauth2-proxy") }}
+            port:
+              number: 80
