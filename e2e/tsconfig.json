@@ -1,0 +1,7 @@
+{
+	"compilerOptions": {
+		"types": ["node"],
+		"moduleResolution": "node",
+		"target": "ES2022"
+	}
+}

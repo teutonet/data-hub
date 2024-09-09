@@ -1,0 +1,333 @@
+global:
+  auth:
+    issuer: https://login.example.com/exampleIssuer
+    tokenPath: protocol/openid-connect/token
+    readyPath: /health/ready
+  baseDomain: example.com
+  udhImageTag: latest
+  udhImageRegistry: "registry-gitlab.teuto.net"
+  smtp_base_domain: udh-platform@example.com
+  imageCredentials:
+    udh-platform:
+      host: "registry-gitlab.teuto.net"
+      username: "udh-pull-secret"
+      password: SECRET
+  imagePullSecrets:
+    - udh-udh-platform-pullsecret-udh-platform
+  storageClass: teutostack-ssd
+  babashka:
+    image:
+      registry: "docker.io"
+      pullPolicy: Always
+      repository: "babashka/babashka"
+      tag: 1.3.189
+      digest: ""
+  sslInsecureSkipVerify: false
+  ingress:
+    annotations:
+      kubernetes.io/tls-acme: "true"
+  loglevel: info
+keycloak:
+  realm: udh
+  replicaCount: 1
+  extensions:
+    image:
+      registry: "registry-gitlab.teuto.net"
+      pullPolicy: Always
+      repository: "4teuto/dev/udh/teuto-data-hub/keycloak-extensions"
+      tag: ""
+      digest: ""
+  ingress:
+    annotations: {}
+  resources:
+    requests:
+      cpu: 20m
+      memory: 512Mi
+    limits:
+      memory: 2048Mi
+  testUsers: null
+  smtp:
+    fromDisplayName: keycloak-config-cli
+    host: mailing.example.com
+    auth: true
+    port: 25
+    ssl: false
+    user: username
+    password: password
+mailhog:
+  enabled: false
+  replicas: 1
+  auth:
+    enabled: true
+  ingress:
+    enabled: false
+    annotations: {}
+  resources:
+    limits:
+      memory: 128Mi
+    requests:
+      cpu: 20m
+      memory: 128Mi
+
+database:
+  version: 15
+  # backup:
+  #   awsAccesKey: KEY
+  #   awsSecretKey: SECRET_KEY
+  #   bucketName: MY_BUCKET
+  #   endpoint: https://api.ffm3.teutostack.de:6780
+  backup: { }
+  # recovery:
+  #   awsAccesKey: KEY
+  #   awsSecretKey: SECRET_KEY
+  #   bucketName: MY_BUCKET
+  #   clusterName: MY_CLUSTER
+  #   enabled: false
+  #   endpoint: https://api.ffm3.teutostack.de:6780
+  #   uid: CLUSTER_UID
+  #   walPath: PATH
+  #   timestamp: "2017-12-19T12:40:33+01:00"  # timezone required (offset relative to UTC, see RFC 3339 section 5.6)
+  recovery: { }
+  loadbalancer:
+    enabled: false
+    allowedSourceRanges: [ ]
+  image:
+    registry: ghcr.io
+    repository: zalando/spilo-16
+    tag: 3.2-p2
+  replicas: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi
+  persistence:
+    size: 4Gi
+  ssl:
+    enabled: false
+
+grafana:
+  ingress:
+    annotations: {}
+  smtp:
+    enabled: true
+    from_adress: alert@example.com
+    from_name: Grafana
+    host: mailing.example.com
+    user: username
+    password: password
+  resources:
+    requests:
+      cpu: 20m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+  plugins:
+    - volkovlabs-echarts-panel
+
+grafanaOauth2Proxy:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 100Mi
+    limits:
+      memory: 300Mi
+
+grafanaPublic:
+  ingress:
+    annotations: {}
+  resources:
+    requests:
+      cpu: 20m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+  plugins:
+    - volkovlabs-echarts-panel
+  datasources:
+    {}
+
+prometheus:
+  ingress:
+    annotations: {}
+
+prometheusOauth2Proxy:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 100Mi
+    limits:
+      memory: 300Mi
+
+jupyterhub:
+  ingress:
+    annotations: {}
+  proxy:
+    chp:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 256Mi
+        limits:
+          memory: 1024Mi
+    traefik:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 256Mi
+        limits:
+          memory: 1024Mi
+    secretSync:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 256Mi
+        limits:
+          memory: 1024Mi
+  hub:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 256Mi
+      limits:
+        memory: 1024Mi
+  prePuller:
+    resources:
+      requests:
+        memory: 256Mi
+      limits:
+        memory: 1024Mi
+
+mimir:
+  minimal: false
+  config:
+    mimir:
+      structuredConfig:
+        tenant_federation:
+          enabled: true
+        limits:
+          # Enable TSDB block upload
+          compactor_block_upload_enabled: true
+
+fakeCa:
+  enabled: false
+  generate: false
+  certificate: ""
+  privateKey: ""
+  name: ""
+
+objectStorage:
+  enabled: false
+  allowDeletion: false
+  storage: 5Gi
+  monStorage: 1Gi
+
+grafanaPublicSync:
+  syncIntervalSeconds: 60
+  loglevel: info
+  image:
+    registry: "registry-gitlab.teuto.net"
+    repository: 4teuto/dev/udh/teuto-data-hub/grafana-public-sync
+
+geojsonExport:
+  replicas: 1
+  image:
+    registry: "registry-gitlab.teuto.net"
+    repository: 4teuto/dev/udh/teuto-data-hub/geojson-export
+  ingress:
+    annotations: {}
+
+sensorIngestion:
+  networkPolicy:
+    # false will disable all NetworkPolicy resources in this chart
+    enabled: true
+    # if enabled allows ingress from everywhere and egress to public IPv4 addresses for all components that might have to communicate with external services in that direction
+    # change this to false if you want to configure fine-grained rules, for example with DNS-specific rules functionality of your CNI
+    broadAllowRules: true
+  metadataDB:
+    enabled: true
+    frontend:
+      replicas: 1
+      image:
+        repository: 4teuto/dev/udh/teuto-data-hub/mdb-frontend
+        #pullPolicy: Never|IfNotPresent|Always
+        pullSecrets: []
+      ingress:
+        annotations: {}
+      sentry:
+        dsn: ''
+      resources:
+        requests:
+          memory: 128Mi
+          cpu: 10m
+        limits:
+          memory: 384Mi
+          cpu: 100m
+    migrations:
+      image:
+        repository: 4teuto/dev/udh/teuto-data-hub/mdb-migrations
+        #pullPolicy: Never|IfNotPresent|Always
+        pullSecrets: []
+      resources: &default_node_resources
+        requests:
+          memory: 64Mi
+          cpu: 50m
+        limits:
+          memory: 256Mi
+    postgraphile:
+      replicas: 1
+      #loglevel: DEBUG|INFO|WARNING|ERROR|CRITICAL
+      auth:
+        audience: mdb
+      ingress:
+        enabled: true
+        annotations: {}
+        client: mdb
+        scope: openid
+      image:
+        repository: 4teuto/dev/udh/teuto-data-hub/mdb-postgraphile
+        #pullPolicy: Never|IfNotPresent|Always
+        pullSecrets: []
+      resources: *default_node_resources
+  lorawanReceiver:
+    enabled: true
+    replicas: 1
+    #loglevel: DEBUG|INFO|WARNING|ERROR|CRITICAL
+    targets: &all_targets
+      - prometheus-writer
+      # - sensor-things-writer
+      #- https://other-target.example.com/api/v1/some-write-path
+    ingress:
+      enabled: true
+      annotations: {}
+    image:
+      repository: 4teuto/dev/udh/teuto-data-hub/lorawan-receiver
+      tag: latest
+      #pullPolicy: Never|IfNotPresent|Always
+      pullSecrets: []
+    resources: &default_python_resources
+      requests:
+        memory: 32Mi
+        cpu: 50m
+      limits:
+        memory: 128Mi
+  prometheusWriter:
+    enabled: true
+    #loglevel: DEBUG|INFO|WARNING|ERROR|CRITICAL
+    replicas: 1
+    outOfOrderSeconds: 0
+    alwaysUpdatePayload: true
+    ingress:
+      enabled: true
+      annotations: {}
+    prometheus:
+      forwardToken: true
+      url: https://prometheus.example.com/api/v1/write
+      readyPath: /oauth2-write
+    image:
+      repository: 4teuto/dev/udh/teuto-data-hub/prometheus-remote-write
+      #pullPolicy: Never|IfNotPresent|Always
+      pullSecrets: []
+  resources: *default_python_resources

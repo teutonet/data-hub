@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+source "$(dirname "$BASH_SOURCE")/.common"
+
+cd "$REPO"
+
+export MINIKUBE_IP=`minikube ip | grep '^[0-9]*.[0-9]*.[0-9]*.[0-9]*$'` # grep to be sure we have an IP to feed into sed
+
+# /etc/hosts
+HOSTS=$($KUBECTL get ingress --all-namespaces -o=go-template='{{range .items}}{{range .spec.rules}}{{.host}} {{end}}{{end}}')
+DESIRED_LINE="$MINIKUBE_IP $HOSTS"
+if grep -Fx "$DESIRED_LINE" /etc/hosts >/dev/null
+then
+  echo "/etc/hosts already up to date"
+else
+  if grep "^$MINIKUBE_IP " /etc/hosts
+  then
+    UPDATE_HOSTS_COMMAND="sudo cp /etc/hosts /etc/hosts.backup && sudo sed -i 's/^$MINIKUBE_IP .*/$DESIRED_LINE/' /etc/hosts"
+  else
+    UPDATE_HOSTS_COMMAND="echo '$DESIRED_LINE' | sudo tee -a /etc/hosts"
+  fi
+  confirm $'Update /etc/hosts with the command\n    '"$UPDATE_HOSTS_COMMAND"$'\n?'
+  eval "$UPDATE_HOSTS_COMMAND"
+fi

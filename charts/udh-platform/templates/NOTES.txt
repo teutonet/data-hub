@@ -1,0 +1,16 @@
+# Keycloak
+{{ printf "https://login.%s" .Values.global.baseDomain }}
+user
+kubectl -n {{ .Release.Namespace }} get secret {{ .Release.Name }}-udh-platform-sso-keycloak -ojsonpath='{.data.admin-password}' | base64 -d ; echo
+
+For REPL development use
+kubectl port-forward -n {{ .Release.Namespace }} statefulsets/{{ .Release.Name }}-udh-platform-sso-keycloak 7888:7888
+and connect to localhost:7888
+
+# Grafana
+{{ printf "https://dashboard.%s" .Values.global.baseDomain }}
+
+kubectl port-forward -n {{ .Release.Namespace }} deploy/{{ .Release.Name }}-udh-platform-grafana 3000:3000
+http://localhost:3000
+admin
+kubectl -n {{ .Release.Namespace }} get secret {{ .Release.Name }}-udh-platform-grafana -ojsonpath='{.data.admin-password}' | base64 -d ; echo

@@ -1,0 +1,8 @@
+{
+	"themes": [
+		{
+			"name": "teuto-data-hub",
+			"types": ["login"]
+		}
+	]
+}

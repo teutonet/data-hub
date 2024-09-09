@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Docker wrapper for graphile-migrate
+
+: "${IMAGE=sensor-dev-migrate}"
+
+set -eu -o pipefail
+
+docker build -t "$IMAGE" "$(dirname "$0")"
+
+exec \
+	docker run \
+	$([[ -t 0 ]] && echo --tty) --interactive \
+	--rm \
+	--network=host \
+	--user `id -u`:`id -g` \
+	--volume "$(readlink -f "$(dirname "$0")")"/gmrc-dev.js:/migrate/.gmrc.js:ro \
+	--volume "$(readlink -f "$(dirname "$0")")"/migrations/:/migrate/migrations:rw \
+	--init \
+	"$IMAGE" \
+	"$@"

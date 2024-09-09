@@ -1,0 +1,58 @@
+{{- $name := "grafana-public-sync" -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      {{- include "udh-platform.imagePullSecrets" (dict "context" .) | nindent 6 }}
+      containers:
+      - name: {{ $name }}
+        image: {{ include "udh-platform.images.image" (dict "imageRoot" .Values.grafanaPublicSync.image "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.grafanaPublicSync.image.pullPolicy }}
+        ports:
+          - containerPort: 3001
+            name: http
+        env:
+          - name: PRIVATE_GRAFANA_HOST
+            value: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+          - name: PRIVATE_GRAFANA_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+                key: admin-user
+          - name: PRIVATE_GRAFANA_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+                key: admin-password
+          - name: PUBLIC_GRAFANA_HOST
+            value: {{ include "data-hub.name" (dict "context" . "name" "grafana-public") }}
+          - name: PUBLIC_GRAFANA_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "data-hub.name" (dict "context" . "name" "grafana-public") }}
+                key: admin-user
+          - name: PUBLIC_GRAFANA_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "data-hub.name" (dict "context" . "name" "grafana-public") }}
+                key: admin-password
+          - name: SYNC_INTERVAL
+            value: {{ .Values.grafanaPublicSync.syncIntervalSeconds | quote }}
+          - name: LOGLEVEL
+            value: {{ .Values.grafanaPublicSync.loglevel }}
+        resources: {{- toYaml .Values.grafanaPublicSync.resources | nindent 10 }}

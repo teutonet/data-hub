@@ -1,0 +1,6 @@
+ARG REGISTRY_MIRROR_LIB=""
+
+FROM ${REGISTRY_MIRROR_LIB}busybox:1.36.1
+COPY udh-sync/build/libs/udh-sync-all.jar /providers/
+COPY theme/target/theme-teuto-data-hub.jar /providers/
+CMD cp /providers/* /target/

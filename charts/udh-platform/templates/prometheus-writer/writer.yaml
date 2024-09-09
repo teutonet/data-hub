@@ -1,0 +1,15 @@
+{{- define "sensor-ingestion.prometheusWriter.env" -}}
+- name: MDB_URL
+  value: {{ printf "http://%s-mdb/graphql" (include "common.names.fullname" .) | quote }}
+- name: PROMETHEUS_URL
+  value: {{ .Values.sensorIngestion.prometheusWriter.prometheus.url | quote }}
+- name: PROMETHEUS_READY_PATH
+  value: {{ .Values.sensorIngestion.prometheusWriter.prometheus.readyPath | quote }}
+- name: FORWARD_TOKEN
+  value: {{ .Values.sensorIngestion.prometheusWriter.prometheus.forwardToken | quote }}
+- name: OUT_OF_ORDER_SECONDS
+  value: {{ .Values.sensorIngestion.prometheusWriter.outOfOrderSeconds | quote }}
+- name: ALWAYS_UPDATE_PAYLOAD
+  value: {{ .Values.sensorIngestion.prometheusWriter.alwaysUpdatePayload | quote }}
+{{- end -}}
+{{ include "sensor-ingestion.standard.serviceDeployment" (merge (dict "name" "prometheusWriter" "networkLabels" (list "http" "write")) .) }}

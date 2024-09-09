@@ -1,0 +1,5 @@
+/charts/sensor-ingestion/templates/
+/test-env/chart/templates/
+/metadata-db/frontend/.svelte-kit
+/metadata-db/frontend/build
+/metadata-db/frontend/src/lib/common/generated/

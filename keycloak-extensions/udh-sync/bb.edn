@@ -1,0 +1,3 @@
+{:paths ["test"]
+ :tasks {:requires ([test-resources])
+         resource-integration-tests (test-resources/run-tests)}}

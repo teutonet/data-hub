@@ -1,0 +1,5 @@
+{{- define "sensor-ingestion.lorawanReceiver.env" -}}
+- name: OAUTHLIB_INSECURE_TRANSPORT # this is only as acceptable as the unencrypted traffic from the ingress controller inside the same Kubernetes cluster!
+  value: "1"
+{{- end -}}
+{{ include "sensor-ingestion.standard.serviceDeployment" (merge (dict "name" "lorawanReceiver" "networkLabels" (list "http" "input")) .) }}

@@ -1,0 +1,25 @@
+clientId: mdb
+redirectUris:
+  - https://mdb.example.com/oauth2/callback
+webOrigins:
+  - +
+publicClient: true
+defaultClientScopes: []
+optionalClientScopes: []
+attributes:
+  access.token.lifespan: 300
+protocolMappers:
+  - name: projects
+    protocol: openid-connect
+    protocolMapper: oidc-hardcoded-claim-mapper
+    config:
+      claim.name: projects
+      claim.value: '["some-project", "other-project"]'
+      jsonType.label: JSON
+      access.token.claim: 'true'
+  - name: audience-mdb
+    protocol: openid-connect
+    protocolMapper: oidc-audience-mapper
+    config:
+      included.custom.audience: mdb
+      access.token.claim: 'true'

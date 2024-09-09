@@ -1,0 +1,54 @@
+mutation (
+	$project: String!
+	$thingId: UUID!
+	$deveui: String!
+	$sensorId: UUID!
+	$labelId: UUID!
+	$metricId: UUID!
+) {
+	createSensor(input: { sensor: { project: $project, name: "sensorXYZ", id: $sensorId } }) {
+		clientMutationId
+	}
+	createThing(
+		input: {
+			thing: {
+				project: $project
+				name: "thingXYZ"
+				sensorId: $sensorId
+				id: $thingId
+				deveui: $deveui
+			}
+		}
+	) {
+		clientMutationId
+	}
+	label: createProperty(
+		input: { property: { project: $project, id: $labelId, name: "labelXYZ" } }
+	) {
+		clientMutationId
+	}
+	labelProperty: createSensorProperty(
+		input: {
+			sensorProperty: {
+				sensorId: $sensorId
+				propertyId: $labelId
+				project: $project
+				alias: "labelXYZ"
+			}
+		}
+	) {
+		clientMutationId
+	}
+	metric: createProperty(
+		input: {
+			property: { project: $project, id: $metricId, name: "metricXYZ", metricName: "metricNameXYZ" }
+		}
+	) {
+		clientMutationId
+	}
+	metricProperty: createSensorProperty(
+		input: { sensorProperty: { sensorId: $sensorId, propertyId: $metricId, project: $project } }
+	) {
+		clientMutationId
+	}
+}

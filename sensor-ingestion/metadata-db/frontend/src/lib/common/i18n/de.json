@@ -1,0 +1,451 @@
+{
+	"shared": {
+		"keycloakAPI": {
+			"resourceNameInvalid": "Name darf nur Zahlen und Kleinbuchstaben enthalten, dazwischen können Bindestriche verwendet werden.",
+			"requestErros": {
+				"unauthorized": "Fehler bei der Authentifizierung",
+				"forbidden": "Sie haben keine Berechtigung diese Aktion auszuführen",
+				"conflict": "Es existiert bereits eine Resource mit dem selben Namen"
+			}
+		},
+		"message": {
+			"savedSuccessfully": "Erfolgreich gespeichert",
+			"deletedSuccessfully": "Erfolgreich gelöscht",
+			"networkError": "Netzwerkfehler",
+			"networkErrorDetail": "Bitte überprüfen Sie Ihre Netzwerkverbindung oder versuchen Sie es später erneut.",
+			"graphqlError": "Fehler",
+			"graphqlErrorDetail": "Bitte versuchen Sie es später erneut. Wenn das Problem weiterbesteht kontaktieren Sie bitte den Support.",
+			"errorSaving": "Beim Speichern sind Probleme aufgetreten",
+			"responseError": "Fehlerhafte Serverantwort",
+			"authorizationError": "Fehler bei der Authentifizierung: Status {status}",
+			"yes": "Ja",
+			"no": "Nein"
+		},
+		"action": {
+			"continue": "Fortfahren",
+			"abort": "Abbrechen",
+			"close": "Schließen",
+			"create": "Erstellen",
+			"save": "Speichern",
+			"delete": "Löschen"
+		},
+		"breadcrumbs": {
+			"home": "Startseite",
+			"tenants": "Tenants",
+			"tenant": "Tenant {tenant}",
+			"projects": "Projekte",
+			"project": "Projekt {project}",
+			"groups": "Gruppen",
+			"group": "Gruppe {group}",
+			"permissions": "Berechtigungen",
+			"permission": "Berechtigung {permission}",
+			"newPermission": "Neue Berechtigung"
+		}
+	},
+	"component": {
+		"permissions": {
+			"name": "Name",
+			"groups": "Gruppe/n",
+			"scopes": "Scope/s",
+			"create": "Neue Berechtigung anlegen",
+			"list": {
+				"noExistingPermissions": "Keine existierenden Berechtigungen",
+				"deleteModal": {
+					"title": "Berechtigung wirklich löschen?",
+					"body": "Wollen sie diese Berechtigung wirklich löschen? Diese Aktion ist nicht reversibel."
+				}
+			},
+			"edit": {
+				"nameNewNotAllowed": "Der Name \"new\" kann nicht verwendet werden",
+				"scopesMustBeSpecified": "Es muss mindestens ein Scope angegeben werden",
+				"groupsMustBeSpecified": "Es muss mindestens eine Gruppe ausgewählt werden",
+				"otherOptionsThenAllUnselectedWarningMessage": "'Alle' Option Hinweis",
+				"otherOptionsThenAllUnselectedWarningMessageDetails": "Sie haben die Option 'Alle' gewählt, daher wurden die einzelnen Gruppen abgewählt. Um wieder einzelne Gruppen auszuwählen entfernen Sie zuerst die Option 'Alle'"
+			}
+		},
+		"activeProjectSelector": {
+			"select": "Projekt auswählen",
+			"projectName": "Projekt: {name}"
+		},
+		"nav": {
+			"brand": "MetaData_DB",
+			"newSensors": "Neue Sensoren",
+			"overview": "Übersicht",
+			"sensors": "Sensoren",
+			"sensortypes": "Sensortypen",
+			"createSensor": "Sensor erstellen",
+			"properties": "Eigenschaften",
+			"allProjects": "Alle Projekte",
+			"projectApi": "Projektressource in API",
+			"projectApiDesc": "Erstellen und Rotieren von Sensor Credentials etc."
+		},
+		"validatedFormField": {
+			"maxLength": "{value} Zeichen übrig"
+		},
+		"userDropdown": {
+			"title": "Benutzermenü",
+			"logout": "Logout",
+			"login": "Login"
+		},
+		"projectOverview": {
+			"description": {
+				"newSensors": "Übersicht über neu angelegte Sensoren, die bereit sind konfiguriert zu werden.",
+				"properties": "Liste an Sensoreigenschaften, die dem Projekt bekannt sind.",
+				"sensors": "Liste aller dem Projekt bekannten, verfügbaren Sensoren.",
+				"sensorTypes": "Liste aller dem Projekt bekannten, verfügbaren Sensortypen.",
+				"createSensor": "Erstellen sie einen neuen Sensor (DevEUI benötigt),"
+			}
+		},
+		"sensorsOverview": {
+			"allSensors": "Alle Sensoren",
+			"id": "Id",
+			"name": "Name",
+			"project": "Projekt",
+			"datasheet": "Datasheet",
+			"description": "Beschreibung",
+			"filterHeader": "Filter ({number, plural, one {1 Eintrag} other {{number} Einträge}})",
+			"filterHeaderFiltered": "Filter ({filteredNumber} von {number, plural, one {1 Eintrag} other {{number} Einträgen}})",
+			"nameFilterHeader": "Name",
+			"idFilterHeader": "ID",
+			"projectFilterHeader": "Projekt",
+			"resetFilters": "Filter zurücksetzen"
+		},
+		"sensorFind": {
+			"pleaseSelect": "Bitte Auswählen",
+			"select": "Auswählen",
+			"labels": "Label",
+			"metrics": "Metriken",
+			"noSensorFound": "Kein passender Sensortyp gefunden",
+			"propertiesNotFoundInPayload": "Nicht in der Payload enthaltene Eigenschaften"
+		},
+		"thingsOverview": {
+			"all": "Alle",
+			"id": "Id",
+			"name": "Name",
+			"project": "Projekt",
+			"sensorId": "Sensor-Id",
+			"sensorType": "Sensortyp",
+			"status": "Status",
+			"projectSelectName": "Projekte",
+			"filterHeader": "Filter ({number, plural, one {1 Eintrag} other {{number} Einträge}})",
+			"filterHeaderFiltered": "Filter ({filteredNumber} von {number, plural, one {1 Eintrag} other {{number} Einträgen}})",
+			"projectFilterHeader": "Projekt",
+			"nameFilterHeader": "Name",
+			"sensorTypeFilterHeader": "Sensortyp",
+			"statusFilterHeader": "Status",
+			"resetFilters": "Filter zurücksetzen"
+		},
+		"thingsImport": {
+			"title": "Sensoren CSV Import",
+			"defaultActivate": "Sensoren als 'aktiviert' anlegen",
+			"importToDatabase": "Sensoren in die Datenbank importieren",
+			"problems": "Probleme",
+			"failure": "Import Fehlgeschlagen",
+			"nameDuplicate": "Ein Sensor gleichen Namens wurde bereits angelegt, ein partieller Import wird aktuell nicht unterstützt",
+			"success": "Import Erfolgreich",
+			"successDetail": "{count, plural, =1 {# Sensor wurde} other {Alle # Sensoren wurden}} erfolgreich importiert",
+			"downloadTemplate": "Vorlage herunterladen",
+			"importError": {
+				"fileTooBig": "Die Datei ist zu groß, um verarbeitet werden zu können",
+				"wrongHeaders": "Das Spaltenschema ist invalide, bitte benutzen Sie die oben verlinkte CSV-Datei als Vorlage",
+				"required": "Zeile {row}: Spalte \"{property}\" darf nicht leer sein",
+				"sensortypeNotFound": "Zeile {row}: Sensortyp \"{sensorType}\" wurde nicht gefunden"
+			}
+		},
+		"propertiesOverview": {
+			"project": "Projekt",
+			"name": "Name",
+			"measure": "Messeinheit",
+			"metricName": "Metrikname",
+			"filterHeader": "Filter ({number, plural, one {1 Eintrag} other {{number} Einträge}})",
+			"filterHeaderFiltered": "Filter ({filteredNumber} von {number, plural, one {1 Eintrag} other {{number} Einträgen}})",
+			"projectFilterHeader": "Projekt",
+			"nameFilterHeader": "Name",
+			"measureFilterHeader": "Messeinheit",
+			"metricNameFilterHeader": "Metrikname",
+			"resetFilters": "Filter zurücksetzen"
+		},
+		"welcomeBanner": {
+			"heading": "Willkommen im MetaData_DB Hub",
+			"description": "Hier können Sie ihre Sensordaten einsehen, Gruppen verwalten"
+		},
+		"sensorEdit": {
+			"id": "Sensortyp-ID",
+			"name": "Sensorname",
+			"description": "Beschreibung",
+			"datasheet": "Datasheet",
+			"project": "Projekt",
+			"appeui": "appeui",
+			"public": "Öffentlich",
+			"editAndDeleteWarning": "Wenn Eigenschaften entfernt oder der Sensortyp gelöscht wird, werden Offsets, die für Geräte dieses Sensortyps oder die gelöschte Eigenschaft definiert sind, gelöscht.",
+			"sensorHasThings": "Es gibt noch {numberOfThings} Sensoren diese Sensortyps. Es müssen erst alle Sensoren diese Typs gelöscht werden, um den Sensortyp zu löschen.",
+			"deleteModal": {
+				"body": "Wollen sie den Sensortyp wirklich löschen? Diese Aktion ist nicht reversibel.",
+				"title": "Sensortyp wirklich löschen?"
+			},
+			"sensorProp": {
+				"measureHeader": "Messeinheit",
+				"nameAliasHeader": "Name oder Alias",
+				"metricNameHeader": "Metrikname",
+				"newSensorPropButton": "Neue Sensoreigenschaft",
+				"noProps": "Keine Sensoreigenschaften gefunden",
+				"propertySelect": "Eigenschaft",
+				"newPropButton": "Neue Eigenschaft anlegen",
+				"newPropertyOption": "Neue Eigenschaft",
+				"newSensorPropAliasLabel": "Alias",
+				"newPropNameLabel": "Name",
+				"newPropMeasureLabel": "Messeinheit",
+				"newPropMetricNameLabel": "Metrikname",
+				"newPropDescriptionLabel": "Beschreibung",
+				"newPropModalTitle": "Neue Eigenschaft erstellen",
+				"newSensorPropModalTitle": "Neue Sensoreigenschaft erstellen",
+				"editSensorPropModalTitle": "Sensoreigenschaft bearbeiten",
+				"editButton": "Bearbeiten",
+				"nameAlias": "{name} (Alias: {alias})",
+				"propSelectHelper": "Sie müssen eine Eigenschaft auswählen",
+				"noPropsCreated": "Noch keine Sensoreigenschaften erstellt",
+				"propOption": "{name} (Einheit: {unit}, Metrikname: {metricName})",
+				"deleteModalTitle": "Sensoreigenschaft wirklich löschen?",
+				"deleteModalBody": "Wollen Sie die Sensoreigenschaft wirklich löschen? Diese Aktion ist nicht rückgängig zu machen.",
+				"newSensorPropWriteDeltaLabel": "Zusätzlich Delta-Zeitreihen schreiben",
+				"writeDeltaHeader": "Delta-Zeitreihen"
+			}
+		},
+		"propertyEdit": {
+			"id": "ID",
+			"project": "Projekt",
+			"name": "Name",
+			"measure": "Messeinheit",
+			"description": "Beschreibung",
+			"metricName": "Metrikname",
+			"deleteModal": {
+				"title": "Eigenschaft wirklich löschen?",
+				"body": "Wollen sie die Eigenschaft wirklich löschen? Diese Aktion ist nicht reversibel."
+			}
+		},
+		"map": {
+			"openMap": "Karte öffnen"
+		}
+	},
+	"sensorTypeAutodetect": {
+		"nameHead": "Name",
+		"appeuiHead": "App-EUI",
+		"labelsHead": "Labels",
+		"metricsHead": "Metriken",
+		"unusedKeysHead": "Unbenutzte Schlüssel",
+		"missingKeysHead": "Fehlende Schlüssel",
+		"buttonText": "Neue Sensoren automatisch zuordnen",
+		"sensorTypesSaved": "Sensortyp {number} neuen Geräten zugeordnet",
+		"noThings": "Keine neuen Geräte ohne Sensortyp gefunden",
+		"modalTitle": "Neue Geräte ohne Sensortyp",
+		"modalExplanation": "Wählen Sie die Geräte aus, denen Sie den Sensortyp {sensorTypeName} zuweisen wollen.",
+		"toggleAllCheckboxName": "Alle Geräte auswählen",
+		"matchCheckboxName": "Gerät {name} auswählen"
+	},
+	"thingOffsetList": {
+		"metric": "Metrik",
+		"offsetType": "Offset-Typ",
+		"offsetValue": "Offset-Wert",
+		"newOffsetButton": "Neues Offset anlegen",
+		"offsetMetricNameSelectLabel": "Metrik",
+		"offsetTypeSelectLabel": "Offset-Typ",
+		"offsetValueInputLabel": "Offset-Wert",
+		"offsetTypes": {
+			"ADD": "+",
+			"SUB": "-",
+			"MULT": "*",
+			"DIV": "/"
+		},
+		"noOffsets": "Keine Offsets gefunden",
+		"deleteModalTitle": "Offset löschen?",
+		"deleteModalBody": "Wollen Sie das Offset für die Metrik {metricName} wirklich löschen?",
+		"divisionByZero": "Division durch 0 ist nicht erlaubt!"
+	},
+	"sensorView": {
+		"offsetsHeading": "Offsets",
+		"newlyCreatedAlert": "Dieser Sensor wurde soeben hinzugefügt, Bitte überprüfen Sie die Konfiguration des Gerätes",
+		"editOrDeleteWarning": "Wenn der Typ des Sensors geändert wird, werden alle konfigurierten Offsets gelöscht",
+		"information": "Informationen",
+		"general": "Allgemeine Informationen",
+		"sensorType": "Sensortyp",
+		"sensorLocation": "Sensor Standort",
+		"location": "Standort",
+		"findSensortype": "Sensortyp finden",
+		"noSensorType": "Ohne Sensortypen",
+		"sensorProperties": {
+			"properties": "Eigenschaften",
+			"measure": "Messwert",
+			"metricName": "Metriknamen",
+			"name": "Name",
+			"key": "Schlüssel",
+			"value": "Wert"
+		},
+		"map": {
+			"location": "Ort",
+			"description": "Beschreibung",
+			"latitude": "Breitengrad (latitude)",
+			"longitude": "Längengrad (longitude)",
+			"altitude": "Höhengrad (altitude)"
+		},
+		"thing": {
+			"id": "Id",
+			"deveui": "DevEUI",
+			"status": "Status",
+			"name": "Name"
+		},
+		"saveSensor": "Änderungen Speichern",
+		"activateSensor": "Speichern & Sensor Aktivieren",
+		"sensorHeader": "Sensor",
+		"deleteModal": {
+			"title": "Sensor wirklich löschen?",
+			"body": "Wollen sie den Sensor wirklich löschen? Diese Aktion ist nicht reversibel."
+		},
+		"createSensor": "Sensor anlegen",
+		"createActivateSensor": "Sensor anlegen & aktivieren",
+		"noPayload": "Keine Payload",
+		"lastPayload": "Letzte Payload",
+		"customLabels": "Benutzerdefinierte Labels",
+		"noCustomLabels": "Keine benutzerdefinierten Labels definiert",
+		"newCustomLabelButton": "Neues benutzerdefiniertes Label erstellen",
+		"customLabelValue": "Wert",
+		"customLabelKey": "Schlüssel",
+		"customLabelValuePatternMismatch": "Wert darf keine Control-Characters enthalten.",
+		"customLabelKeyPatternMismatch": "Schlüssel darf nicht mit zwei Unterstrichen beginnen oder Sonderzeichen enthalten",
+		"customLabelArrayBroken": "Label-Liste fehlerhaft",
+		"customLabelNotFound": "Label nicht gefunden",
+		"newKeyMissing": "Schlüssel fehlt",
+		"duplicateKey": "Schlüssel mit diesem Namen existiert schon",
+		"editCustomLabelButton": "Label bearbeiten",
+		"deleteCustomLabelButton": "Label löschen",
+		"customLabelHelperText": "Benutzerdefinierte Label, die dieselben Schlüssel wie existierende Label haben, werden überschrieben. Änderungen an Labels erzeugen eine neue Zeitreihe."
+	},
+	"page": {
+		"hub": {
+			"welcome": "Willkommen im Data HUB",
+			"navigation": "Navigation:",
+			"links": {
+				"keycloak": "Keycloak",
+				"grafana": "Grafana Dashboard",
+				"jupyterhub": "Jupyterhub",
+				"mdb": "MDB",
+				"mdbGraphiql": "MDB-Graphiql",
+				"authApi": "Auth API"
+			}
+		},
+		"apiRoot": {
+			"title": "Auth API",
+			"tenantsLink": "Tenants"
+		},
+		"tenantPage": {
+			"projectsButton": "Projekte",
+			"groupsButton": "Gruppen",
+			"permissionListTitle": "Tenant Berechtigungen"
+		},
+		"groupsList": {
+			"title": "Gruppen",
+			"noGroups": "Keine Gruppen gefunden",
+			"newGroupButton": "Neue Gruppe anlegen",
+			"newGroupModalTitle": "Neue Gruppe",
+			"newGroupExplanation": "Geben Sie den Namen für die neue Gruppe an",
+			"newGroupNameInputLabel": "Gruppenname",
+			"deleteModal": {
+				"title": "Gruppe wirklich löschen?",
+				"body": "Wollen sie diese Gruppe wirklich löschen? Diese Aktion ist nicht reversibel."
+			}
+		},
+		"projectList": {
+			"title": "Projekte",
+			"noProjects": "Keine Projekte gefunden",
+			"newTokenButton": "Neuen Token anlegen",
+			"newProjectButton": "Neues Projekt anlegen",
+			"newProjectModalTitle": "Neues Projekt",
+			"newProjectExplanation": "Geben Sie den Namen für das neue Projekt an",
+			"newProjectNameInputLabel": "Projektname",
+			"permissionListTitle": "Projekt Berechtigungen",
+			"deleteModal": {
+				"title": "Projekt wirklich löschen?",
+				"body": "Wollen sie dieses Projekt wirklich löschen? Diese Aktion ist nicht reversibel."
+			}
+		},
+		"tenantsList": {
+			"title": "Tenants",
+			"noTenants": "Keine Tenants gefunden",
+			"newTenantButton": "Neuen Tenant anlegen",
+			"newTenantModalTitle": "Neuer Tenant",
+			"newTenantExplanation": "Geben Sie den Namen für den neuen Tenant an",
+			"newTenantNameInputLabel": "Tenantname"
+		},
+		"projectOverview": {
+			"title": "Übersicht",
+			"newCredential": "Neu erstellen",
+			"credentialSelector": "Token auswählen",
+			"deleteModal": {
+				"title": "Token wirklich löschen?",
+				"body": "Wollen sie diesen Token wirklich löschen? Diese Aktion ist nicht reversibel."
+			},
+			"apiTokenModal": {
+				"buttonText": "API-Token erneuern",
+				"explanation": "Unten können Sie sich die Credentials kopieren. Bitte bewahren Sie sie gut auf, sie werden nur einmal angezeigt und dann nicht wieder!",
+				"usernameDisplay": "Username",
+				"passwordDisplay": "Passwort",
+				"copy": "Kopieren",
+				"copySuccess": "In Zwischenablage kopiert!",
+				"copyError": "Fehler beim Kopieren",
+				"title": "Zugangsdaten für {sensorCredential} in {project}",
+				"buttonTextCreate": "Token erzeugen",
+				"nameModalTitle": "Namen für Token eingeben",
+				"faultyResponse": "Fehlerhafte Daten",
+				"nameInputLabel": "Token-Name",
+				"endpointLabel": "API-Base-URL: "
+			},
+			"rotateTokenConfirmationModal": {
+				"title": "API-Token wirklich erneuern?",
+				"body": "Durch das Erneuern des Tokens wird das aktuelle Token widerrufen, alle Webhooks, verbundene Endpunkte und Kollektoren, die das aktuelle Token verwenden, müssen daraufhin aktualisiert werden!"
+			}
+		},
+		"newThings": {
+			"title": "Neue Geräte"
+		},
+		"allThings": {
+			"title": "Alle Sensoren"
+		},
+		"overview": {
+			"welcome": "Willkommen im MetaData_DB Hub",
+			"projectNotFound": "Projekt nicht gefunden",
+			"goToOverview": "Zurück zur Übersicht",
+			"explanation": {
+				"part1": "Hier können Sie über alle Projekte hinweg Ihre ",
+				"part2": "verfügbaren Sensoren einsehen",
+				"part3": " und ",
+				"part4": "neue Sensoren konfigurieren"
+			}
+		},
+		"sensorPage": {
+			"title": "Sensor-{name}-{id}",
+			"currentPosition": "Aktuelle Position",
+			"newPosition": "Neue Position",
+			"createSensor": "Neuen Sensor erstellen"
+		},
+		"sensorTypes": {
+			"title": "Sensortypen",
+			"newSensortype": "Neuen Sensortyp erstellen"
+		},
+		"sensortypePage": {
+			"title": "Sensortyp {name} bearbeiten"
+		},
+		"newSensortype": {
+			"title": "Neuen Sensortyp erstellen"
+		},
+		"propertyList": {
+			"title": "Eigenschaften",
+			"newPropertyButton": "Neue Eigenschaft anlegen"
+		},
+		"newProperty": {
+			"title": "Neue Eigenschaft anlegen"
+		},
+		"propertyPage": {
+			"title": "Eigenschaft {name} bearbeiten",
+			"editInfo": "Durch das Ändern des Metriknamens oder das Löschen der Eigenschaft werden sämtliche eingerichteten Offsets die von der Eigenschaft mit diesem Metriknamen abhängen gelöscht"
+		}
+	}
+}

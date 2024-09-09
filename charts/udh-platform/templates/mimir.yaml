@@ -1,0 +1,21 @@
+{{- if not .Values.mimir.minimal -}}
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "mimir") }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "mimir") }}
+  chart:
+    spec:
+      chart: mimir-distributed
+      version: 5.1.0-weekly.249
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+  interval: 1h0m0s
+  targetNamespace: {{ .Release.Namespace }}
+  values:
+    {{ .Values.mimir.config | toYaml | nindent 4 }}
+{{- end -}}

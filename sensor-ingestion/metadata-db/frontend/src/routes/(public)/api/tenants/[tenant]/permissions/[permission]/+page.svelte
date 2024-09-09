@@ -1,0 +1,39 @@
+<script lang="ts">
+	import type { PageData } from './$types';
+	import PermissionEdit from '$lib/permissions/PermissionEdit.svelte';
+	import { apiFetch, fetchGroups, fetchScopes } from '$lib/nav/fetchUtils';
+	import { accessToken } from '$lib/common/auth';
+	import { Spinner } from 'flowbite-svelte';
+	import type { UdhPrincipal } from '$lib/permissions/types';
+
+	export let data: PageData;
+	const tenant = data.tenant;
+	const permission = data.permission;
+
+	let isNew = permission == 'new';
+
+	const groupsPromise = fetchGroups(tenant, $accessToken);
+
+	const scopesPromise = fetchScopes(tenant, null, $accessToken);
+
+	const permissionPromise = isNew
+		? { scopes: [], principals: [] }
+		: apiFetch<{ principals: UdhPrincipal[]; scopes: string[] }>(
+				`data-hub/tenants/${tenant}/permissions/${permission}`,
+				$accessToken,
+				false
+			);
+</script>
+
+{#await Promise.all([permissionPromise, groupsPromise, scopesPromise])}
+	<Spinner />
+{:then responseData}
+	<PermissionEdit
+		{isNew}
+		{tenant}
+		{permission}
+		permissionObject={responseData[0]}
+		selectableGroups={responseData[1]}
+		selectableScopes={responseData[2].all}
+	/>
+{/await}

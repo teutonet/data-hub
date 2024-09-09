@@ -1,0 +1,140 @@
+{{- $name := include "data-hub.name" (dict "context" . "name" "mimir") -}}
+{{- if .Values.mimir.minimal -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: mimir
+  name: {{ $name }}
+spec:
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mimir
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: mimir
+    spec:
+      containers:
+        - name: mimir
+          image: grafana/mimir:r249-12792f6
+          args:
+            - -config.file=/etc/mimir/demo.yaml
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            - mountPath: /etc/mimir
+              name: config
+          ports:
+            - containerPort: 8080
+              name: http
+          
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 30Mi
+            limits:
+              memory: 1000Mi
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: mimir
+  name: {{ include "data-hub.name" (dict "context" . "name" "mimir-nginx") }}
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mimir
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: mimir
+  name: {{ $name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: mimir
+  name: {{ $name }}
+data:
+  demo.yaml: |
+    # Do not use this configuration in production.
+    # It is for demonstration purposes only.
+    multitenancy_enabled: true
+
+    memberlist:
+      cluster_label: mimir
+      cluster_label_verification_disabled: true
+
+    blocks_storage:
+      backend: filesystem
+      bucket_store:
+        sync_dir: /data/tsdb-sync
+      filesystem:
+        dir: /data/data/tsdb
+      tsdb:
+        dir: /data/tsdb
+
+    compactor:
+      data_dir: /data/compactor
+      sharding_ring:
+        kvstore:
+          store: memberlist
+
+    distributor:
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: memberlist
+
+    ingester:
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: memberlist
+        replication_factor: 1
+
+    ruler_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/rules
+
+    server:
+      http_listen_port: 8080
+      log_level: info
+
+    store_gateway:
+      sharding_ring:
+        replication_factor: 1
+{{- end -}}

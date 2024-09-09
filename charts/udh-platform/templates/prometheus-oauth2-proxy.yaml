@@ -1,0 +1,128 @@
+{{- define "udh.jwtIngress" -}}
+{{- $cookieSecretMimirOauthProxySpec := (merge (dict "name" (printf "cookie-secret-mimir-oauth-%s" .name)) .) -}}
+{{- $cookieSecretMimirOauthProxy := include "udh.secret" $cookieSecretMimirOauthProxySpec }}
+{{ include "udh.secretManifest" (merge (dict "value" $cookieSecretMimirOauthProxy) $cookieSecretMimirOauthProxySpec) }}
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" (printf "%s-%s" "mimir-auth" .name)) }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" (printf "%s-%s" "mimir-auth" .name)) }}
+  chart:
+    spec:
+      chart: oauth2-proxy
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ include "data-hub.name" (dict "context" . "name" "oauth2") }}
+  interval: 1h0m0s
+  dependsOn:
+    - name: {{ include "data-hub.name" (dict "context" . "name" "keycloak") }}
+  values:
+    config:
+      clientID: prometheus_{{ .name }}
+      cookieSecret: {{ $cookieSecretMimirOauthProxy | quote }}
+    extraEnv:
+      - name: OAUTH2_PROXY_PROXY_PREFIX
+        value: /oauth2-{{ .name }}
+      - name: OAUTH2_PROXY_PROVIDER
+        value: keycloak-oidc
+      - name: OAUTH2_PROXY_REDIRECT_URL
+        value: https://prometheus.{{ .Values.global.baseDomain }}/oauth2/callback
+      - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+        value: https://{{ include "data-hub.keycloak.hostname" . }}/realms/{{ .Values.keycloak.realm }}
+      - name: OAUTH2_PROXY_COOKIE_CSRF_PER_REQUEST
+        value: "true"
+      - name: OAUTH2_PROXY_SKIP_PROVIDER_BUTTON
+        value: "true"
+      - name: OAUTH2_PROXY_CODE_CHALLENGE_METHOD
+        value: S256
+      - name: OAUTH2_PROXY_SET_XAUTHREQUEST
+        value: "true"
+      - name: OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS
+        value: "true"
+      - name: OAUTH2_PROXY_OIDC_EMAIL_CLAIM
+        # no email needed for this service
+        value: "sub"
+      - name: OAUTH2_PROXY_COOKIE_EXPIRE
+        value: 24h
+    {{- if .Values.fakeCa.name }}
+    extraVolumeMounts:
+      - mountPath: /tls
+        readOnly: true
+        name: ca-cert
+    extraVolumes:
+      - name: ca-cert
+        secret:
+          secretName: {{ .Values.fakeCa.name }}
+          items:
+            - key: ca.crt
+              path: ca.crt
+    extraArgs: ["--provider-ca-file=/tls/ca.crt"]
+    {{- end }}
+    resources: {{- $.Values.prometheusOauth2Proxy.resources | toYaml | nindent 6 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" (printf "mimir-auth-%s" .name)) }}
+  annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.prometheus.ingress.annotations) | nindent 4 }}
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "64k"
+spec:
+  rules:
+  - host: prometheus.{{ .Values.global.baseDomain }}
+    http:
+      paths:
+      - path: /oauth2-{{ .name }}
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "data-hub.name" (dict "context" . "name" (printf "mimir-auth-%s-oauth2-proxy" .name)) }}
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" (printf "prometheus-%s" .name)) }}
+  annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.prometheus.ingress.annotations) | nindent 4 }}
+    nginx.ingress.kubernetes.io/auth-response-headers: Authorization, X-Scope-OrgID
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: {{ .target | quote }}
+    nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2-{{ .name }}/auth
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      auth_request_set $name_upstream_1 $upstream_cookie__oauth2_proxy_1;
+      access_by_lua_block {
+        if ngx.var.name_upstream_1 ~= "" then
+          ngx.header["Set-Cookie"] = "_oauth2_proxy_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
+        end
+      }
+
+      auth_request_set $udh_projects $upstream_http_x_auth_request_groups;
+      proxy_set_header X-Scope-OrgID $udh_projects;
+spec:
+  rules:
+  - host: prometheus.{{ .Values.global.baseDomain }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ include "data-hub.name" (dict "context" . "name" "mimir-nginx") }}
+            port:
+              number: 80
+        path: {{ .path | quote }}
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - prometheus.{{ .Values.global.baseDomain }}
+    secretName: prometheus.{{ .Values.global.baseDomain }}-tls
+{{- end -}}
+{{ include "udh.jwtIngress" (merge (dict
+  "name" "read"
+  "target" "/prometheus/$1"
+  "path" "/(api/v1/(?:query|query_range|format_query|query_exemplars|series|labels?)(?:/.*)?)$") .) }}
+{{ include "udh.jwtIngress" (merge (dict
+  "name" "write"
+  "target" "/api/v1/push"
+  "path" "/api/v1/write$") .) }}

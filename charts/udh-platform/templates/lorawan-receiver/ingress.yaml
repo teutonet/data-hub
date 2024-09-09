@@ -1,0 +1,28 @@
+{{- define "sensor-ingestion.lorawanReceiver.hostname" -}}
+api.{{ .Values.global.baseDomain }}
+{{- end -}}
+{{- if .Values.sensorIngestion.lorawanReceiver.ingress.enabled -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-lorawan-receiver" (include "common.names.fullname" .) | quote }}
+  annotations:
+    {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.lorawanReceiver.ingress.annotations "context" .) | nindent 4 }}
+spec:
+  rules:
+  - host: {{ include "sensor-ingestion.lorawanReceiver.hostname" . }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ printf "%s-lorawan-receiver" (include "common.names.fullname" .) | quote }}
+            port:
+              number: 80
+        path: /api/v1/sensordata
+        pathType: Prefix
+  tls:
+  - hosts:
+    - {{ include "sensor-ingestion.lorawanReceiver.hostname" . }}
+    secretName: {{ include "sensor-ingestion.lorawanReceiver.hostname" . }}-tls
+{{- end -}}

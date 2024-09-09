@@ -1,0 +1,108 @@
+{{- if and .Values.sensorIngestion.metadataDB.enabled .Values.sensorIngestion.metadataDB.postgraphile.ingress.enabled -}}
+---
+{{- $secretName := printf "%s-mdb-auth-cookie-secret" (include "common.names.fullname" .) -}}
+{{- $secretKey := "cookieSecret" -}}
+{{- $cookieSecret := include "common.secrets.passwords.manage" (dict "secret" $secretName "key" $secretKey "providedValues" (list) "length" 32 "failOnNew" false "context" $) | replace "\"" "" | b64dec -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+type: Opaque
+stringData:
+  {{ $secretKey }}: {{ $cookieSecret | quote }}
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ printf "%s-mdb-auth" (include "common.names.fullname" .) | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  releaseName: {{ .Release.Name }}-mdb-auth
+  chart:
+    spec:
+      chart: oauth2-proxy
+      version: 6.20.1
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ printf "%s-oauth2" (include "common.names.fullname" .) | quote }}
+  interval: 1h0m0s
+  timeout: 10m
+  values:
+    config:
+      clientID: {{ .Values.sensorIngestion.metadataDB.postgraphile.ingress.client | quote }}
+      cookieSecret: {{ $cookieSecret | quote }}
+      configFile: email_domains = [ "*" ]
+    alphaConfig:
+      enabled: true
+      configData:
+        injectRequestHeaders:
+        - name: Authorization
+          values:
+          - claim: access_token
+            prefix: 'Bearer '
+        providers:
+        - clientID: mdb
+          clientSecret: unused
+          code_challenge_method: S256
+          id: oidc=mdb
+          loginURLParameters:
+          - default:
+            - force
+            name: approval_prompt
+          {{- if .Values.fakeCa.name }}
+          caFiles:
+            - /tls/ca.crt
+          {{- end }}
+          oidcConfig:
+            audienceClaims: [aud]
+            emailClaim: sub
+            issuerURL: {{ .Values.global.auth.issuer | quote }}
+            userIDClaim: email
+          provider: oidc
+          scope: {{ .Values.sensorIngestion.metadataDB.postgraphile.ingress.scope | quote }}
+        upstreamConfig:
+          upstreams:
+          - id: /
+            path: /
+            uri: {{ printf "http://%s-mdb/" (include "common.names.fullname" .) | quote }}
+    extraArgs:
+      skip-provider-button: true
+      silence-ping-logging: true
+      cookie-refresh: 4m55s
+      cookie-csrf-per-request: true
+      skip-jwt-bearer-tokens: true
+    {{- if .Values.fakeCa.name}}
+    extraVolumeMounts:
+      - mountPath: /tls
+        readOnly: true
+        name: ca-cert
+    extraVolumes:
+      - name: ca-cert
+        secret:
+          secretName: {{ .Values.fakeCa.name }}
+          items:
+            - key: ca.crt
+              path: ca.crt
+    {{- end }}
+    ingress:
+      enabled: true
+      annotations:
+        {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.postgraphile.ingress.annotations "context" .) | nindent 8 }}
+        nginx.ingress.kubernetes.io/proxy-buffer-size: "64k"
+      hosts:
+      - {{ include "sensor-ingestion.mdb.postgraphile.hostname" . }}
+      tls:
+      - hosts:
+        - {{ include "sensor-ingestion.mdb.postgraphile.hostname" . }}
+        secretName: {{ include "sensor-ingestion.mdb.postgraphile.hostname" . }}-tls
+    resources:
+      requests:
+        cpu: 50m
+        memory: 100Mi
+      limits:
+        memory: 300Mi
+    podLabels:
+      {{- include "sensor-ingestion.standard.networkLabels" (merge (dict "networkLabels" (list "http")) .) | nindent 6 }}
+{{- end -}}

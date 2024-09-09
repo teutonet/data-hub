@@ -1,0 +1,156 @@
+global:
+  baseDomain: data-hub.local
+  udhImageRegistry: "localimage.test"
+  auth:
+    issuer: https://login.data-hub.local/realms/udh
+    readyPath: /
+  smtp_base_domain: udh-platform@teuto.net
+  storageClass: standard
+  sslInsecureSkipVerify: true
+  ingress:
+    annotations:
+      kubernetes.io/tls-acme: "true"
+      cert-manager.io/issuer: "udh-test-iss"
+grafana:
+  smtp:
+    enabled: true
+    from_adress: alert@example.com
+    from_name: grafana-local
+    host: feature-mailhog
+    user: ""
+    password: ""
+keycloak:
+  extensions:
+    image:
+      registry: "localimage.test"
+      pullPolicy: IfNotPresent
+      repository: "keycloak-extensions"
+      tag: ""
+      digest: ""
+  testUsers:
+    data-hub-admin:
+      username: data-hub-admin
+      email: data-hub-admin@example.com
+      password: admin
+      clientRoles:
+        realm-management:
+          - manage-realm
+          - query-users
+          - manage-users
+          - query-groups
+    demo:
+      username: demo
+      email: demo-udh-platform@example.com
+      password: demo
+  smtp:
+    fromDisplayName: keycloak-local
+    host: feature-mailhog
+    auth: false
+    ssl: false
+
+mailhog:
+  enabled: true
+  replicas: 2
+  ingress:
+    enabled: true
+
+fakeCa:
+  enabled: true
+  # openssl req -new -x509 -days 3650 -keyout ca.key -out ca.crt -subj "/CN=udp" -addext "basicConstraints=CA:TRUE" -addext "nameConstraints=permitted;DNS:.data-hub.local" -nodes
+  privateKey: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCVHwsqSy5a3a68
+    onX+ZD4Kx9ubLwaBeTE5R2K85u+RHOOhDl/xQIUDc2Vsvwqy5SHJ7hgWkkdpDoqG
+    yhHmeCTEy9v4lXxICMFTq5SLjse3SpVW/XmMbOgPvXIYkKe//OfBIaMddB6vJru3
+    FF7gpzBaJqrLZgI2uHT/iwcPBmmJCYzwVmpRiF+ZRi474SIX4gx6INNtcTJ5AFpx
+    rNS+8ZO/diORDNQE3y4W4iAsZVsm4WvSciPBqdSFBO+cXFDFj5H1ZWfD0bgPVSKX
+    eB7siBUJrrqHxH9MF5+v8rcJYVqc/MJ5rocrFxcBhza6vNtIIwHXecrk3DbFpS9u
+    UT1J6gndAgMBAAECggEABfs8iqoA1j65nVHj6zwQnASXu7IHcAaRMaO6I2sc9WRk
+    AggOU6I7o5+LlDDWiEX2FMAy4abk6+McLdtpm+W6TdWCgYZXeZk2TfmeJ/nma2T3
+    uAlLSJVuuoDmFHOq8uG9VwsXHJ2VhH+IfIe55Yd3Qkp2Q9nX4WOFN+HW+uSOM6Op
+    flvADwY4UgUszsgs6Nd+1xyb7jVxUJ9GMiUeB9+tWVu4Uv14XS9R5qjfyQPdRQ8c
+    5gqh+E8k4vJC/8Ina0SvUY0ol/2KhqrRkvaTXF0TX/BJc0VKVtiEddqG/DNf3pK+
+    VflkpbMRQqF751oz6CNLGJDdwsy2ycJb6S3EwnAckQKBgQDLhIyfhxNRGsl6UEAw
+    1WbXFxyhUG7luG0tTPKxb1tEM3WI0Rgpiro4s3go4x3nYkDQ14/e+fnZJ+Ssab97
+    7GxAx9ENN0EDWDWwMrWUhdhFsQkGbgjckfomomNbFbP8ZLV7bSLm4eQ7qq00rHMR
+    MwHoyVLVlgHcClK2i1T/417cDQKBgQC7k3LiZ3y9pDMlO1C6PFS5TulQP0z91wmp
+    m+U85ktHSkLO7XRTva/kz4Ir4n/VpaujacDXGy8Gh6T0VqeGxxAftT0VOJUJtjy2
+    OAu30Anwy+kg/s6XMrD7GTLcA87cjqXMWPIclqWznIGtP+tyc6ua1YbTc1/osmWq
+    LxkrSo7hEQKBgBwnR/TBkNCFbh23gEnBG6rhjZpbMBwjOSctH92f0/ZJUBcPJdKJ
+    WF2DpjmxwW9CzkiVqVdlKUT7Gc0oC88u04LaoXa8kAfQagzn1uqm4VYyuVbkXeF1
+    aC90A16UUAO4QsrCPDPIR/RhFfjVak2UyszTHNxjFfrEitCp0aZcY8D5AoGBAKFF
+    3gHQzkxSz/KT9A2bb5C/yxPGyRB6gYFFWywoKNMLgzNcr6aMMZ3918KZhCWRwmfG
+    thl78sufdnDpzDGyFyfb8L+9HU7zU3Gr8E9C3DkfaLqIueD/oXDSsoq9725saxqt
+    4sQ3thIeXtQxX+LQltuR+ND2oqB0Obq/sdkpynyxAoGAatLY6igSk5WOGcoC8GUS
+    ySvAvP1EeqcwElD6mSdt/w2RSRFFwAS/FASCQZ6YGfp7Nef4Gl0w0l8sZ/BCW9DT
+    GhLmQIZJSlIYw3x0AqjmjSXTiLxR2Rbje+X7clxE09Z7WsDXnxaRo0xEf4h8btcM
+    QhKx8WIieVI3myMU2V55+XI=
+    -----END PRIVATE KEY-----
+  certificate: |
+    -----BEGIN CERTIFICATE-----
+    MIIDGjCCAgKgAwIBAgIUZW+5ICamgcpLIDOzakJqLtNBVbUwDQYJKoZIhvcNAQEL
+    BQAwDjEMMAoGA1UEAwwDdWRwMB4XDTI0MDcxODE5MTIyOVoXDTM0MDcxNjE5MTIy
+    OVowDjEMMAoGA1UEAwwDdWRwMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
+    AQEAlR8LKksuWt2uvKJ1/mQ+Csfbmy8GgXkxOUdivObvkRzjoQ5f8UCFA3NlbL8K
+    suUhye4YFpJHaQ6KhsoR5ngkxMvb+JV8SAjBU6uUi47Ht0qVVv15jGzoD71yGJCn
+    v/znwSGjHXQerya7txRe4KcwWiaqy2YCNrh0/4sHDwZpiQmM8FZqUYhfmUYuO+Ei
+    F+IMeiDTbXEyeQBacazUvvGTv3YjkQzUBN8uFuIgLGVbJuFr0nIjwanUhQTvnFxQ
+    xY+R9WVnw9G4D1Uil3ge7IgVCa66h8R/TBefr/K3CWFanPzCea6HKxcXAYc2urzb
+    SCMB13nK5Nw2xaUvblE9SeoJ3QIDAQABo3AwbjAdBgNVHQ4EFgQUA1v2dOI10zpn
+    /gqz680H6FjzvTkwHwYDVR0jBBgwFoAUA1v2dOI10zpn/gqz680H6FjzvTkwDAYD
+    VR0TBAUwAwEB/zAeBgNVHR4EFzAVoBMwEYIPLmRhdGEtaHViLmxvY2FsMA0GCSqG
+    SIb3DQEBCwUAA4IBAQAKyDDVR+hGvPOz0e/B/Ll7UuZ7o50G7cq0MhM6lGDbWX/b
+    b7Xb/vk7+U0+qv8n9JYYN1yB1LlafIJrx72tkMUio0wHcrRgbvamM95uArkvuXQJ
+    4IbjsmFkJ4ap3jNjDMgrlEla7el1gJaVMj/eowAvGSRwGy7GR8NSiZVHmBQ9dv5G
+    y+7rynTzF5/hOrVjAszfJke7aLBSfPzi+tiChboweAdsdxonwBTCO4+w0yNAvgZX
+    /L3YF07NzwrFf8LPoCWxaZ9zngPGAJ78RhMXUbLAGdoNjjyAHOfDKgCfS9niDe6B
+    4q5wZxr0CxADqNuRnlLn0ykjpQG6EnDQVT1Qh7kS
+    -----END CERTIFICATE-----
+  name: "udh-test-iss"
+
+objectStorage:
+  enabled: false
+
+grafanaPublicSync:
+  syncIntervalSeconds: 3
+  image:
+    repository: grafana-public-sync
+    pullPolicy: IfNotPresent
+
+mimir:
+  minimal: true
+
+geojsonExport:
+  image:
+    repository: geojson-export
+    pullPolicy: IfNotPresent
+
+sensorIngestion:
+  metadataDB:
+    migrations:
+      image:
+        registry: "localhost:5000"
+        pullPolicy: IfNotPresent
+        repository: sensor-ingestion/metadata-db/migrations
+    frontend:
+      image:
+        registry: "localhost:5000"
+        pullPolicy: IfNotPresent
+        repository: sensor-ingestion/metadata-db/frontend
+      sentry:
+        dsn: "https://b9d6941e30a946fbb7015038e4b7d923@glitchtip.stg.teuto.dev/5"
+    postgraphile:
+      image:
+        registry: "localhost:5000"
+        pullPolicy: IfNotPresent
+        repository: sensor-ingestion/metadata-db/postgraphile
+  lorawanReceiver:
+    image:
+      pullPolicy: IfNotPresent
+      repository: lorawan-receiver
+  prometheusWriter:
+    prometheus:
+      url: https://prometheus.data-hub.local/api/v1/write
+    image:
+      pullPolicy: IfNotPresent
+      repository: prometheus-remote-write

@@ -1,0 +1,80 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+spec:
+  interval: 1h0m0s
+  url: https://jupyterhub.github.io/helm-chart/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+  chart:
+    spec:
+      chart: jupyterhub
+      version: 3.2.1
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+  interval: 1h0m0s
+  targetNamespace: {{ .Release.Namespace }}
+  values:
+    fullnameOverride: null # default is empty string which removes all prefixes
+    ingress:
+      enabled: true
+      hosts:
+        - {{ include "data-hub.jupyterhub.hostname" . }}
+      annotations: {{- include "udh.ingress.annotations" (dict "context" $ "annotations" .Values.jupyterhub.ingress.annotations) | nindent 8 }}
+      tls:
+        - hosts:
+          - {{ include "data-hub.jupyterhub.hostname" . }}
+          secretName: {{ include "data-hub.jupyterhub.hostname" . }}-tls
+    hub:
+      networkPolicy:
+        egress:
+          - ports:
+            - port: 6443
+      config:
+        GenericOAuthenticator:
+          client_id: jupyterhub
+          authorize_url: "https://{{ include "data-hub.keycloak.hostname" . }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/auth"
+          token_url: "https://{{ include "data-hub.keycloak.hostname" . }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/token"
+          userdata_url: "https://{{ include "data-hub.keycloak.hostname" . }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/userinfo"
+          scope: [openid, email, profile]
+          username_claim: sub # ensures that the user ALWAYS keeps their data (and only theirs!) across email address and username changes
+          allow_all: true
+          login_service: Data HUB
+          validate_server_cert: {{ .Values.fakeCa.enabled | ternary "false" "true" }}
+        Authenticator:
+          auto_login: true
+        JupyterHub:
+          authenticator_class: generic-oauth
+        KubeSpawner:
+          volume_mounts:
+            - name: volume-{username}
+              mountPath: /home/jovyan
+              subPath: data
+      resources: {{- $.Values.jupyterhub.hub.resources | toYaml | nindent 8 }}
+    prePuller:
+      resources: {{- $.Values.jupyterhub.prePuller.resources | toYaml | nindent 8 }}
+    scheduling:
+      userScheduler:
+        enabled: false
+    singleuser:
+      storage:
+        dynamic:
+          pvcNameTemplate: {{ printf "%s-{username}" (include "data-hub.name" (dict "context" . "name" "jupyterhub")) | quote }}
+    proxy:
+      service:
+        type: ClusterIP
+      chp:
+        resources: {{- $.Values.jupyterhub.proxy.chp.resources | toYaml | nindent 10 }}
+      traefik:
+        resources: {{- $.Values.jupyterhub.proxy.traefik.resources | toYaml | nindent 10 }}
+      secretSync:
+        resources: {{- $.Values.jupyterhub.proxy.secretSync.resources | toYaml | nindent 10 }}

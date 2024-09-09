@@ -1,0 +1,129 @@
+{{- if .Values.sensorIngestion.networkPolicy.enabled -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) "default-deny" | quote }}
+spec:
+  podSelector:
+    matchLabels:
+      network-release-name: {{ .Release.Name | quote }}
+  policyTypes:
+    - Ingress
+    - Egress
+{{ if .Values.sensorIngestion.networkPolicy.broadAllowRules -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) "allow-egress" | quote }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: network-release-name
+        operator: In
+        values: [{{ .Release.Name | quote }}]
+      - key: network-no-egress
+        operator: DoesNotExist
+        values: []
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16]
+    - to:
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) "allow-ingress" | quote }}
+spec:
+  podSelector:
+    matchLabels:
+      network-release-name: {{ .Release.Name | quote }}
+      network-http: "true"
+  policyTypes:
+    - Ingress
+  ingress:
+    - {}
+{{ end }}
+
+{{ include "sensor-ingestion.standard.networkPolicy" (merge (dict "name" "input-write"
+"src" (dict "network-input" "true")
+"dst" (dict "network-write" "true")) .) }}
+
+{{ include "sensor-ingestion.standard.networkPolicy" (merge (dict "name" "promwrite-mdb"
+"src" (dict "app.kubernetes.io/component" "prometheus-writer")
+"dst" (dict "app.kubernetes.io/component" "postgraphile")) .) }}
+
+{{ include "sensor-ingestion.standard.networkPolicy" (merge (dict "name" "oauth-mdb"
+"src" (dict "app.kubernetes.io/component" "authentication-proxy")
+"dst" (dict "app.kubernetes.io/component" "postgraphile" "app.kubernetes.io/part-of" "metadata-db")) .) }}
+
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) "postgraphile-db" | quote }}
+spec:
+  podSelector:
+    matchLabels:
+      network-release-name: {{ .Release.Name | quote }}
+      app.kubernetes.io/component: postgraphile
+      app.kubernetes.io/part-of: metadata-db
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              application: spilo
+              cluster-name: {{ printf "%s-udh-platform-postgres" .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) "allow-nginx-egress" | quote }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: network-release-name
+        operator: In
+        values: [{{ .Release.Name | quote }}]
+      - key: network-no-egress
+        operator: DoesNotExist
+        values: []
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: ingress-nginx
+              app.kubernetes.io/name: ingress-nginx
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+{{ end }}

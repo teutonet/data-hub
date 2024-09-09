@@ -1,0 +1,2445 @@
+"""The root query type which gives access points into the data universe."""
+type Query implements Node {
+  """
+  Exposes the root query type nested one level down. This is helpful for Relay 1
+  which can only query top level fields if they are in a particular form.
+  """
+  query: Query!
+
+  """
+  The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`.
+  """
+  nodeId: ID!
+
+  """Fetches an object given its globally unique `ID`."""
+  node(
+    """The globally unique `ID`."""
+    nodeId: ID!
+  ): Node
+
+  """Reads a set of `Property`."""
+  properties(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `Property`."""
+    orderBy: [PropertiesOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: PropertyCondition
+  ): [Property!]
+
+  """Reads a set of `PublicQuery`."""
+  publicQueries(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `PublicQuery`."""
+    orderBy: [PublicQueriesOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: PublicQueryCondition
+  ): [PublicQuery!]
+
+  """Reads a set of `Sensor`."""
+  sensors(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `Sensor`."""
+    orderBy: [SensorsOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SensorCondition
+  ): [Sensor!]
+
+  """Reads a set of `SensorProperty`."""
+  sensorProperties(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `SensorProperty`."""
+    orderBy: [SensorPropertiesOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SensorPropertyCondition
+  ): [SensorProperty!]
+
+  """Reads a set of `Thing`."""
+  things(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `Thing`."""
+    orderBy: [ThingsOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ThingCondition
+  ): [Thing!]
+
+  """Reads a set of `ThingOffset`."""
+  thingOffsets(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `ThingOffset`."""
+    orderBy: [ThingOffsetsOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ThingOffsetCondition
+  ): [ThingOffset!]
+  property(id: UUID!): Property
+  publicQuery(project: String!, name: String!): PublicQuery
+  sensorByProjectAndName(project: String!, name: String!): Sensor
+  sensor(id: UUID!): Sensor
+  sensorProperty(sensorId: UUID!, propertyId: UUID!): SensorProperty
+  thingByProjectAndName(project: String!, name: String!): Thing
+  thing(id: UUID!): Thing
+  thingOffset(id: UUID!): ThingOffset
+  thingOffsetByThingIdAndMetricName(thingId: UUID!, metricName: String!): ThingOffset
+  accessToProject(project: String): Boolean
+  accessToProjects(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [String]
+  checkCustomLabelsFormat(arr: [String]): Boolean
+  findForPropertySuperset(
+    propertyNames: [String]
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [UUID]
+  findWithIdenticalProperties(
+    propertyNames: [String]
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [UUID]
+
+  """Reads a single `Property` using its globally unique `ID`."""
+  propertyByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Property`."""
+    nodeId: ID!
+  ): Property
+
+  """Reads a single `PublicQuery` using its globally unique `ID`."""
+  publicQueryByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `PublicQuery`.
+    """
+    nodeId: ID!
+  ): PublicQuery
+
+  """Reads a single `Sensor` using its globally unique `ID`."""
+  sensorByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Sensor`."""
+    nodeId: ID!
+  ): Sensor
+
+  """Reads a single `SensorProperty` using its globally unique `ID`."""
+  sensorPropertyByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `SensorProperty`.
+    """
+    nodeId: ID!
+  ): SensorProperty
+
+  """Reads a single `Thing` using its globally unique `ID`."""
+  thingByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Thing`."""
+    nodeId: ID!
+  ): Thing
+
+  """Reads a single `ThingOffset` using its globally unique `ID`."""
+  thingOffsetByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `ThingOffset`.
+    """
+    nodeId: ID!
+  ): ThingOffset
+}
+
+"""An object with a globally unique `ID`."""
+interface Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+}
+
+type Property implements Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  project: String
+  id: UUID!
+  name: String!
+  description: String
+  measure: String
+  metricName: String
+
+  """Reads and enables pagination through a set of `SensorProperty`."""
+  sensorProperties(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `SensorProperty`."""
+    orderBy: [SensorPropertiesOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SensorPropertyCondition
+  ): [SensorProperty!]!
+}
+
+"""
+A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122).
+"""
+scalar UUID
+
+type SensorProperty implements Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  project: String!
+  sensorId: UUID!
+  propertyId: UUID!
+  alias: String
+  public: Boolean
+  writeDelta: Boolean!
+
+  """Reads a single `Sensor` that is related to this `SensorProperty`."""
+  sensor: Sensor
+
+  """Reads a single `Property` that is related to this `SensorProperty`."""
+  property: Property
+}
+
+type Sensor implements Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  project: String!
+  id: UUID!
+  name: String!
+  description: String
+  appeui: String
+  datasheet: String
+  public: Boolean!
+
+  """Reads and enables pagination through a set of `SensorProperty`."""
+  sensorProperties(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `SensorProperty`."""
+    orderBy: [SensorPropertiesOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SensorPropertyCondition
+  ): [SensorProperty!]!
+
+  """Reads and enables pagination through a set of `Thing`."""
+  things(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `Thing`."""
+    orderBy: [ThingsOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ThingCondition
+  ): [Thing!]!
+}
+
+"""Methods to use when ordering `SensorProperty`."""
+enum SensorPropertiesOrderBy {
+  NATURAL
+  PROJECT_ASC
+  PROJECT_DESC
+  SENSOR_ID_ASC
+  SENSOR_ID_DESC
+  PROPERTY_ID_ASC
+  PROPERTY_ID_DESC
+  ALIAS_ASC
+  ALIAS_DESC
+  PUBLIC_ASC
+  PUBLIC_DESC
+  WRITE_DELTA_ASC
+  WRITE_DELTA_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+A condition to be used against `SensorProperty` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input SensorPropertyCondition {
+  """Checks for equality with the object’s `project` field."""
+  project: String
+
+  """Checks for equality with the object’s `sensorId` field."""
+  sensorId: UUID
+
+  """Checks for equality with the object’s `propertyId` field."""
+  propertyId: UUID
+
+  """Checks for equality with the object’s `alias` field."""
+  alias: String
+
+  """Checks for equality with the object’s `public` field."""
+  public: Boolean
+
+  """Checks for equality with the object’s `writeDelta` field."""
+  writeDelta: Boolean
+}
+
+type Thing implements Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  project: String!
+  id: UUID!
+  name: String!
+  appid: String
+  devid: String
+  deveui: String
+  lat: BigFloat
+  long: BigFloat
+  status: String
+  install: Boolean
+  altitude: String
+  public: Boolean
+  ownedby: String
+  locationname: String
+  locationdesc: String
+  sensorId: UUID
+  geohash: String
+  payload: JSON
+  lastValues: JSON
+  customLabels: [String]
+
+  """Reads a single `Sensor` that is related to this `Thing`."""
+  sensor: Sensor
+
+  """Reads and enables pagination through a set of `ThingOffset`."""
+  thingOffsets(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `ThingOffset`."""
+    orderBy: [ThingOffsetsOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ThingOffsetCondition
+  ): [ThingOffset!]!
+}
+
+"""
+A floating point number that requires more precision than IEEE 754 binary 64
+"""
+scalar BigFloat
+
+"""
+A JavaScript object encoded in the JSON format as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+type ThingOffset implements Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  project: String!
+  id: UUID!
+  thingId: UUID!
+  metricName: String!
+  offsetType: OffsetType!
+  offsetValue: BigFloat!
+
+  """Reads a single `Thing` that is related to this `ThingOffset`."""
+  thing: Thing
+}
+
+enum OffsetType {
+  MULT
+  DIV
+  SUB
+  ADD
+}
+
+"""Methods to use when ordering `ThingOffset`."""
+enum ThingOffsetsOrderBy {
+  NATURAL
+  PROJECT_ASC
+  PROJECT_DESC
+  ID_ASC
+  ID_DESC
+  THING_ID_ASC
+  THING_ID_DESC
+  METRIC_NAME_ASC
+  METRIC_NAME_DESC
+  OFFSET_TYPE_ASC
+  OFFSET_TYPE_DESC
+  OFFSET_VALUE_ASC
+  OFFSET_VALUE_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+A condition to be used against `ThingOffset` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input ThingOffsetCondition {
+  """Checks for equality with the object’s `project` field."""
+  project: String
+
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `thingId` field."""
+  thingId: UUID
+
+  """Checks for equality with the object’s `metricName` field."""
+  metricName: String
+
+  """Checks for equality with the object’s `offsetType` field."""
+  offsetType: OffsetType
+
+  """Checks for equality with the object’s `offsetValue` field."""
+  offsetValue: BigFloat
+}
+
+"""Methods to use when ordering `Thing`."""
+enum ThingsOrderBy {
+  NATURAL
+  PROJECT_ASC
+  PROJECT_DESC
+  ID_ASC
+  ID_DESC
+  NAME_ASC
+  NAME_DESC
+  APPID_ASC
+  APPID_DESC
+  DEVID_ASC
+  DEVID_DESC
+  DEVEUI_ASC
+  DEVEUI_DESC
+  LAT_ASC
+  LAT_DESC
+  LONG_ASC
+  LONG_DESC
+  STATUS_ASC
+  STATUS_DESC
+  INSTALL_ASC
+  INSTALL_DESC
+  ALTITUDE_ASC
+  ALTITUDE_DESC
+  PUBLIC_ASC
+  PUBLIC_DESC
+  OWNEDBY_ASC
+  OWNEDBY_DESC
+  LOCATIONNAME_ASC
+  LOCATIONNAME_DESC
+  LOCATIONDESC_ASC
+  LOCATIONDESC_DESC
+  SENSOR_ID_ASC
+  SENSOR_ID_DESC
+  GEOHASH_ASC
+  GEOHASH_DESC
+  PAYLOAD_ASC
+  PAYLOAD_DESC
+  LAST_VALUES_ASC
+  LAST_VALUES_DESC
+  CUSTOM_LABELS_ASC
+  CUSTOM_LABELS_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+A condition to be used against `Thing` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input ThingCondition {
+  """Checks for equality with the object’s `project` field."""
+  project: String
+
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `name` field."""
+  name: String
+
+  """Checks for equality with the object’s `appid` field."""
+  appid: String
+
+  """Checks for equality with the object’s `devid` field."""
+  devid: String
+
+  """Checks for equality with the object’s `deveui` field."""
+  deveui: String
+
+  """Checks for equality with the object’s `lat` field."""
+  lat: BigFloat
+
+  """Checks for equality with the object’s `long` field."""
+  long: BigFloat
+
+  """Checks for equality with the object’s `status` field."""
+  status: String
+
+  """Checks for equality with the object’s `install` field."""
+  install: Boolean
+
+  """Checks for equality with the object’s `altitude` field."""
+  altitude: String
+
+  """Checks for equality with the object’s `public` field."""
+  public: Boolean
+
+  """Checks for equality with the object’s `ownedby` field."""
+  ownedby: String
+
+  """Checks for equality with the object’s `locationname` field."""
+  locationname: String
+
+  """Checks for equality with the object’s `locationdesc` field."""
+  locationdesc: String
+
+  """Checks for equality with the object’s `sensorId` field."""
+  sensorId: UUID
+
+  """Checks for equality with the object’s `geohash` field."""
+  geohash: String
+
+  """Checks for equality with the object’s `payload` field."""
+  payload: JSON
+
+  """Checks for equality with the object’s `lastValues` field."""
+  lastValues: JSON
+
+  """Checks for equality with the object’s `customLabels` field."""
+  customLabels: [String]
+}
+
+"""Methods to use when ordering `Property`."""
+enum PropertiesOrderBy {
+  NATURAL
+  PROJECT_ASC
+  PROJECT_DESC
+  ID_ASC
+  ID_DESC
+  NAME_ASC
+  NAME_DESC
+  DESCRIPTION_ASC
+  DESCRIPTION_DESC
+  MEASURE_ASC
+  MEASURE_DESC
+  METRIC_NAME_ASC
+  METRIC_NAME_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+A condition to be used against `Property` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input PropertyCondition {
+  """Checks for equality with the object’s `project` field."""
+  project: String
+
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `name` field."""
+  name: String
+
+  """Checks for equality with the object’s `description` field."""
+  description: String
+
+  """Checks for equality with the object’s `measure` field."""
+  measure: String
+
+  """Checks for equality with the object’s `metricName` field."""
+  metricName: String
+}
+
+type PublicQuery implements Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  project: String!
+  name: String!
+  query: String!
+}
+
+"""Methods to use when ordering `PublicQuery`."""
+enum PublicQueriesOrderBy {
+  NATURAL
+  PROJECT_ASC
+  PROJECT_DESC
+  NAME_ASC
+  NAME_DESC
+  QUERY_ASC
+  QUERY_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+A condition to be used against `PublicQuery` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input PublicQueryCondition {
+  """Checks for equality with the object’s `project` field."""
+  project: String
+
+  """Checks for equality with the object’s `name` field."""
+  name: String
+
+  """Checks for equality with the object’s `query` field."""
+  query: String
+}
+
+"""Methods to use when ordering `Sensor`."""
+enum SensorsOrderBy {
+  NATURAL
+  PROJECT_ASC
+  PROJECT_DESC
+  ID_ASC
+  ID_DESC
+  NAME_ASC
+  NAME_DESC
+  DESCRIPTION_ASC
+  DESCRIPTION_DESC
+  APPEUI_ASC
+  APPEUI_DESC
+  DATASHEET_ASC
+  DATASHEET_DESC
+  PUBLIC_ASC
+  PUBLIC_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+A condition to be used against `Sensor` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input SensorCondition {
+  """Checks for equality with the object’s `project` field."""
+  project: String
+
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `name` field."""
+  name: String
+
+  """Checks for equality with the object’s `description` field."""
+  description: String
+
+  """Checks for equality with the object’s `appeui` field."""
+  appeui: String
+
+  """Checks for equality with the object’s `datasheet` field."""
+  datasheet: String
+
+  """Checks for equality with the object’s `public` field."""
+  public: Boolean
+}
+
+"""
+The root mutation type which contains root level fields which mutate data.
+"""
+type Mutation {
+  """Creates a single `Property`."""
+  createProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreatePropertyInput!
+  ): CreatePropertyPayload
+
+  """Creates a single `PublicQuery`."""
+  createPublicQuery(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreatePublicQueryInput!
+  ): CreatePublicQueryPayload
+
+  """Creates a single `Sensor`."""
+  createSensor(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSensorInput!
+  ): CreateSensorPayload
+
+  """Creates a single `SensorProperty`."""
+  createSensorProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSensorPropertyInput!
+  ): CreateSensorPropertyPayload
+
+  """Creates a single `Thing`."""
+  createThing(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateThingInput!
+  ): CreateThingPayload
+
+  """Creates a single `ThingOffset`."""
+  createThingOffset(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateThingOffsetInput!
+  ): CreateThingOffsetPayload
+
+  """Updates a single `Property` using its globally unique id and a patch."""
+  updatePropertyByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdatePropertyByNodeIdInput!
+  ): UpdatePropertyPayload
+
+  """Updates a single `Property` using a unique key and a patch."""
+  updateProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdatePropertyInput!
+  ): UpdatePropertyPayload
+
+  """
+  Updates a single `PublicQuery` using its globally unique id and a patch.
+  """
+  updatePublicQueryByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdatePublicQueryByNodeIdInput!
+  ): UpdatePublicQueryPayload
+
+  """Updates a single `PublicQuery` using a unique key and a patch."""
+  updatePublicQuery(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdatePublicQueryInput!
+  ): UpdatePublicQueryPayload
+
+  """Updates a single `Sensor` using its globally unique id and a patch."""
+  updateSensorByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSensorByNodeIdInput!
+  ): UpdateSensorPayload
+
+  """Updates a single `Sensor` using a unique key and a patch."""
+  updateSensorByProjectAndName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSensorByProjectAndNameInput!
+  ): UpdateSensorPayload
+
+  """Updates a single `Sensor` using a unique key and a patch."""
+  updateSensor(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSensorInput!
+  ): UpdateSensorPayload
+
+  """
+  Updates a single `SensorProperty` using its globally unique id and a patch.
+  """
+  updateSensorPropertyByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSensorPropertyByNodeIdInput!
+  ): UpdateSensorPropertyPayload
+
+  """Updates a single `SensorProperty` using a unique key and a patch."""
+  updateSensorProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSensorPropertyInput!
+  ): UpdateSensorPropertyPayload
+
+  """Updates a single `Thing` using its globally unique id and a patch."""
+  updateThingByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingByNodeIdInput!
+  ): UpdateThingPayload
+
+  """Updates a single `Thing` using a unique key and a patch."""
+  updateThingByProjectAndName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingByProjectAndNameInput!
+  ): UpdateThingPayload
+
+  """Updates a single `Thing` using a unique key and a patch."""
+  updateThing(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingInput!
+  ): UpdateThingPayload
+
+  """
+  Updates a single `ThingOffset` using its globally unique id and a patch.
+  """
+  updateThingOffsetByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingOffsetByNodeIdInput!
+  ): UpdateThingOffsetPayload
+
+  """Updates a single `ThingOffset` using a unique key and a patch."""
+  updateThingOffset(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingOffsetInput!
+  ): UpdateThingOffsetPayload
+
+  """Updates a single `ThingOffset` using a unique key and a patch."""
+  updateThingOffsetByThingIdAndMetricName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingOffsetByThingIdAndMetricNameInput!
+  ): UpdateThingOffsetPayload
+
+  """Deletes a single `Property` using its globally unique id."""
+  deletePropertyByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeletePropertyByNodeIdInput!
+  ): DeletePropertyPayload
+
+  """Deletes a single `Property` using a unique key."""
+  deleteProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeletePropertyInput!
+  ): DeletePropertyPayload
+
+  """Deletes a single `PublicQuery` using its globally unique id."""
+  deletePublicQueryByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeletePublicQueryByNodeIdInput!
+  ): DeletePublicQueryPayload
+
+  """Deletes a single `PublicQuery` using a unique key."""
+  deletePublicQuery(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeletePublicQueryInput!
+  ): DeletePublicQueryPayload
+
+  """Deletes a single `Sensor` using its globally unique id."""
+  deleteSensorByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSensorByNodeIdInput!
+  ): DeleteSensorPayload
+
+  """Deletes a single `Sensor` using a unique key."""
+  deleteSensorByProjectAndName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSensorByProjectAndNameInput!
+  ): DeleteSensorPayload
+
+  """Deletes a single `Sensor` using a unique key."""
+  deleteSensor(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSensorInput!
+  ): DeleteSensorPayload
+
+  """Deletes a single `SensorProperty` using its globally unique id."""
+  deleteSensorPropertyByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSensorPropertyByNodeIdInput!
+  ): DeleteSensorPropertyPayload
+
+  """Deletes a single `SensorProperty` using a unique key."""
+  deleteSensorProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSensorPropertyInput!
+  ): DeleteSensorPropertyPayload
+
+  """Deletes a single `Thing` using its globally unique id."""
+  deleteThingByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingByNodeIdInput!
+  ): DeleteThingPayload
+
+  """Deletes a single `Thing` using a unique key."""
+  deleteThingByProjectAndName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingByProjectAndNameInput!
+  ): DeleteThingPayload
+
+  """Deletes a single `Thing` using a unique key."""
+  deleteThing(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingInput!
+  ): DeleteThingPayload
+
+  """Deletes a single `ThingOffset` using its globally unique id."""
+  deleteThingOffsetByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingOffsetByNodeIdInput!
+  ): DeleteThingOffsetPayload
+
+  """Deletes a single `ThingOffset` using a unique key."""
+  deleteThingOffset(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingOffsetInput!
+  ): DeleteThingOffsetPayload
+
+  """Deletes a single `ThingOffset` using a unique key."""
+  deleteThingOffsetByThingIdAndMetricName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingOffsetByThingIdAndMetricNameInput!
+  ): DeleteThingOffsetPayload
+  assignSensortypeToNewDevices(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AssignSensortypeToNewDevicesInput!
+  ): AssignSensortypeToNewDevicesPayload
+  createSensorWithProps(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSensorWithPropsInput!
+  ): CreateSensorWithPropsPayload
+
+  """Creates one or many `Property`."""
+  mnCreateProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnCreatePropertyInput!
+  ): mnCreatePropertyPayload
+
+  """Creates one or many `SensorProperty`."""
+  mnCreateSensorProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnCreateSensorPropertyInput!
+  ): mnCreateSensorPropertyPayload
+
+  """Creates one or many `Thing`."""
+  mnCreateThing(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnCreateThingInput!
+  ): mnCreateThingPayload
+
+  """Updates one or many `Property` using a unique key and a patch."""
+  mnUpdateProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnUpdatePropertyInput!
+  ): mnUpdatePropertyPayload
+
+  """Updates one or many `SensorProperty` using a unique key and a patch."""
+  mnUpdateSensorProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnUpdateSensorPropertyInput!
+  ): mnUpdateSensorPropertyPayload
+
+  """Updates one or many `Thing` using a unique key and a patch."""
+  mnUpdateThing(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnUpdateThingInput!
+  ): mnUpdateThingPayload
+
+  """Deletes one or many `Property` a unique key via a patch."""
+  mnDeleteProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnDeletePropertyInput!
+  ): mnDeletePropertyPayload
+
+  """Deletes one or many `SensorProperty` a unique key via a patch."""
+  mnDeleteSensorProperty(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnDeleteSensorPropertyInput!
+  ): mnDeleteSensorPropertyPayload
+
+  """Deletes one or many `Thing` a unique key via a patch."""
+  mnDeleteThing(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: mnDeleteThingInput!
+  ): mnDeleteThingPayload
+}
+
+"""The output of our create `Property` mutation."""
+type CreatePropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Property` that was created by this mutation."""
+  property: Property
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `Property` mutation."""
+input CreatePropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Property` to be created by this mutation."""
+  property: PropertyInput!
+}
+
+"""An input for mutations affecting `Property`"""
+input PropertyInput {
+  project: String
+  name: String!
+  description: String
+  measure: String
+  metricName: String
+}
+
+"""The output of our create `PublicQuery` mutation."""
+type CreatePublicQueryPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `PublicQuery` that was created by this mutation."""
+  publicQuery: PublicQuery
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `PublicQuery` mutation."""
+input CreatePublicQueryInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `PublicQuery` to be created by this mutation."""
+  publicQuery: PublicQueryInput!
+}
+
+"""An input for mutations affecting `PublicQuery`"""
+input PublicQueryInput {
+  project: String!
+  name: String!
+  query: String!
+}
+
+"""The output of our create `Sensor` mutation."""
+type CreateSensorPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Sensor` that was created by this mutation."""
+  sensor: Sensor
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `Sensor` mutation."""
+input CreateSensorInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Sensor` to be created by this mutation."""
+  sensor: SensorInput!
+}
+
+"""An input for mutations affecting `Sensor`"""
+input SensorInput {
+  project: String!
+  name: String!
+  description: String
+  appeui: String
+  datasheet: String
+  public: Boolean
+}
+
+"""The output of our create `SensorProperty` mutation."""
+type CreateSensorPropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `SensorProperty` that was created by this mutation."""
+  sensorProperty: SensorProperty
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `SensorProperty`."""
+  sensor: Sensor
+
+  """Reads a single `Property` that is related to this `SensorProperty`."""
+  property: Property
+}
+
+"""All input for the create `SensorProperty` mutation."""
+input CreateSensorPropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `SensorProperty` to be created by this mutation."""
+  sensorProperty: SensorPropertyInput!
+}
+
+"""An input for mutations affecting `SensorProperty`"""
+input SensorPropertyInput {
+  project: String!
+  sensorId: UUID!
+  propertyId: UUID!
+  alias: String
+  public: Boolean
+  writeDelta: Boolean
+}
+
+"""The output of our create `Thing` mutation."""
+type CreateThingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Thing` that was created by this mutation."""
+  thing: Thing
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `Thing`."""
+  sensor: Sensor
+}
+
+"""All input for the create `Thing` mutation."""
+input CreateThingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Thing` to be created by this mutation."""
+  thing: ThingInput!
+}
+
+"""An input for mutations affecting `Thing`"""
+input ThingInput {
+  project: String!
+  name: String!
+  appid: String
+  devid: String
+  deveui: String
+  lat: BigFloat
+  long: BigFloat
+  status: String
+  install: Boolean
+  altitude: String
+  public: Boolean
+  ownedby: String
+  locationname: String
+  locationdesc: String
+  sensorId: UUID
+  geohash: String
+  payload: JSON
+  lastValues: JSON
+  customLabels: [String]
+}
+
+"""The output of our create `ThingOffset` mutation."""
+type CreateThingOffsetPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ThingOffset` that was created by this mutation."""
+  thingOffset: ThingOffset
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Thing` that is related to this `ThingOffset`."""
+  thing: Thing
+}
+
+"""All input for the create `ThingOffset` mutation."""
+input CreateThingOffsetInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `ThingOffset` to be created by this mutation."""
+  thingOffset: ThingOffsetInput!
+}
+
+"""An input for mutations affecting `ThingOffset`"""
+input ThingOffsetInput {
+  project: String!
+  thingId: UUID!
+  metricName: String!
+  offsetType: OffsetType!
+  offsetValue: BigFloat!
+}
+
+"""The output of our update `Property` mutation."""
+type UpdatePropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Property` that was updated by this mutation."""
+  property: Property
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updatePropertyByNodeId` mutation."""
+input UpdatePropertyByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Property` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Property` being updated.
+  """
+  patch: PropertyPatch!
+}
+
+"""
+Represents an update to a `Property`. Fields that are set will be updated.
+"""
+input PropertyPatch {
+  project: String
+  name: String
+  description: String
+  measure: String
+  metricName: String
+}
+
+"""All input for the `updateProperty` mutation."""
+input UpdatePropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Property` being updated.
+  """
+  patch: PropertyPatch!
+  id: UUID!
+}
+
+"""The output of our update `PublicQuery` mutation."""
+type UpdatePublicQueryPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `PublicQuery` that was updated by this mutation."""
+  publicQuery: PublicQuery
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updatePublicQueryByNodeId` mutation."""
+input UpdatePublicQueryByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `PublicQuery` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `PublicQuery` being updated.
+  """
+  patch: PublicQueryPatch!
+}
+
+"""
+Represents an update to a `PublicQuery`. Fields that are set will be updated.
+"""
+input PublicQueryPatch {
+  project: String
+  name: String
+  query: String
+}
+
+"""All input for the `updatePublicQuery` mutation."""
+input UpdatePublicQueryInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `PublicQuery` being updated.
+  """
+  patch: PublicQueryPatch!
+  project: String!
+  name: String!
+}
+
+"""The output of our update `Sensor` mutation."""
+type UpdateSensorPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Sensor` that was updated by this mutation."""
+  sensor: Sensor
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateSensorByNodeId` mutation."""
+input UpdateSensorByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Sensor` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Sensor` being updated.
+  """
+  patch: SensorPatch!
+}
+
+"""
+Represents an update to a `Sensor`. Fields that are set will be updated.
+"""
+input SensorPatch {
+  project: String
+  name: String
+  description: String
+  appeui: String
+  datasheet: String
+  public: Boolean
+}
+
+"""All input for the `updateSensorByProjectAndName` mutation."""
+input UpdateSensorByProjectAndNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Sensor` being updated.
+  """
+  patch: SensorPatch!
+  project: String!
+  name: String!
+}
+
+"""All input for the `updateSensor` mutation."""
+input UpdateSensorInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Sensor` being updated.
+  """
+  patch: SensorPatch!
+  id: UUID!
+}
+
+"""The output of our update `SensorProperty` mutation."""
+type UpdateSensorPropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `SensorProperty` that was updated by this mutation."""
+  sensorProperty: SensorProperty
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `SensorProperty`."""
+  sensor: Sensor
+
+  """Reads a single `Property` that is related to this `SensorProperty`."""
+  property: Property
+}
+
+"""All input for the `updateSensorPropertyByNodeId` mutation."""
+input UpdateSensorPropertyByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SensorProperty` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `SensorProperty` being updated.
+  """
+  patch: SensorPropertyPatch!
+}
+
+"""
+Represents an update to a `SensorProperty`. Fields that are set will be updated.
+"""
+input SensorPropertyPatch {
+  project: String
+  sensorId: UUID
+  propertyId: UUID
+  alias: String
+  public: Boolean
+  writeDelta: Boolean
+}
+
+"""All input for the `updateSensorProperty` mutation."""
+input UpdateSensorPropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `SensorProperty` being updated.
+  """
+  patch: SensorPropertyPatch!
+  sensorId: UUID!
+  propertyId: UUID!
+}
+
+"""The output of our update `Thing` mutation."""
+type UpdateThingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Thing` that was updated by this mutation."""
+  thing: Thing
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `Thing`."""
+  sensor: Sensor
+}
+
+"""All input for the `updateThingByNodeId` mutation."""
+input UpdateThingByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Thing` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Thing` being updated.
+  """
+  patch: ThingPatch!
+}
+
+"""
+Represents an update to a `Thing`. Fields that are set will be updated.
+"""
+input ThingPatch {
+  project: String
+  name: String
+  appid: String
+  devid: String
+  deveui: String
+  lat: BigFloat
+  long: BigFloat
+  status: String
+  install: Boolean
+  altitude: String
+  public: Boolean
+  ownedby: String
+  locationname: String
+  locationdesc: String
+  sensorId: UUID
+  geohash: String
+  payload: JSON
+  lastValues: JSON
+  customLabels: [String]
+}
+
+"""All input for the `updateThingByProjectAndName` mutation."""
+input UpdateThingByProjectAndNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Thing` being updated.
+  """
+  patch: ThingPatch!
+  project: String!
+  name: String!
+}
+
+"""All input for the `updateThing` mutation."""
+input UpdateThingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Thing` being updated.
+  """
+  patch: ThingPatch!
+  id: UUID!
+}
+
+"""The output of our update `ThingOffset` mutation."""
+type UpdateThingOffsetPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ThingOffset` that was updated by this mutation."""
+  thingOffset: ThingOffset
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Thing` that is related to this `ThingOffset`."""
+  thing: Thing
+}
+
+"""All input for the `updateThingOffsetByNodeId` mutation."""
+input UpdateThingOffsetByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `ThingOffset` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `ThingOffset` being updated.
+  """
+  patch: ThingOffsetPatch!
+}
+
+"""
+Represents an update to a `ThingOffset`. Fields that are set will be updated.
+"""
+input ThingOffsetPatch {
+  project: String
+  thingId: UUID
+  metricName: String
+  offsetType: OffsetType
+  offsetValue: BigFloat
+}
+
+"""All input for the `updateThingOffset` mutation."""
+input UpdateThingOffsetInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `ThingOffset` being updated.
+  """
+  patch: ThingOffsetPatch!
+  id: UUID!
+}
+
+"""All input for the `updateThingOffsetByThingIdAndMetricName` mutation."""
+input UpdateThingOffsetByThingIdAndMetricNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `ThingOffset` being updated.
+  """
+  patch: ThingOffsetPatch!
+  thingId: UUID!
+  metricName: String!
+}
+
+"""The output of our delete `Property` mutation."""
+type DeletePropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Property` that was deleted by this mutation."""
+  property: Property
+  deletedPropertyNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deletePropertyByNodeId` mutation."""
+input DeletePropertyByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Property` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteProperty` mutation."""
+input DeletePropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID!
+}
+
+"""The output of our delete `PublicQuery` mutation."""
+type DeletePublicQueryPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `PublicQuery` that was deleted by this mutation."""
+  publicQuery: PublicQuery
+  deletedPublicQueryNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deletePublicQueryByNodeId` mutation."""
+input DeletePublicQueryByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `PublicQuery` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deletePublicQuery` mutation."""
+input DeletePublicQueryInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  project: String!
+  name: String!
+}
+
+"""The output of our delete `Sensor` mutation."""
+type DeleteSensorPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Sensor` that was deleted by this mutation."""
+  sensor: Sensor
+  deletedSensorNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deleteSensorByNodeId` mutation."""
+input DeleteSensorByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Sensor` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteSensorByProjectAndName` mutation."""
+input DeleteSensorByProjectAndNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  project: String!
+  name: String!
+}
+
+"""All input for the `deleteSensor` mutation."""
+input DeleteSensorInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID!
+}
+
+"""The output of our delete `SensorProperty` mutation."""
+type DeleteSensorPropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `SensorProperty` that was deleted by this mutation."""
+  sensorProperty: SensorProperty
+  deletedSensorPropertyNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `SensorProperty`."""
+  sensor: Sensor
+
+  """Reads a single `Property` that is related to this `SensorProperty`."""
+  property: Property
+}
+
+"""All input for the `deleteSensorPropertyByNodeId` mutation."""
+input DeleteSensorPropertyByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SensorProperty` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteSensorProperty` mutation."""
+input DeleteSensorPropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sensorId: UUID!
+  propertyId: UUID!
+}
+
+"""The output of our delete `Thing` mutation."""
+type DeleteThingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Thing` that was deleted by this mutation."""
+  thing: Thing
+  deletedThingNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `Thing`."""
+  sensor: Sensor
+}
+
+"""All input for the `deleteThingByNodeId` mutation."""
+input DeleteThingByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Thing` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteThingByProjectAndName` mutation."""
+input DeleteThingByProjectAndNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  project: String!
+  name: String!
+}
+
+"""All input for the `deleteThing` mutation."""
+input DeleteThingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID!
+}
+
+"""The output of our delete `ThingOffset` mutation."""
+type DeleteThingOffsetPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ThingOffset` that was deleted by this mutation."""
+  thingOffset: ThingOffset
+  deletedThingOffsetNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Thing` that is related to this `ThingOffset`."""
+  thing: Thing
+}
+
+"""All input for the `deleteThingOffsetByNodeId` mutation."""
+input DeleteThingOffsetByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `ThingOffset` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteThingOffset` mutation."""
+input DeleteThingOffsetInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID!
+}
+
+"""All input for the `deleteThingOffsetByThingIdAndMetricName` mutation."""
+input DeleteThingOffsetByThingIdAndMetricNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  thingId: UUID!
+  metricName: String!
+}
+
+"""The output of our `assignSensortypeToNewDevices` mutation."""
+type AssignSensortypeToNewDevicesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `assignSensortypeToNewDevices` mutation."""
+input AssignSensortypeToNewDevicesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sensorId: UUID
+  deviceIds: [UUID]
+}
+
+"""The output of our `createSensorWithProps` mutation."""
+type CreateSensorWithPropsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  sensorId: UUID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createSensorWithProps` mutation."""
+input CreateSensorWithPropsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  project: String
+  name: String
+  appeui: String
+  description: String
+  datasheet: String
+  public: Boolean
+  properties: [PropertyInputRecordInput]
+}
+
+"""An input for mutations affecting `PropertyInputRecord`"""
+input PropertyInputRecordInput {
+  propertyId: UUID
+  alias: String
+  writeDelta: Boolean
+}
+
+"""The output of our many create `Property` mutation."""
+type mnCreatePropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input, unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Property` that was created by this mutation."""
+  property: Property
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create mn`Property` mutation."""
+input mnCreatePropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The one or many `Property` to be created by this mutation."""
+  mnProperty: [PropertyInput!]
+}
+
+"""The output of our many create `SensorProperty` mutation."""
+type mnCreateSensorPropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input, unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `SensorProperty` that was created by this mutation."""
+  sensorProperty: SensorProperty
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `SensorProperty`."""
+  sensor: Sensor
+
+  """Reads a single `Property` that is related to this `SensorProperty`."""
+  property: Property
+}
+
+"""All input for the create mn`SensorProperty` mutation."""
+input mnCreateSensorPropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The one or many `SensorProperty` to be created by this mutation."""
+  mnSensorProperty: [SensorPropertyInput!]
+}
+
+"""The output of our many create `Thing` mutation."""
+type mnCreateThingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input, unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Thing` that was created by this mutation."""
+  thing: Thing
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `Thing`."""
+  sensor: Sensor
+}
+
+"""All input for the create mn`Thing` mutation."""
+input mnCreateThingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The one or many `Thing` to be created by this mutation."""
+  mnThing: [ThingInput!]
+}
+
+"""The output of our update mn `Property` mutation."""
+type mnUpdatePropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,                 unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Property` that was updated by this mutation."""
+  property: Property
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the update `mnUpdateProperty` mutation."""
+input mnUpdatePropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The one or many `Property` to be updated."""
+  mnPatch: [PropertyPatch!]
+}
+
+"""The output of our update mn `SensorProperty` mutation."""
+type mnUpdateSensorPropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,                 unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `SensorProperty` that was updated by this mutation."""
+  sensorProperty: SensorProperty
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `SensorProperty`."""
+  sensor: Sensor
+
+  """Reads a single `Property` that is related to this `SensorProperty`."""
+  property: Property
+}
+
+"""All input for the update `mnUpdateSensorProperty` mutation."""
+input mnUpdateSensorPropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The one or many `SensorProperty` to be updated."""
+  mnPatch: [SensorPropertyPatch!]
+}
+
+"""The output of our update mn `Thing` mutation."""
+type mnUpdateThingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,                 unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Thing` that was updated by this mutation."""
+  thing: Thing
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `Thing`."""
+  sensor: Sensor
+}
+
+"""All input for the update `mnUpdateThing` mutation."""
+input mnUpdateThingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The one or many `Thing` to be updated."""
+  mnPatch: [ThingPatch!]
+}
+
+"""The output of our delete mn `Property` mutation."""
+type mnDeletePropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input, unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Property` that was deleted by this mutation."""
+  property: Property
+  deletedPropertyNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the delete `mnDeleteProperty` mutation."""
+input mnDeletePropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The one or many `Property` to be deleted. You must provide the PK values!
+  """
+  mnPatch: [PropertyPatch!]
+}
+
+"""The output of our delete mn `SensorProperty` mutation."""
+type mnDeleteSensorPropertyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input, unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `SensorProperty` that was deleted by this mutation."""
+  sensorProperty: SensorProperty
+  deletedSensorPropertyNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `SensorProperty`."""
+  sensor: Sensor
+
+  """Reads a single `Property` that is related to this `SensorProperty`."""
+  property: Property
+}
+
+"""All input for the delete `mnDeleteSensorProperty` mutation."""
+input mnDeleteSensorPropertyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The one or many `SensorProperty` to be deleted. You must provide the PK values!
+  """
+  mnPatch: [SensorPropertyPatch!]
+}
+
+"""The output of our delete mn `Thing` mutation."""
+type mnDeleteThingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input, unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Thing` that was deleted by this mutation."""
+  thing: Thing
+  deletedThingNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Sensor` that is related to this `Thing`."""
+  sensor: Sensor
+}
+
+"""All input for the delete `mnDeleteThing` mutation."""
+input mnDeleteThingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The one or many `Thing` to be deleted. You must provide the PK values!"""
+  mnPatch: [ThingPatch!]
+}

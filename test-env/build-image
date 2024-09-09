@@ -1,0 +1,54 @@
+#!/bin/bash
+
+source "$(dirname "$BASH_SOURCE")/.common"
+
+cd "$REPO"
+
+: ${TAG=latest}
+# use `KC_EXTENSION_LOCAL_BUILD=1 ./test-env/start.sh` to build using local tools instead of in docker
+: ${KC_EXTENSION_LOCAL_BUILD=}
+
+$KUBECTL port-forward -n kube-system svc/registry 5000:80 1>/dev/null &
+PID_PORT_FORWARD=$!
+trap "kill $PID_PORT_FORWARD" EXIT
+
+build_image () {
+  context=$1
+  image=$REGISTRY/$context:$TAG
+
+  tar chC $context --exclude-vcs{,-ignores} . | docker build -t $image --quiet -
+
+  docker push "$image"
+}
+
+build_images () {
+	if (($#))
+	then
+		for dir in "$@"
+		do
+			build_image "$dir" &
+		done
+	else
+		for dockerfile in **/Dockerfile
+		do
+			context=`dirname $dockerfile`
+
+		if [[ $context == "keycloak-extensions" && "$KC_EXTENSION_LOCAL_BUILD" != "" ]]
+		then
+			(cd "$context" && ./quick-build.sh)
+		else
+				build_image "$context" &
+		fi
+		done
+	fi
+
+	wait
+}
+
+# kill everything if subshell fails
+trap "kill 0" ERR
+set -E
+
+# wrap once again to not wait for the port-forward
+build_images &
+wait -fn $!

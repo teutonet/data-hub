@@ -1,0 +1,8 @@
+# we don't use video encoding
+CVE-2023-6879
+
+# we don't use high quality graphic files
+CVE-2023-5841
+
+# will not be fixed if you can believe the status 'will_not_fix'
+CVE-2023-45853

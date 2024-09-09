@@ -1,0 +1,85 @@
+openapi: 3.0.3
+info:
+  title: Write module
+  description: |-
+    This service can write sensor data from the intermediate format to a database.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.0.1
+externalDocs:
+  description: GitLab project
+  url: https://gitlab.com/urban-data-hub/sensor-ingestion
+servers:
+  - url: /api/v1
+paths:
+  /write:
+    post:
+      summary: Write sensor data
+      description: Process sensor data and write it to the database.
+      tags: [write]
+      requestBody:
+        description: Sensor data to write
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Intermediate'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+      security:
+        - oAuth2ClientCredentials: []
+components:
+  securitySchemes:
+    oAuth2ClientCredentials:
+      type: oauth2
+      description: Use client credentials from your OAuth2 provider.
+      flows:
+        clientCredentials:
+          tokenUrl: http://keycloak.si.test/realms/si
+          scopes: {}
+  schemas:
+    Intermediate:
+      type: object
+      properties:
+        resultTime:
+          type: string
+          format: date-time
+        sourcePath:
+          type: object
+          properties:
+            appid:
+              type: string
+            devid:
+              type: string
+            deveui:
+              type: string
+          required:
+            - appid
+            - deveui
+            - devid
+        variables:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+        setLocation:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+          required:
+            - latitude
+            - longitude
+        gateways:
+          type: integer
+      required:
+        - resultTime
+        - sourcePath
+        - variables

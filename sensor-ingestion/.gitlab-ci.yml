@@ -1,0 +1,26 @@
+include: common/pipeline.yaml
+
+variables:
+  E2E_TEST_IMAGE: $CI_REGISTRY/$CI_PROJECT_PATH/lorawan-receiver:$CI_COMMIT_SHA
+
+build:
+  extends: .build
+  parallel:
+    matrix:
+      - directory:
+          - metadata-db/migrations
+          - metadata-db/postgraphile
+      - directory: &python_images # add here to run unit tests
+          - lorawan-receiver
+          - rtb-receiver
+          - owm-collector
+          - rudis-collector
+          - prometheus-writer
+          - sensor-things-writer
+
+python:unittest:
+  image: $CI_REGISTRY_IMAGE/$image:$CI_COMMIT_SHA
+  script: cd /python_app && python -m unittest -v
+  parallel:
+    matrix:
+      - image: *python_images

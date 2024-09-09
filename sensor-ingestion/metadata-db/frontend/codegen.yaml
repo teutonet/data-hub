@@ -1,0 +1,20 @@
+overwrite: true
+schema: ./src/lib/common/generated/schema.graphql
+generates:
+  src/lib/common/generated/types.ts:
+    documents:
+      - ./src/lib/common/graphql/queries.ts
+    plugins:
+      - typescript
+      - typescript-operations
+    config:
+      withHOC: false
+      withComponent: false
+      withMutationFn: false
+      skipTypename: true
+config:
+  scalars:
+    Datetime: string
+    JSON: string
+    Date: string
+    UUID: string

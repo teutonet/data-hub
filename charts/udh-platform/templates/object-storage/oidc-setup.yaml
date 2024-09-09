@@ -1,0 +1,61 @@
+{{- define "udh.babashkaContainer.env-get-keycloak-fingerprint.clj" -}}
+- name: KEYCLOAK_DOMAIN
+  value: {{ (include "data-hub.keycloak.hostname" .context) | quote }}
+{{- end -}}
+{{- if .Values.objectStorage.enabled -}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-object-storage-setup" (include "common.names.fullname" .) | quote }}
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: fingerprint
+          emptyDir:
+            sizeLimit: 100Mi
+      initContainers:
+        - {{ include "udh.babashkaContainer" (dict "context" . "script" "get-keycloak-fingerprint.clj") | indent 10 | trim }}
+          volumeMounts: &fingerprint
+            - mountPath: /fingerprint
+              name: fingerprint
+      containers:
+        - name: configure
+          image: public.ecr.aws/aws-cli/aws-cli:2.15.19
+          command:
+            - bash
+            - -ce
+            - |
+              # accept ID tokens from our Keycloak
+              aws iam list-open-id-connect-providers \
+              || aws iam create-open-id-connect-provider --url https://{{ include "data-hub.keycloak.hostname" . }}/realms/udh --thumbprint-list "`cat /fingerprint/fp`" --client-id-list buckets
+
+              # create the role used by federated users, allowed buckets are passed in session tags https://docs.ceph.com/en/reef/radosgw/session-tags/
+              aws iam get-role --role-name usercode \
+              || aws iam create-role --role-name usercode --max-session-duration 43200 --assume-role-policy-document "$POLICY"
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+          env:
+            - name: AWS_ENDPOINT_URL
+              value: {{ print "https://storage." .Values.global.baseDomain | quote }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "rook-ceph-object-user-bucket-%s-oidc-admin" (include "common.names.fullname" .) | quote }}
+                  key: AccessKey
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "rook-ceph-object-user-bucket-%s-oidc-admin" (include "common.names.fullname" .) | quote }}
+                  key: SecretKey
+            - name: POLICY
+              value: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["sts:AssumeRoleWithWebIdentity","sts:TagSession"],"Principal":{"Federated":["arn:aws:iam:::oidc-provider/login.{{.Values.global.baseDomain}}/realms/udh"]}}]}'
+          volumeMounts: *fingerprint
+{{- end -}}
