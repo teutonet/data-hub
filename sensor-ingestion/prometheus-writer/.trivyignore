@@ -6,3 +6,10 @@ CVE-2023-5841
 
 # will not be fixed if you can believe the status 'will_not_fix'
 CVE-2023-45853
+
+# we use 64bit
+CVE-2024-45491
+CVE-2024-45492
+
+# only applies if a user can set the length in XML_Parse, in which case they can already cause a crash/memory fault anyways
+CVE-2024-45490

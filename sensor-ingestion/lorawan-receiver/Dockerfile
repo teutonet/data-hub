@@ -1,6 +1,6 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}python:3.12.2-alpine as builder
+FROM ${REGISTRY_MIRROR_LIB}python:3.12.5-alpine as builder
 
 RUN pip install virtualenv
 
@@ -14,7 +14,7 @@ RUN pip3 install --upgrade pip
 RUN source .venv/bin/activate && pip3 install -r requirements.txt
 
 
-FROM ${REGISTRY_MIRROR_LIB}python:3.12.2-alpine
+FROM ${REGISTRY_MIRROR_LIB}python:3.12.5-alpine
 
 WORKDIR /python_app
 
