@@ -19,17 +19,14 @@ metadata:
   labels: {{- include "common.labels.standard" . | nindent 4 }}
 spec:
   releaseName: {{ .Release.Name }}-mdb-auth
-  chart:
-    spec:
-      chart: oauth2-proxy
-      version: 6.20.1
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        name: {{ printf "%s-oauth2" (include "common.names.fullname" .) | quote }}
+  chartRef:
+    kind: OCIRepository
+    name: {{ printf "%s-oauth2" (include "common.names.fullname" .) | quote }}
   interval: 1h0m0s
-  timeout: 10m
+  dependsOn:
+    - name: {{ include "data-hub.name" (dict "context" . "name" "keycloak") }}
   values:
+    replicaCount: {{ .Values.sensorIngestion.metadataDB.postgraphile.ingress.replicas }}
     config:
       clientID: {{ .Values.sensorIngestion.metadataDB.postgraphile.ingress.client | quote }}
       cookieSecret: {{ $cookieSecret | quote }}

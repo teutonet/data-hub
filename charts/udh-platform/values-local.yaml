@@ -3,7 +3,6 @@ global:
   udhImageRegistry: "localimage.test"
   auth:
     issuer: https://login.data-hub.local/realms/udh
-    readyPath: /
   smtp_base_domain: udh-platform@teuto.net
   storageClass: standard
   sslInsecureSkipVerify: true
@@ -16,7 +15,6 @@ grafana:
     enabled: true
     from_adress: alert@example.com
     from_name: grafana-local
-    host: feature-mailhog
     user: ""
     password: ""
 keycloak:
@@ -31,6 +29,8 @@ keycloak:
     data-hub-admin:
       username: data-hub-admin
       email: data-hub-admin@example.com
+      firstName: Data hub
+      lastName: Admin
       password: admin
       clientRoles:
         realm-management:
@@ -41,18 +41,21 @@ keycloak:
     demo:
       username: demo
       email: demo-udh-platform@example.com
+      firstName: Demo
+      lastName: User
       password: demo
   smtp:
     fromDisplayName: keycloak-local
-    host: feature-mailhog
     auth: false
     ssl: false
 
-mailhog:
-  enabled: true
-  replicas: 2
-  ingress:
-    enabled: true
+database:
+  shadowTables: true
+
+mailpit:
+    auth:
+        users:
+            admin: admin
 
 fakeCa:
   enabled: true

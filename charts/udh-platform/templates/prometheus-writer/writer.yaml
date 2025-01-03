@@ -7,8 +7,6 @@
   value: {{ .Values.sensorIngestion.prometheusWriter.prometheus.readyPath | quote }}
 - name: FORWARD_TOKEN
   value: {{ .Values.sensorIngestion.prometheusWriter.prometheus.forwardToken | quote }}
-- name: OUT_OF_ORDER_SECONDS
-  value: {{ .Values.sensorIngestion.prometheusWriter.outOfOrderSeconds | quote }}
 - name: ALWAYS_UPDATE_PAYLOAD
   value: {{ .Values.sensorIngestion.prometheusWriter.alwaysUpdatePayload | quote }}
 {{- end -}}

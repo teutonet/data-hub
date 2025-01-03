@@ -29,7 +29,7 @@ spec:
         {{- include "sensor-ingestion.standard.networkLabels" (merge (dict "networkLabels" (list "http")) .) | nindent 8 }}
     spec:
       {{- include "sensor-ingestion.securityContext" . | nindent 6 }}
-      {{- include "common.images.pullSecrets" (dict "images" (list .Values.sensorIngestion.metadataDB.migrations.image .Values.sensorIngestion.metadataDB.postgraphile.image) "global" .Values.global) | indent 6 | trimAll " " }}
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.sensorIngestion.metadataDB.migrations.image .Values.sensorIngestion.metadataDB.postgraphile.image) "global" .Values.global) | nindent 6 }}
       initContainers:
       - name: migrations
         {{- include "sensor-ingestion.standard.image" (dict "image" .Values.sensorIngestion.metadataDB.migrations.image "context" .) | nindent 8 }}
@@ -110,5 +110,5 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 5000
-{{- end }}
 {{ include "sensor-ingestion.standard.pdb" (merge (dict "name" "metadataDB" "component" "postgraphile") .) }}
+{{- end }}

@@ -7,6 +7,8 @@ set -eu -o pipefail
 : "${REALM=udh}"
 : "${SKIP_IMAGE_BUILD=0}"
 
+source "$(dirname "$BASH_SOURCE")/../test-env/versions.sh"
+
 if [[ $SKIP_IMAGE_BUILD -eq 0 ]]
 then
   docker build -t "$IMAGE" "$(dirname "$0")"
@@ -38,7 +40,7 @@ run_container \
 	-e KEYCLOAK_EXTRA_ARGS="--features=admin-fine-grained-authz" \
 	-e DH_EXTERNAL_RECONCILIATION=false \
 	-v "$VOLUME:/opt/bitnami/keycloak/providers/" \
-	bitnami/keycloak:"23.0.6"
+	$IMAGE_KEYCLOAK
 kc_container=${containers[-1]}
 
 kcadm () {

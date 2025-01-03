@@ -96,7 +96,6 @@ export const GET_THING_BY_ID = gql`
 			deveui
 			devid
 			geohash
-			payload
 			sensorId
 			sensor {
 				name
@@ -106,6 +105,9 @@ export const GET_THING_BY_ID = gql`
 				appeui
 			}
 			customLabels
+			thingLivedatum {
+				payload
+			}
 		}
 	}
 `;
@@ -121,6 +123,7 @@ export const GET_SENSOR_BY_ID = gql`
 			nodeId
 			datasheet
 			appeui
+			outOfOrderSeconds
 			things {
 				name
 				id
@@ -182,7 +185,9 @@ export const THING_FRAGMENT = gql`
 			appeui
 		}
 		customLabels
-		payload
+		thingLivedatum {
+			payload
+		}
 	}
 `;
 
@@ -229,10 +234,30 @@ export const GET_ALL_PROPERTIES = gql`
 export const GET_PROPERTIES = gql`
 	query getProperties($condition: PropertyCondition) {
 		properties(condition: $condition) {
+			description
 			id
 			measure
 			name
 			project
+			metricName
+		}
+	}
+`;
+
+export const GET_PROPERTIES_BY_PROJECTID_AND_GLOBAL_PROPERTIES = gql`
+	query things($project: String!) {
+		properties(condition: { project: $project }) {
+			description
+			id
+			measure
+			name
+			metricName
+		}
+		publicProps: properties(condition: { project: null }) {
+			description
+			id
+			measure
+			name
 			metricName
 		}
 	}
@@ -428,6 +453,103 @@ export const UPDATE_THING_OFFSET = gql`
 	mutation updateOffset($patch: ThingOffsetPatch!, $id: UUID!) {
 		updateThingOffset(input: { id: $id, patch: $patch }) {
 			clientMutationId
+		}
+	}
+`;
+
+export const GET_THING_CHANGES = gql`
+	query thingChanges($id: UUID!) {
+		thingChanges(_id: $id) {
+			auditId
+			auditUserName
+			eventKey
+			id
+			sessionInfo
+			stmtDate
+			valuesAfter
+			valuesBefore
+			transactionId
+		}
+	}
+`;
+
+export const GET_SENSOR_CHANGES = gql`
+	query sensorChanges($id: UUID!) {
+		sensorChanges(_id: $id) {
+			auditId
+			auditUserName
+			eventKey
+			id
+			sessionInfo
+			stmtDate
+			valuesAfter
+			valuesBefore
+			transactionId
+		}
+	}
+`;
+
+export const GET_SENSOR_PROPERTY_CHANGES = gql`
+	query sensorPropertyChanges($id: UUID!) {
+		sensorPropertyChanges(_id: $id) {
+			auditId
+			auditUserName
+			eventKey
+			id
+			sessionInfo
+			stmtDate
+			valuesAfter
+			valuesBefore
+			transactionId
+		}
+	}
+`;
+
+export const GET_PROPERTY_CHANGES = gql`
+	query propertyChanges($id: UUID!) {
+		propertyChanges(_id: $id) {
+			auditId
+			auditUserName
+			eventKey
+			id
+			sessionInfo
+			stmtDate
+			valuesAfter
+			valuesBefore
+			transactionId
+		}
+	}
+`;
+
+export const SENSORTYPE_IMPORT = gql`
+	mutation importSensortype($currentProject: String!, $data: JSON!) {
+		sensortypeImport(input: { data: $data, currentProject: $currentProject }) {
+			uuid
+		}
+	}
+`;
+
+export const GET_SENSOR_AND_SENSOR_PROPERTIES = gql`
+	query getSensortypeAndSensorprops($uuid: UUID!) {
+		sensor(id: $uuid) {
+			name
+			project
+			description
+			datasheet
+			appeui
+			public
+			outOfOrderSeconds
+			sensorProperties {
+				property {
+					name
+					metricName
+					measure
+					description
+					project
+				}
+				writeDelta
+				alias
+			}
 		}
 	}
 `;

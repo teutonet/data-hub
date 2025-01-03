@@ -23,22 +23,21 @@
 	import PageTitle from '$lib/PageTitle.svelte';
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { projectAccess } from '$lib/common/auth/stores';
 
 	export let data: PageData;
 
 	const client = getContextClient();
 
-	$: projects =
-		data.projectId === 'all'
-			? $projectAccess.map((project) => {
-					return { name: project, value: project };
-				})
-			: [];
+	if (data.projectId === 'all') {
+		goto('../sensortypes').catch((e) => {
+			console.error(e.message);
+		});
+	}
 
 	let sensor = {
 		project: data.projectId,
 		description: '',
+		outOfOrderSeconds: 0,
 		public: true,
 		writeDelta: false,
 		datasheet: '',
@@ -66,6 +65,7 @@
 					name: sensor.name,
 					appeui: sensor.appeui,
 					description: sensor.description,
+					outOfOrderSeconds: sensor.outOfOrderSeconds,
 					datasheet: sensor.datasheet,
 					public: sensor.public,
 					properties
@@ -113,7 +113,7 @@
 		).then((result) => {
 			if (result.error) {
 				handleCombinedErrors(result.error, { showToasts: true });
-				return Promise.reject();
+				return Promise.reject(result.error);
 			} else {
 				success('shared.message.savedSuccessfully');
 				if (properties?.length === 0) {
@@ -132,8 +132,6 @@
 			bind:sensor
 			{submitFunction}
 			id="sensor-form"
-			projectId={data.projectId}
-			{projects}
 			{properties}
 			{createPropFunction}
 			create

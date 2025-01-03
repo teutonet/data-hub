@@ -17,3 +17,7 @@ mdb-frontend.{{ .Values.global.baseDomain }}
 {{- define "sensor-ingestion.mdb.postgraphile.hostname" -}}
 mdb.{{ .Values.global.baseDomain }}
 {{- end -}}
+
+{{- define "data-hub.mailpit.hostname" -}}
+smtp.{{ .Values.global.baseDomain }}
+{{- end -}}

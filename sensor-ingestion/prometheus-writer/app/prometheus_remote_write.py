@@ -32,10 +32,13 @@ query Properties($deveui: String!) {
         locationname
         project
         status
-        lastValues
+        thingLivedatum {
+            lastValues
+        }
         sensor {
             id
             name
+            outOfOrderSeconds
             sensorProperties {
                 alias
                 writeDelta
@@ -79,20 +82,18 @@ mutation createThing(
     $lat: BigFloat
     $long: BigFloat
     ) {
-    createThing(
+    createThingWithPayload(
         input: {
-            thing: {
-                project: $project
-                name: $name
-                sensorId: $sensorId
-                appid: $appid
-                deveui: $deveui
-                devid: $devid
-                status: "created"
-                payload: $payload
-                lat: $lat
-                long: $long
-            }
+            project: $project
+            name: $name
+            sensorId: $sensorId
+            appid: $appid
+            deveui: $deveui
+            devid: $devid
+            status: "created"
+            payload: $payload
+            lat: $lat
+            long: $long
         }
     ) {
         clientMutationId
@@ -102,9 +103,19 @@ mutation createThing(
 
 
 UPDATE_PAYLOAD_MUTATION = """
-mutation updatePayload($id: UUID!, $payload: JSON!, $lastValues: JSON!) {
-    updateThing(input: {patch: {payload: $payload, lastValues: $lastValues}, id: $id}) {
+mutation updatePayload($thingId: UUID!, $payload: JSON!, $lastValues: JSON!) {
+    updateThingLivedatum(input: {patch: {payload: $payload, lastValues: $lastValues}, thingId: $thingId}) {
         clientMutationId
+    }
+}
+"""
+
+CREATE_PAYLOAD_MUTATION = """
+mutation createPayload($thingId: UUID!, $payload: JSON!, $lastValues: JSON!) {
+    createThingLivedatum(input: {thingLivedatum: {thingId: $thingId, payload: $payload, lastValues: $lastValues}}) {
+        thingLivedatum {
+            lastValues
+        }
     }
 }
 """
@@ -272,19 +283,22 @@ def message_received():
 
     # TODO should deveui be unique?
     thing = things[0]
+    thing_livedatum = thing["thingLivedatum"]
 
-    try:
-        last_values = json.loads(thing["lastValues"] or "{}")
-    except:
+    if thing_livedatum is None:
         last_values = {}
+    else:
+        try:
+            last_values = json.loads(thing_livedatum["lastValues"] or "{}")
+        except:
+            last_values = {}
 
     updated_last_values = last_values.copy()
 
     for key, value in request_payload["variables"].items():
         updated_last_values[key] = {"value": value, "time": round(time.time_ns() / 1_000_000)}
 
-    # if always_update_payload:
-    do_graphql(UPDATE_PAYLOAD_MUTATION, {"id": thing["id"], "payload": json.dumps(request_payload), "lastValues": json.dumps(updated_last_values)})
+    do_graphql(CREATE_PAYLOAD_MUTATION if thing_livedatum is None else UPDATE_PAYLOAD_MUTATION, {"thingId": thing["id"], "payload": json.dumps(request_payload), "lastValues": json.dumps(updated_last_values)})
 
 
     if thing["status"] != "activated":
@@ -297,7 +311,7 @@ def message_received():
                 label_key, label_value = custom_label_raw.split(":", 1)
                 custom_labels[label_key] = label_value
         for sample in create_samples(request_payload, source_path, thing, last_values,
-                                    ooo_window=ooo_seconds, custom_labels=custom_labels):
+                                    ooo_window=thing["sensor"]["outOfOrderSeconds"], custom_labels=custom_labels):
             write(**sample)
 
     return "SUCCESS", 200
@@ -411,6 +425,17 @@ def create_samples(request_payload, id_labels, thing_metadata, last_values,
                     msg["labels"]["__name__"] = metric_name + '_delta'
                     samples.append(dict(msg=msg, project=thing_metadata["project"]))
 
+            msg = deepcopy(base_msg)
+            msg["value"] = 1
+            if "geohash" in msg["labels"]:
+                msg["labels"] = { "__name__": "up", "deveui": msg["labels"]["deveui"], "geohash": msg["labels"]["geohash"] }
+            else:
+                msg["labels"] = { "__name__": "up", "deveui": msg["labels"]["deveui"] }
+
+            samples.append(dict(msg=msg, project=thing_metadata["project"]))
+
+
+
     logging.debug("samples: %s", samples)
     return samples
 
@@ -419,7 +444,6 @@ if __name__ == '__main__':
     mdb_url = os.environ["MDB_URL"]
     prometheus_url = os.environ["PROMETHEUS_URL"]
     prometheus_ready_path = os.environ["PROMETHEUS_READY_PATH"]
-    ooo_seconds = int(os.environ["OUT_OF_ORDER_SECONDS"])
 
     logging.info("starting server")
     serve(app, host="0.0.0.0", port=8091)

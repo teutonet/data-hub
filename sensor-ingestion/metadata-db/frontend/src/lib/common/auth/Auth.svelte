@@ -50,7 +50,7 @@
 	async function login(userManager: UserManager, redirect: boolean) {
 		try {
 			await userManager.signinSilent();
-		} catch (e) {
+		} catch {
 			// Silent Signin is not possible, redirect user to login page
 			if (redirect) {
 				// Current href is saved so users can be returned to this page after

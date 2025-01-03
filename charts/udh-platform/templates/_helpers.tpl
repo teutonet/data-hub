@@ -123,7 +123,7 @@ metadata:
     {{- include "sensor-ingestion.standard.networkLabels" . | nindent 4 }}
 spec:
   {{- include "sensor-ingestion.securityContext" . | nindent 2 }}
-  {{- include "common.images.pullSecrets" (dict "images" (list $image) "global" .Values.global) | indent 2 | trimAll " " }}
+  {{- include "common.images.pullSecrets" (dict "images" (list $image) "global" .Values.global) | nindent 2 }}
   containers:
   - name: {{ $kebab }}
     {{- include "sensor-ingestion.standard.image" (dict "image" $image "context" .) | nindent 4 }}
@@ -217,7 +217,7 @@ metadata:
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: {{ $kebab }}
 spec:
-  replicas: {{ dig .name "replicas" 1 .Values.AsMap }}
+  replicas: {{ dig "sensorIngestion" .name "replicas" 1 .Values.AsMap }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: {{ $kebab }}
@@ -232,8 +232,8 @@ spec:
               - key: ca.crt
                 path: ca.crt
       {{- end }}
-{{- end }}
 {{ include "sensor-ingestion.standard.pdb" . }}
+{{- end }}
 {{- end -}}
 
 {{- define "sensor-ingestion.standard.service" -}}
@@ -262,7 +262,7 @@ spec:
 {{- end -}}
 
 {{- define "sensor-ingestion.standard.pdb" -}}
-{{- if and .Values.global.pdb (dig .name "enabled" false .Values.AsMap) -}}
+{{- if gt (dig "sensorIngestion" .name "replicas" 1 .Values.AsMap | int64) 1 -}}
 {{- $kebab := kebabcase .name -}}
 ---
 apiVersion: policy/v1

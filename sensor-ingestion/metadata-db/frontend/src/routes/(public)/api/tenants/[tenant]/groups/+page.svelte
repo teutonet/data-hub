@@ -60,7 +60,7 @@
 	<div class="flex flex-col gap-2">
 		{#each groups as group}
 			<div class="flex flex-row gap-2">
-				<Button class="grow">
+				<Button class="grow" href={`groups/${group}`}>
 					{group}
 				</Button>
 				<DeleteButton

@@ -77,7 +77,7 @@ export function getThingMatches(
 	}
 
 	for (const thing of things) {
-		const payload = thing.payload;
+		const payload = thing.thingLivedatum?.payload ?? undefined;
 		if (!payload) {
 			continue;
 		}

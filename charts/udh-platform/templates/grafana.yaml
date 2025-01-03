@@ -8,14 +8,21 @@ spec:
   chart:
     spec:
       chart: grafana
-      version: 6.58.8
+      version: 6.58.8 # renovate: datasource=helm depName=grafana versioning=helm registryUrl=https://grafana.github.io/helm-charts
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
         name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
   interval: 1h0m0s
+  timeout: 15m
   targetNamespace: {{ .Release.Namespace }}
   values:
+    replicas: {{ .Values.grafana.replicas }}
+    {{- if gt (.Values.grafana.replicas | int64) 1 }}
+    podDisruptionBudget:
+      minAvailable: 1
+    {{- end }}
+    headlessService: true
     ingress:
       enabled: true
       hosts:
@@ -36,10 +43,6 @@ spec:
         - hosts:
           - {{ include "data-hub.grafana.hostname" . }}
           secretName: {{ include "data-hub.grafana.hostname" . }}-tls
-    persistence:
-      enabled: true
-    deploymentStrategy:
-      type: Recreate
     resources: {{- $.Values.grafana.resources | toYaml | nindent 6 }}
     rbac:
       create: false
@@ -55,6 +58,8 @@ spec:
         secretName: {{ include "data-hub.name" (dict "context" . "name" "grafana-smtp-secret") }}
         readOnly: true
     grafana.ini:
+      auth:
+        signout_redirect_url: {{ printf "https://%s//oauth2/sign_out?rd=%s" (include "data-hub.grafana.hostname" .) (urlquery (printf "https://%s/realms/udh/protocol/openid-connect/logout?client_id=grafana&post_logout_redirect_uri=https://%s/" (include "data-hub.keycloak.hostname" .) (include "sensor-ingestion.mdb.frontend.hostname" .) )) }}
       server:
         root_url: https://{{ include "data-hub.grafana.hostname" . }}/
       auth.proxy:
@@ -76,9 +81,20 @@ spec:
         enabled: {{ .Values.grafana.smtp.enabled }}
         from_address: {{ .Values.grafana.smtp.from_adress }}
         from_name: {{ .Values.grafana.smtp.from_name }}
+        {{- if .Values.mailpit.enabled }}
+        host: {{ (printf "%s-%s" (include "common.names.fullname" .) "mailpit-smtp") -}}:25
+        {{- else }}
         host: {{ .Values.grafana.smtp.host }}
+        {{- end }}
         user: {{ .Values.grafana.smtp.user }}
         password: $__file{/etc/secrets/smtp/password}
+      unified_alerting:
+        enabled: true
+        ha_listen_address: ${POD_IP}:9094
+        ha_peers: {{ include "data-hub.name" (dict "context" . "name" "grafana-headless") }}:9094
+        ha_advertise_address: ${POD_IP}:9094
+        ha_peer_timeout: 15s
+        ha_reconnect_timeout: 2m
 ---
 apiVersion: v1
 kind: Secret

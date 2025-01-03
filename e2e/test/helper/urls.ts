@@ -7,5 +7,6 @@ export const MDB_GRAPHIQL = makeUrl('mdb');
 export const GRAFANA = makeUrl('dashboard');
 export const GRAFANA_PUBLIC = makeUrl('dashboard-public');
 export const API = makeUrl('api');
+export const PROMETHEUS = makeUrl('prometheus');
 export const KEYCLOAK = makeUrl('login');
 export const EXPORT = makeUrl('export');

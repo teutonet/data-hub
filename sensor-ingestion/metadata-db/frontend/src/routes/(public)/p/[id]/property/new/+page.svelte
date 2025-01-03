@@ -12,25 +12,19 @@
 	import { getContextClient } from '@urql/svelte';
 	import { Card, Heading } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
-	import { projectAccess } from '$lib/common/auth';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
 
 	const client = getContextClient();
 
-	$: projectId = data.projectId === 'all' ? undefined : data.projectId;
+	$: projectId = data.projectId;
 
-	$: rawProjects =
-		data.projectId === 'all'
-			? $projectAccess.map((project) => {
-					return { name: project, value: project };
-				})
-			: undefined;
-
-	$: projects = rawProjects?.length
-		? [{ name: $_('component.nav.allProjects'), value: 'all' }, ...rawProjects]
-		: undefined;
+	if (data.projectId === 'all') {
+		goto('../properties').catch((e) => {
+			console.error(e.message);
+		});
+	}
 
 	let property: PropertyInput;
 
@@ -76,5 +70,5 @@
 </Heading>
 
 <Card class="max-w-full">
-	<PropertyEdit {projectId} {projects} create bind:property id="property-edit" {submitFunction} />
+	<PropertyEdit create bind:property id="property-edit" {submitFunction} />
 </Card>

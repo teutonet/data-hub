@@ -8,17 +8,14 @@ metadata:
   name: {{ include "data-hub.name" (dict "context" . "name" "grafana-auth") }}
 spec:
   releaseName: {{ include "data-hub.name" (dict "context" . "name" "grafana-auth") }}
-  chart:
-    spec:
-      chart: oauth2-proxy
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        name: {{ include "data-hub.name" (dict "context" . "name" "oauth2") }}
+  chartRef:
+    kind: OCIRepository
+    name: {{ printf "%s-oauth2" (include "common.names.fullname" .) | quote }}
   interval: 1h0m0s
   dependsOn:
     - name: {{ include "data-hub.name" (dict "context" . "name" "keycloak") }}
   values:
+    replicaCount: {{ .Values.grafanaOauth2Proxy.replicas }}
     config:
       clientID: grafana
       cookieSecret: {{ $cookieSecretGrafanaOauthProxy | quote }}
@@ -39,6 +36,7 @@ spec:
         value: "true"
       - name: OAUTH2_PROXY_SCOPE
         value: "openid email profile"
+    {{ $extraArgs := list (printf "--whitelist-domain=%s" (include "data-hub.keycloak.hostname" .)) }}
     {{- if .Values.fakeCa.name }}
     extraVolumeMounts:
       - mountPath: /tls
@@ -51,8 +49,9 @@ spec:
           items:
             - key: ca.crt
               path: ca.crt
-    extraArgs: ["--provider-ca-file=/tls/ca.crt"]
+    {{ $extraArgs = append $extraArgs "--provider-ca-file=/tls/ca.crt" }}
     {{- end }}
+    extraArgs: {{ $extraArgs | toYaml | nindent 4 }}
     resources: {{- $.Values.grafanaOauth2Proxy.resources | toYaml | nindent 6 }}
 ---
 apiVersion: networking.k8s.io/v1

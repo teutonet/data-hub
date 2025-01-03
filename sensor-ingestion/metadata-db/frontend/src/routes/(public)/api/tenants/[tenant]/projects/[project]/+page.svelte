@@ -102,7 +102,7 @@
 			}
 
 			success('page.projectOverview.apiTokenModal.copySuccess');
-		} catch (err) {
+		} catch {
 			error('page.projectOverview.apiTokenModal.copyError');
 		}
 	}

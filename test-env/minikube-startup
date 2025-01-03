@@ -65,7 +65,7 @@ else
   minikube config set driver docker
 
   echo "starting minikube"
-  minikube start --network-plugin=cni --cpus=${MINIKUBE_RESOURCE_CPU} --memory=${MINIKUBE_RESOURCE_RAM} --kubernetes-version=${KUBERNETES_VERSION}
+  minikube start --cni=cilium --driver docker --cpus=${MINIKUBE_RESOURCE_CPU} --memory=${MINIKUBE_RESOURCE_RAM} --kubernetes-version=${KUBERNETES_VERSION}
 
   minikube_started=true
 fi
@@ -83,15 +83,16 @@ then
 
   echo "enabling minikube registry"
   minikube addons enable registry
+   # Using Cilium as a CNI somehow breaks running the docker registry on localhost:5000 (only on some machines), this is hopefully fixing it 
+  $KUBECTL -n kube-system patch svc registry --type json --patch '[{"op":"replace","path":"/spec/type","value":"NodePort"},{"op":"add","path":"/spec/ports/0/nodePort","value":32000}]'
+  $KUBECTL -n ingress-nginx patch svc ingress-nginx-controller -p "{\"spec\":{\"externalIPs\":[\"$(minikube ip)\"]}}"
 
   echo "enabling cert-manager"
-  helm upgrade cert-manager --version "1.5.4" --install --create-namespace -n cert-manager cert-manager --repo https://charts.jetstack.io --set installCRDs=true --wait
+  helm upgrade cert-manager --version "$CERT_MANAGER_VERSION" --install --create-namespace -n cert-manager cert-manager --repo https://charts.jetstack.io --set installCRDs=true --wait
 
   echo "enabling postgres operator"
-  helm upgrade postgres-operator --version "1.9.0" --install --create-namespace -n postgres postgres-operator --repo https://opensource.zalando.com/postgres-operator/charts/postgres-operator/ --wait
+  helm upgrade postgres-operator --version "$POSTGRES_OPERATOR_VERSION" --install --create-namespace -n postgres postgres-operator --repo https://opensource.zalando.com/postgres-operator/charts/postgres-operator/ --wait
 
-  echo "installing calico"
-  $KUBECTL apply -f https://raw.githubusercontent.com/projectcalico/calico/$CALICO_VERSION/manifests/calico.yaml
 
   echo "install flux"
   $KUBECTL apply -f https://github.com/fluxcd/flux2/releases/download/$FLUX_VERSION/install.yaml

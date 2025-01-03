@@ -1,8 +1,10 @@
 ---
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: OCIRepository
 metadata:
   name: {{ include "data-hub.name" (dict "context" . "name" "oauth2") }}
 spec:
   interval: 1h0m0s
-  url: https://oauth2-proxy.github.io/manifests
+  url: oci://ghcr.io/oauth2-proxy/charts/oauth2-proxy
+  ref:
+    tag: 7.9.0 # renovate: datasource=docker depName=ghcr.io/oauth2-proxy/charts/oauth2-proxy

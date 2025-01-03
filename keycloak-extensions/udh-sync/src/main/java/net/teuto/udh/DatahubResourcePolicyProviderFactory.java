@@ -7,7 +7,6 @@ import org.keycloak.authorization.policy.provider.PolicyProvider;
 import org.keycloak.authorization.policy.provider.PolicyProviderFactory;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.representations.idm.authorization.PolicyRepresentation;
 
 import static net.teuto.udh.UdhResourceManagerKt.DATA_HUB_RESOURCE_POLICY;
 

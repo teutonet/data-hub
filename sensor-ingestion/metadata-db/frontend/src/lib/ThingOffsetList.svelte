@@ -428,7 +428,7 @@
 				</TableBodyRow>
 			{:else}
 				<TableBodyRow>
-					<TableBodyCell colspan="4">
+					<TableBodyCell colspan={4}>
 						<div class="flex h-full content-center justify-center p-4">
 							{$_('thingOffsetList.noOffsets')}
 						</div>

@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 
 	$: errMsg =
-		$page.status === 404 ? `Not found: ${$page.url.pathname}` : $page.error?.message ?? '';
+		$page.status === 404 ? `Not found: ${$page.url.pathname}` : ($page.error?.message ?? '');
 </script>
 
 <div class="flex h-screen items-center justify-center">

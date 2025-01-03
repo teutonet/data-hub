@@ -16,9 +16,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jboss.logging.Logger
 import org.keycloak.authorization.AuthorizationProvider
-import org.keycloak.authorization.attribute.Attributes
 import org.keycloak.authorization.common.DefaultEvaluationContext
 import org.keycloak.authorization.common.UserModelIdentity
+import org.keycloak.authorization.identity.Identity
 import org.keycloak.authorization.model.Policy
 import org.keycloak.authorization.model.Resource
 import org.keycloak.authorization.model.ResourceServer
@@ -35,7 +35,6 @@ import org.keycloak.models.*
 import org.keycloak.models.utils.ModelToRepresentation
 import org.keycloak.representations.IDToken
 import org.keycloak.representations.idm.authorization.*
-import org.keycloak.services.ForbiddenException
 import org.keycloak.services.managers.AppAuthManager
 import org.keycloak.services.resource.RealmResourceProvider
 import org.keycloak.services.resources.admin.permissions.AdminPermissionManagement
@@ -43,6 +42,7 @@ import org.keycloak.services.resources.admin.permissions.AdminPermissions
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.function.BiFunction
+import kotlin.reflect.KClass
 
 val LOGGER: Logger = Logger.getLogger("udh")
 
@@ -135,15 +135,15 @@ fun ensureGlobalPermissions(ctx: AuthzContext) {
     ensureRealmMgmtPermission(ctx, mgmtPermissions)
     ctx.resourceServer.decisionStrategy = DecisionStrategy.AFFIRMATIVE
     listOf("Default Permission", "Default Policy").forEach { policy ->
-        ctx.policyStore.findByName(ctx.resourceServer, policy)?.let { ctx.policyStore.delete(ctx.realm, it.id) }
+        ctx.policyStore.findByName(ctx.resourceServer, policy)?.let { ctx.policyStore.delete(it.id) }
     }
     ctx.resourceStore.findByName(ctx.resourceServer, "Default Resource")
-        ?.let { ctx.resourceStore.delete(ctx.realm, it.id) }
+        ?.let { ctx.resourceStore.delete(it.id) }
     if (ctx.resourceStore.findByName(ctx.resourceServer, ROOT) == null) {
         ctx.resourceStore.create(ctx.resourceServer, ROOT, ctx.dataHubClient.id)
             .type = ROOT
     }
-    resources.getAllNames().forEach {
+    ROOT_TYPE.getAllNames().forEach {
         val permission = ResourcePermissionRepresentation()
         permission.name = "datahub: $it"
         permission.description = "Data HUB custom permissions on $it"
@@ -202,8 +202,8 @@ fun resourceCheckOnPath(
     resourcePath: ResourcePath,
     ctx: AuthzContext,
     evaluationContext: EvaluationContext
-): UdhResource {
-    var resource = rootResource(ctx)
+): UdhResource<*> {
+    var resource: UdhResource<*> = rootResource(ctx)
     resourcePath.path.forEach {
         resource = resource.findSub(it.second, it.first, ctx) ?: throw NotFoundException()
         if (!hasPermissionScopes(resource.kcResource, listOf(VIEW_SCOPE), ctx, evaluationContext)) {
@@ -253,7 +253,7 @@ fun executeAction(
             newResource.updateScopes(resourceType.resolveOwnScopes(ctx))
             newResource.displayName = newResourcePath.pathRepresentation()
             val newGenRes = UdhResource(newResourcePath, newResource, newResourceType)
-            val postCreateResult = newResourceType.postCreate(newGenRes, ctx, externalChangesList)
+            val postCreateResult = newGenRes.getResourceModel().postCreate(ctx, externalChangesList)
 
             if (postCreateResult != Unit) {
                 return postCreateResult
@@ -276,9 +276,7 @@ fun executeAction(
             ) {
                 throw ForbiddenException()
             }
-            val customAction =
-                targetGenResource.resourceType.customActions[action.customAction] ?: throw BadRequestException()
-            return customAction(targetGenResource, ctx, externalChangesList)
+            return targetGenResource.getResourceModel().customAction(ctx, externalChangesList, action.customAction)
         }
 
         is Action.Delete -> {
@@ -344,10 +342,15 @@ fun executeAction(
             }
             val permission =
                 lookupPermission(targetGenResource.kcResource, action.name, ctx) ?: throw NotFoundException()
-            ctx.policyStore.delete(ctx.realm, permission.id)
-            val tenantName = targetGenResource.kcResource.attributes["tenant"]?.firstOrNull()
-            if (tenantName != null) {
-                syncGrafanaOrgsForTenant(ctx, tenantName)
+            val principals = permissionToPrincipals(permission, ctx)
+            ctx.policyStore.delete(permission.id)
+
+            val orgsToSync = principals.flatMap {
+                listOf(it as? UdhGroup ?: return@flatMap listOf())
+            }
+            LOGGER.debug("delete permission, would sync ${orgsToSync.joinToString()}")
+            externalChangesList.add {
+                syncGrafanaOrgs(ctx, orgsToSync)
             }
 
             return Response.noContent().build()
@@ -412,11 +415,13 @@ fun executeAction(
                 }
             }
             var updated = false
+            val permissionPrincipals = action.principals.toMutableSet()
             lookupPermission(targetGenResource.kcResource, action.name, ctx)?.let {
                 updated = true
-                ctx.policyStore.delete(ctx.realm, it.id)
+                ctx.policyStore.delete(it.id)
                 // without flushing, re-creating with same name in same transaction fails
                 ctx.entityManager.flush()
+                permissionPrincipals.addAll(permissionToPrincipals(it, ctx))
             }
             val policy = ScopePermissionRepresentation()
             policy.name = targetGenResource.path.plus("permission", action.name).toHash()
@@ -426,8 +431,16 @@ fun executeAction(
             policy.decisionStrategy = DecisionStrategy.AFFIRMATIVE
             policy.description = action.name
             createPolicy(policy, ctx.policyStore, ctx.resourceServer)
+            // without flushing, the permission is ignored during this transaction
+            ctx.entityManager.flush()
 
-            syncGrafanaOrgsForTenant(ctx, tenantName)
+            val orgsToSync = permissionPrincipals.flatMap {
+                listOf(it as? UdhGroup ?: return@flatMap listOf())
+            }
+            LOGGER.debug("create permission, would sync ${orgsToSync.joinToString()}")
+            externalChangesList.add {
+                syncGrafanaOrgs(ctx, orgsToSync)
+            }
 
             return Response.status(
                 if (updated) {
@@ -543,6 +556,38 @@ data class PermissionRep(
     val name: String? = null,
 )
 
+fun permissionToPrincipals(permission: Policy, ctx: AuthzContext): List<UdhPrincipal> {
+    return permission.associatedPolicies.flatMap { policy ->
+        if (policy.type == "group") {
+            ModelToRepresentation.toRepresentation<GroupPolicyRepresentation>(
+                policy,
+                ctx.authProvider,
+                false,
+                false
+            ).groups.map {
+                val group = ctx.realm.getGroupById(it.id)
+                if (group.parentId == null) {
+                    // TODO null shouldn't happen, still handle it
+                    UdhTenant(group.name)
+                } else {
+                    UdhGroup(group.parent.name, group.name)
+                }
+            }
+        } else if (policy.type == DATA_HUB_RESOURCE_POLICY) {
+            val resPrincipal = ModelToRepresentation.toRepresentation<DatahubResourcePolicyRepresentation>(
+                policy,
+                ctx.authProvider,
+                false,
+                false
+            ).resourcePrincipal
+            val resource = ctx.resourceStore.findByName(ctx.resourceServer, resPrincipal)
+            listOf(udhResourceModelFromResource(resource))
+        } else {
+            listOf()
+        }
+    }
+}
+
 fun permissionToRep(permission: Policy, ctx: AuthzContext, includeName: Boolean): PermissionRep {
     val scopes = permission.scopes.map { it.name }
     val principals = permission.associatedPolicies.flatMap { policy ->
@@ -598,20 +643,23 @@ fun tenantGroupId(tenant: String): String {
     return hashString(tenant)
 }
 
-fun postNoop(res: UdhResource, ctx: AuthzContext, externalChangesList: MutableList<() -> Unit>) {
+fun <T : UdhResourceModel> postNoop(
+    res: T,
+    ctx: AuthzContext,
+    externalChangesList: MutableList<() -> Unit>
+) {
 
 }
 
-class ResourceType(
+class ResourceType<T : UdhResourceModel>(
     val resourceTypeName: String,
     specificOwnScopes: List<String> = listOf(),
-    val children: List<ResourceType> = listOf(),
-    val postCreate: (UdhResource, AuthzContext, MutableList<() -> Unit>) -> Any = ::postNoop,
-    val postDelete: (UdhResource, AuthzContext, MutableList<() -> Unit>) -> Unit = ::postNoop,
-    val customActions: Map<String, (UdhResource, AuthzContext, MutableList<() -> Unit>) -> Any> = mapOf(),
+    val children: List<ResourceType<*>> = listOf(),
+    val attributesToModel: (Map<String, List<String>>) -> T,
     val allowedAsPrincipal: Boolean = false,
+    val clazz: KClass<T>,
 ) {
-    var parent: ResourceType? = null
+    var parent: ResourceType<*>? = null
     val ownScopes: List<String>
     val prefixedOwnScopes: List<String>
 
@@ -625,7 +673,7 @@ class ResourceType(
         return this.children.flatMap { it.getPrefixedScopes() }.plus(prefixedOwnScopes)
     }
 
-    fun findResourceType(subResType: String): ResourceType? {
+    fun findResourceType(subResType: String): ResourceType<*>? {
         return if (subResType == resourceTypeName) {
             this
         } else {
@@ -633,7 +681,7 @@ class ResourceType(
         }
     }
 
-    fun findChild(subResType: String): ResourceType? {
+    fun findChild(subResType: String): ResourceType<*>? {
         return children.firstOrNull { it.resourceTypeName == subResType }
     }
 
@@ -649,18 +697,22 @@ class ResourceType(
 const val ADMIN_SCOPE = "admin"
 const val VIEW_SCOPE = "view"
 
-val resDepths = getResDepth(resources, 0).toMap()
+val resDepths = getResDepth(ROOT_TYPE, 0).toMap()
 
-fun getResDepth(res: ResourceType, depth: Int): List<Pair<String, Int>> {
+fun getResDepth(res: ResourceType<*>, depth: Int): List<Pair<String, Int>> {
     return res.children.flatMap { getResDepth(it, depth + 1) }.plus(Pair(res.resourceTypeName, depth))
 }
 
-fun resourceTypeForName(resourceName: String): ResourceType? {
-    return resources.findResourceType(resourceName)
+fun resourceTypeForName(resourceName: String): ResourceType<*>? {
+    return ROOT_TYPE.findResourceType(resourceName)
 }
 
-class UdhResource(val path: ResourcePath, val kcResource: Resource, val resourceType: ResourceType) {
-    fun findSub(name: String, subtype: String, ctx: AuthzContext): UdhResource? {
+class UdhResource<T : UdhResourceModel>(
+    val path: ResourcePath,
+    val kcResource: Resource,
+    val resourceType: ResourceType<T>
+) {
+    fun findSub(name: String, subtype: String, ctx: AuthzContext): UdhResource<*>? {
         val subPath = path.plus(subtype, name)
         val subPathHash = subPath.toHash()
         val subResource = ctx.resourceStore.findByName(ctx.resourceServer, subPathHash) ?: return null
@@ -668,7 +720,7 @@ class UdhResource(val path: ResourcePath, val kcResource: Resource, val resource
         return UdhResource(subPath, subResource, subResType)
     }
 
-    fun parent(ctx: AuthzContext): UdhResource? {
+    fun parent(ctx: AuthzContext): UdhResource<*>? {
         val parentPath = path.parent()
         if (parentPath == null) {
             return null
@@ -681,7 +733,7 @@ class UdhResource(val path: ResourcePath, val kcResource: Resource, val resource
         }
     }
 
-    fun listSub(subResourceType: String, ctx: AuthzContext): List<UdhResource> {
+    fun listSub(subResourceType: String, ctx: AuthzContext): List<UdhResource<*>> {
         return findAllMatchingResources(subResourceType, path.toAttributes(), ctx).map {
             udhResourceFromKcResource(
                 it
@@ -697,14 +749,14 @@ class UdhResource(val path: ResourcePath, val kcResource: Resource, val resource
             }
         }
         // delete hook
-        resourceType.postDelete(this, ctx, externalChangesList)
+        getResourceModel().postDelete(ctx, externalChangesList)
         // delete policy for this resource
         val resourceHash = path.toHash()
         ctx.policyStore.findByName(ctx.resourceServer, "res-$resourceHash")?.let {
-            ctx.policyStore.delete(ctx.realm, it.id)
+            ctx.policyStore.delete(it.id)
         }
         // delete this
-        ctx.resourceStore.delete(ctx.realm, kcResource.id)
+        ctx.resourceStore.delete(kcResource.id)
     }
 
     fun customAttributes(): Map<String, String> {
@@ -712,21 +764,25 @@ class UdhResource(val path: ResourcePath, val kcResource: Resource, val resource
             it.startsWith(ATTR_PREFIX)
         }.mapKeys { it.key.removePrefix(ATTR_PREFIX) }.mapValues { it.value.first() }
     }
+
+    fun getResourceModel(): T {
+        return resourceType.attributesToModel(kcResource.attributes)
+    }
 }
 
-fun rootResource(context: AuthzContext): UdhResource {
+fun rootResource(context: AuthzContext): UdhResource<UdhRoot> {
     val rootRes = context.resourceStore.findByName(context.resourceServer, ROOT) ?: context.resourceStore.create(
         context.resourceServer,
         ROOT,
         ROOT,
         context.dataHubClient.id
     ).also { it.type = ROOT }
-    return UdhResource(ResourcePath(listOf()), rootRes, resources)
+    return UdhResource(ResourcePath(listOf()), rootRes, ROOT_TYPE)
 }
 
-fun udhResourceFromKcResource(kcResource: Resource): UdhResource {
+fun udhResourceFromKcResource(kcResource: Resource): UdhResource<*> {
     val resourcePath = ResourcePath.fromResource(kcResource)
-    val resType = resourcePath.path.lastOrNull()?.first?.let { resourceTypeForName(it) } ?: resources
+    val resType = resourcePath.path.lastOrNull()?.first?.let { resourceTypeForName(it) } ?: ROOT_TYPE
     return UdhResource(resourcePath, kcResource, resType)
 }
 
@@ -784,10 +840,10 @@ class ResourcePath(val path: List<Pair<String, String>> = listOf()) {
         }
     }
 
-    fun getUdhResource(ctx: AuthzContext): UdhResource? {
+    fun getUdhResource(ctx: AuthzContext): UdhResource<*>? {
         val res = getResource(ctx) ?: return null
         val resType = path.lastOrNull()?.first?.let { resourceTypeForName(it) }
-            ?: resources
+            ?: ROOT_TYPE
         return UdhResource(this, res, resType)
     }
 
@@ -923,14 +979,14 @@ class DatahubPolicyProvider(val authorization: AuthorizationProvider) : PolicyPr
                     evaluation.grant()
                     return
                 }
-                // if the user can access any subgroup, allow access to the supergroup
-                val tenantGroups = findAllMatchingResources("group", mapOf("tenant" to groupName), context)
-                if (tenantGroups.any {
-                        hasPermissionScopes(it, listOf(ADMIN_SCOPE), context, evaluation.context)
-                    }) {
-                    evaluation.grant()
-                    return
-                }
+            }
+            // if the user can access any subgroup, allow access to the supergroup
+            val tenantGroups = findAllMatchingResources("group", mapOf("tenant" to groupName), context)
+            if (tenantGroups.any {
+                    hasPermissionScopes(it, listOf(ADMIN_SCOPE), context, evaluation.context)
+                }) {
+                evaluation.grant()
+                return
             }
         }
     }
@@ -1093,26 +1149,32 @@ class DatahubResourceProvider(private val session: KeycloakSession) : RealmResou
     }
 }
 
-fun lookupResources(ctx: AuthzContext, resourceType: String, names: Map<String, String>): List<Resource> {
+fun <T : UdhResourceModel> lookupResources(
+    ctx: AuthzContext,
+    resourceType: ResourceType<T>,
+    names: Map<String, String>
+): List<UdhResource<T>> {
     return ctx.resourceStore.find(
-        ctx.realm,
         ctx.resourceServer,
-        mapOf(Resource.FilterOption.TYPE to arrayOf(resourceType)),
+        mapOf(Resource.FilterOption.TYPE to arrayOf(resourceType.resourceTypeName)),
         null,
         null
     )
-        .filter { res -> res.type == resourceType && names.all { res.attributes[it.key]?.firstOrNull() == it.value } }
+        .filter { res -> res.type == resourceType.resourceTypeName && names.all { res.attributes[it.key]?.firstOrNull() == it.value } }
+        .map {
+            UdhResource(ResourcePath.fromResource(it), it, resourceType)
+        }
 }
 
-fun getResourcesForUser(
+fun <T : UdhResourceModel> getResourcesForUser(
     ctx: AuthzContext,
-    resourceType: String,
+    resourceType: ResourceType<T>,
     names: Map<String, String>,
     scopes: List<String>
-): List<Resource> {
+): List<UdhResource<T>> {
     return lookupResources(ctx, resourceType, names).filter {
         hasPermissionScopes(
-            it,
+            it.kcResource,
             scopes,
             ctx,
             ctx.evaluationContext
@@ -1120,32 +1182,45 @@ fun getResourcesForUser(
     }
 }
 
-fun getResourcesForResourcePrincipal(
+fun <T : UdhResourceModel> getResourcesForIdentity(
     ctx: AuthzContext,
-    resourcePrincipalHash: String,
-    resourceType: String,
+    identity: Identity,
+    resourceType: ResourceType<T>,
     scopes: List<String>,
     names: Map<String, String>,
-): List<Resource> {
+): List<UdhResource<T>> {
     val evaluationContext = DefaultEvaluationContext(
-        AttributeIdentity(
-            Attributes.from(
-                mapOf(
-                    DATA_HUB_RESOURCE_KEY to listOf(resourcePrincipalHash),
-                    "data-hub.attribute.groups" to listOf("")
-                )
-            )
-        ), ctx.session
+        identity, ctx.session
     )
     // gather all permissions of this resource
     return lookupResources(ctx, resourceType, names).filter {
         hasPermissionScopes(
-            it,
+            it.kcResource,
             scopes,
             ctx,
             evaluationContext
         )
     }
+}
+
+fun getPrincipalsForResource(ctx: AuthzContext, resource: UdhResource<*>, scope: String): Set<UdhPrincipal> {
+    val fullScope = if (scope.contains(":")) {
+        scope
+    } else {
+        "${resource.resourceType.resourceTypeName}:$scope"
+    }
+    val principals = ctx.policyStore.findByResource(ctx.resourceServer, resource.kcResource).flatMap { policy ->
+        // check scopes
+        val policyScopes = policy.scopes.map { it.name }
+        // make into principal
+        if (policyScopes.any { it.endsWith(":${ADMIN_SCOPE}") || it == fullScope }) {
+            permissionToPrincipals(policy, ctx)
+        } else {
+            listOf()
+        }
+    }.toMutableSet()
+    resource.parent(ctx)?.let { parent -> principals.addAll(getPrincipalsForResource(ctx, parent, fullScope)) }
+    return principals
 }
 
 fun getFlatProjects(ctx: AuthzContext, tenant: String?, scopes: List<String>): List<String> {
@@ -1154,9 +1229,8 @@ fun getFlatProjects(ctx: AuthzContext, tenant: String?, scopes: List<String>): L
     } else {
         mapOf("tenant" to tenant)
     }
-    return getResourcesForUser(ctx, "project", names, scopes).map {
-        val project = UdhProject.fromAttributes(it.attributes)
-        project.flatName
+    return getResourcesForUser(ctx, PROJECTS_TYPE, names, scopes).map {
+        it.getResourceModel().flatName
     }
 }
 

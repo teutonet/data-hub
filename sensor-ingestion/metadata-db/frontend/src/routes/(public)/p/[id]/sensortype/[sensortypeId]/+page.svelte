@@ -31,6 +31,7 @@
 		EDIT_SENSOR_PROPERTY,
 		GET_PROPERTIES,
 		GET_SENSOR_BY_ID,
+		GET_SENSOR_CHANGES,
 		UPDATE_SENSOR_BY_ID
 	} from '$lib/common/graphql/queries';
 	import { Card, CardPlaceholder } from 'flowbite-svelte';
@@ -38,10 +39,10 @@
 	import { handleCombinedErrors, performMutation } from '$lib/common/graphql/utils';
 	import { success } from '$lib/common/toast/toast';
 	import PageTitle from '$lib/PageTitle.svelte';
-	import { projectAccess } from '$lib/common/auth';
 	import SensortypeAutodetectModal from '$lib/common/SensortypeAutodetectModal.svelte';
 	import { emptyToNull } from '$lib/stringUtils';
 	import { goto } from '$app/navigation';
+	import HistoryModal from '$lib/HistoryModal.svelte';
 
 	export let data: PageData;
 
@@ -60,17 +61,6 @@
 
 	$: projectId = data.projectId;
 
-	$: rawProjects =
-		data.projectId === 'all'
-			? $projectAccess.map((project) => {
-					return { name: project, value: project };
-				})
-			: undefined;
-
-	$: projects = rawProjects?.length
-		? [{ name: $_('component.nav.allProjects'), value: 'all' }, ...rawProjects]
-		: undefined;
-
 	$: sensorProps = $sensorStore.data?.sensor?.sensorProperties;
 
 	$: propertyStore = queryStore<GetPropertiesQuery, GetPropertiesQueryVariables>({
@@ -82,6 +72,14 @@
 		(prop) => prop.project === null || prop.project === data.projectId
 	);
 
+	$: propertyNames = properties
+		? Object.fromEntries(
+				properties.map((item) => {
+					return [item.id, item.name];
+				})
+			)
+		: undefined;
+
 	async function submitFunction() {
 		const sensorPatch: SensorPatch = {
 			project: projectId,
@@ -89,7 +87,8 @@
 			description: sensor.description ?? undefined,
 			appeui: sensor.appeui ?? undefined,
 			datasheet: sensor.datasheet ?? undefined,
-			public: sensor.public
+			public: sensor.public,
+			outOfOrderSeconds: sensor.outOfOrderSeconds
 		};
 
 		await performMutation<UpdateSensorByIdMutation, UpdateSensorByIdMutationVariables>(
@@ -135,7 +134,7 @@
 		).then((result) => {
 			if (result.error) {
 				handleCombinedErrors(result.error, { showToasts: true });
-				return Promise.reject();
+				return Promise.reject(result.error);
 			} else {
 				success('shared.message.savedSuccessfully');
 				propertyStore.reexecute({ requestPolicy: 'network-only' });
@@ -253,16 +252,22 @@
 			{createSensorPropFunction}
 			{deleteSensorPropFunction}
 			{deleteSensorFunction}
-			{projectId}
-			{projects}
 			{sensorProps}
 			{properties}
 			id="sensor-form"
+			{sensorId}
 		/>
 		<div class="my-4 w-full">
 			<SensortypeAutodetectModal sensortype={sensor} project={data.projectId} />
 		</div>
 	</Card>
+	<HistoryModal
+		entityId={sensor.id}
+		dataKey="sensorChanges"
+		query={GET_SENSOR_CHANGES}
+		additionalNames={propertyNames}
+		excludedKeys={['sensor_id']}
+	/>
 {:else}
 	<CardPlaceholder />
 {/if}

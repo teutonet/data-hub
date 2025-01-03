@@ -28,7 +28,7 @@
 		bind:value
 		{placeholder}
 		{required}
-		{ariaLabel}
+		aria-label={ariaLabel}
 		{items}
 		on:change
 	/>

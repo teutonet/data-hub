@@ -2,22 +2,15 @@
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
 	import type { GetPropertyByIdQuery, PropertyInput } from '$lib/common/generated/types';
 	import { _ } from 'svelte-i18n';
-	import FloatingLabelSelect from '$lib/flowbite-extensions/FloatingLabelSelect.svelte';
 	import { Button } from 'flowbite-svelte';
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
+	import { Tooltip } from 'flowbite-svelte';
 
 	export let id: string;
 	export let create = false;
 	export let property: NonNullable<GetPropertyByIdQuery['property']> | PropertyInput;
 	export let submitFunction: () => Promise<void>;
 	export let deleteFunction: (() => Promise<void>) | undefined = undefined;
-	export let projects:
-		| {
-				value: string;
-				name: string;
-		  }[]
-		| undefined = undefined;
-	export let projectId: string | undefined = undefined;
 
 	async function handleFormSubmit(event: Event) {
 		const formElement = event.target as HTMLFormElement;
@@ -28,21 +21,12 @@
 			await submitFunction();
 		}
 	}
+
+	$: isPropertyProjectNull = property.project == null;
 </script>
 
 <form class="needs-validation" on:submit|preventDefault={handleFormSubmit} novalidate {id}>
 	<div class="grid grid-cols-1 gap-4 pb-4">
-		{#if projects && (!projectId || (create && projectId === 'all'))}
-			<FloatingLabelSelect
-				bind:value={property.project}
-				items={projects}
-				id="project-select"
-				name="project-select"
-				labelText={$_('component.propertyEdit.project')}
-				required
-				disabled={!create}
-			/>
-		{/if}
 		<ValidatedFormField
 			bind:value={property.name}
 			required
@@ -64,19 +48,28 @@
 			bind:value={property.metricName}
 			inputLabel={$_('component.propertyEdit.metricName')}
 			inputId="property-metricname"
+			pattern="^(?![Tt][Ee][Cc][Hh][Nn][Ii][Cc][Aa][Ll]_).*"
+			patternMismatchText={$_('component.propertyEdit.technicalPrefixNotAllowed')}
 		/>
 	</div>
 	<div class="flex flex-row gap-4">
-		<Button type="submit" color="green">
+		<Button type="submit" color="green" disabled={isPropertyProjectNull}>
 			{$_('shared.action.save')}
 		</Button>
+		{#if isPropertyProjectNull}
+			<Tooltip>{$_('component.propertyEdit.editGlobalToolTip')}</Tooltip>
+		{/if}
 		{#if !create && !!deleteFunction}
 			<DeleteButton
 				modalTitle="component.propertyEdit.deleteModal.title"
 				modalBody="component.propertyEdit.deleteModal.body"
 				buttonTitle="shared.action.delete"
 				submitFunction={deleteFunction}
+				disabled={isPropertyProjectNull}
 			/>
+			{#if isPropertyProjectNull}
+				<Tooltip>{$_('component.propertyEdit.deleteGlobalToolTip')}</Tooltip>
+			{/if}
 		{/if}
 	</div>
 </form>

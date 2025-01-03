@@ -1,5 +1,5 @@
 import test, { BrowserContext, Page, expect } from 'playwright/test';
-import { GRAFANA, KEYCLOAK, MDB_FRONTEND } from './helper/urls';
+import { GRAFANA, KEYCLOAK, MDB_FRONTEND, PROMETHEUS } from './helper/urls';
 import axios from 'axios';
 import { Agent } from 'https';
 import { getRandomString } from './helper/util';
@@ -10,6 +10,7 @@ import {
 	createKeycloakUser,
 	signInAdminKeycloak
 } from './helper/keycloak';
+import { pushMetrics } from 'prometheus-remote-write';
 
 async function expectGrafanaWorking(page: Page): Promise<void> {
 	await page.getByLabel('Toggle menu').click();
@@ -61,6 +62,7 @@ async function expectFrontendWorking(page: Page, testPostfix: string): Promise<v
 }
 
 test('keycloak', async ({ page, context }) => {
+	test.slow();
 	await signInAdminKeycloak(page);
 
 	const testPostfix = getRandomString(6);
@@ -87,6 +89,17 @@ test('keycloak', async ({ page, context }) => {
 	);
 	await realmAdminClient.put(
 		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/groups/limited-group`
+	);
+	await realmAdminClient.put(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/groups/view-group`
+	);
+
+	await realmAdminClient.put(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/permissions/data-viewer`,
+		{
+			scopes: ['project:prometheus-read', 'project:view', 'group:view', 'group:dashboard-read'],
+			principals: [{ type: 'group', tenant: `knuffingen-${testPostfix}`, group: 'view-group' }]
+		}
 	);
 
 	await realmAdminClient.put(
@@ -140,6 +153,19 @@ test('keycloak', async ({ page, context }) => {
 			{
 				name: `knuffingen-${testPostfix}`,
 				groups: ['limited-group']
+			}
+		],
+		false
+	);
+
+	await createKeycloakUser(
+		page,
+		`viewer-${testPostfix}`,
+		userPassword,
+		[
+			{
+				name: `knuffingen-${testPostfix}`,
+				groups: ['view-group']
 			}
 		],
 		false
@@ -237,9 +263,25 @@ test('keycloak', async ({ page, context }) => {
 	await expectFrontendWorking(page, testPostfix);
 	await page.goto(GRAFANA);
 	await page.getByLabel('Change organization').click();
-	await expect(page.getByText(`knuffingen-${testPostfix}:admin`).first()).toBeVisible();
-	await expect(page.getByText(`knuffingen-${testPostfix}:limited-group`).first()).toBeVisible();
-	await page.getByText(`knuffingen-${testPostfix}:data-analyst`, { exact: true }).first().click();
+	await expect(
+		page
+			.getByLabel('Select options menu')
+			.getByText(`knuffingen-${testPostfix}:admin`, { exact: true })
+	).toBeVisible();
+	await expect(
+		page
+			.getByLabel('Select options menu')
+			.getByText(`knuffingen-${testPostfix}:limited-group`, { exact: true })
+	).toBeVisible();
+	await expect(
+		page
+			.getByLabel('Select options menu')
+			.getByText(`knuffingen-${testPostfix}:view-group`, { exact: true })
+	).toBeVisible();
+	await page
+		.getByLabel('Select options menu')
+		.getByText(`knuffingen-${testPostfix}:data-analyst`, { exact: true })
+		.click();
 	await expectGrafanaWorking(page);
 
 	// analyzer only has access to one org in grafana but not mdb-frontend
@@ -260,5 +302,108 @@ test('keycloak', async ({ page, context }) => {
 	await freshLoginFrontend(page, context, `limited-${testPostfix}`, userPassword);
 	await expectFrontendWorking(page, testPostfix);
 	await page.goto(GRAFANA);
+	await page.waitForLoadState('networkidle');
 	await expect(page.getByLabel('Change organization')).not.toBeVisible();
+
+	// viewer can look at grafana dashboards
+
+	await freshLoginFrontend(page, context, `viewer-${testPostfix}`, userPassword);
+	await page.goto(GRAFANA);
+	await page.getByLabel('Change organization').click();
+	await expect(page.getByText('Viewer').first()).toBeVisible();
+	await expect(page.getByText('Editor')).not.toBeVisible();
+});
+
+test('resource-api-cross-tenant', async ({ page }) => {
+	const testPostfix1 = getRandomString(6);
+	const testPostfix2 = getRandomString(6);
+
+	const realmAdminToken = await aquireTokenViaDeviceCode(
+		page,
+		DATA_HUB_ADMIN_USERNAME,
+		DATA_HUB_ADMIN_PASSWORD,
+		['data-hub']
+	);
+
+	const realmAdminClient = axios.create({
+		httpsAgent: new Agent({ rejectUnauthorized: false }),
+		headers: { Authorization: `Bearer ${realmAdminToken}` }
+	});
+
+	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}`);
+	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix2}`);
+	await realmAdminClient.put(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test`
+	);
+
+	const sensorCredentials = await realmAdminClient.put<{ username: string; password: string }>(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test/sensor-credentials/${getRandomString(4)}`
+	);
+
+	const apiClient = new MdbApi(
+		`knuffingen-${testPostfix1}.test`,
+		sensorCredentials.data.username,
+		sensorCredentials.data.password
+	);
+
+	await pushMetrics(
+		{ testmetric: 1 },
+		{
+			url: `${PROMETHEUS}/api/v1/write`,
+			headers: {
+				Authorization: `Bearer ${await apiClient.getOrFetchToken()}`,
+				'X-Scope-OrgID': `knuffingen-${testPostfix1}.test`
+			},
+			fetch
+		}
+	);
+	await page.goto(GRAFANA);
+	await page.getByLabel('Change organization').click();
+	await page
+		.getByLabel('Select options menu')
+		.getByText(`knuffingen-${testPostfix2}:admin`, { exact: true })
+		.click();
+	await page.getByLabel('Toggle menu').click();
+	await page.getByTestId('navbarmenu').getByRole('link', { name: 'Explore', exact: true }).click();
+	await page.getByLabel('Select a data source').click();
+	await page.getByLabel('Select options menu').getByText('Prometheus', { exact: true }).click();
+	await expect(page.getByLabel('Metric')).toBeVisible();
+
+	await expect(async () => {
+		await page.reload();
+		await page.getByLabel('Metric').click();
+		await expect(page.getByText('no org id')).toBeVisible({ timeout: 5000 });
+		await page.keyboard.press('Escape');
+		await page.getByLabel('Close alert').click();
+	}).toPass({ intervals: [0] });
+
+	await realmAdminClient.put(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test/permissions/cross`,
+		{
+			scopes: ['project:prometheus-read'],
+			principals: [
+				{
+					type: 'group',
+					tenant: `knuffingen-${testPostfix2}`,
+					group: 'admin'
+				}
+			]
+		}
+	);
+
+	await expect(async () => {
+		await page.reload();
+		await page.getByLabel('Metric').click();
+		await page.getByText('testmetric', { exact: true }).click({ timeout: 5000 });
+	}).toPass({ intervals: [0] });
+
+	await realmAdminClient.delete(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test/permissions/cross`
+	);
+
+	await expect(async () => {
+		await page.reload();
+		await page.getByLabel('Metric').click();
+		await expect(page.getByText('no org id')).toBeVisible({ timeout: 5000 });
+	}).toPass({ intervals: [0] });
 });

@@ -13,6 +13,7 @@ import org.keycloak.models.KeycloakSession
 import org.keycloak.models.UserModel
 import org.keycloak.representations.IDToken
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
@@ -22,6 +23,7 @@ import java.util.*
 import kotlin.time.Duration.Companion.seconds
 
 // if the host is not set, this module does nothing
+// get values from keycloak deployment in k9s for local testing, port-forward grafana pod
 val GRAFANA_HOST: String? = System.getenv("GRAFANA_HOST")
 val GRAFANA_ADMIN_USER = System.getenv("GRAFANA_USER") ?: "admin"
 val GRAFANA_ADMIN_PASSWORD = System.getenv("GRAFANA_PASSWORD") ?: "admin"
@@ -29,16 +31,24 @@ val PROMETHEUS_HOST: String = System.getenv("PROMETHEUS_HOST") ?: "prometheus"
 
 val USER_SYNC_CACHE = Cache.Builder<UserSyncParams, Unit>().maximumCacheSize(1000).expireAfterWrite(10.seconds).build()
 
-data class UserSyncParams(val userLogin: String, val userEmail: String, val desiredOrgNames: List<String>)
+data class UserSyncParams(
+    val userLogin: String,
+    val userEmail: String,
+    val editOrgNames: List<String>,
+    val readOrgNames: List<String>,
+)
 
 fun syncGrafanaUser(ctx: AuthzContext, userModel: UserModel, client: GrafanaClient) {
-    val desiredOrgNames = getResourcesForUser(ctx, "group", mapOf(), listOf("dashboard-edit")).map {
-        UdhGroup.fromAttributes(it.attributes).grafanaOrgName
+    val editOrgNames = getResourcesForUser(ctx, GROUPS_TYPE, mapOf(), listOf("dashboard-edit")).map {
+        it.getResourceModel().grafanaOrgName
     }
-    val params = UserSyncParams(userModel.id, userModel.email, desiredOrgNames)
+    val readOrgNames = getResourcesForUser(ctx, GROUPS_TYPE, mapOf(), listOf("dashboard-read")).map {
+        it.getResourceModel().grafanaOrgName
+    }
+    val params = UserSyncParams(userModel.id, userModel.email, editOrgNames, readOrgNames)
     if (USER_SYNC_CACHE.get(params) == null) {
         USER_SYNC_CACHE.put(params, Unit)
-        client.syncGrafanaUser(userModel.id, userModel.email, desiredOrgNames)
+        client.syncGrafanaUser(userModel.id, userModel.email, editOrgNames, readOrgNames)
     }
 }
 
@@ -48,8 +58,8 @@ fun setClaimGrafana(ctx: AuthzContext, token: IDToken, userModel: UserModel) {
 }
 
 fun syncGrafanaOrgsForTenant(ctx: AuthzContext, tenant: String) {
-    val groupsToSync = lookupResources(ctx, "group", mapOf("tenant" to tenant)).map {
-        UdhGroup.fromAttributes(it.attributes)
+    val groupsToSync = lookupResources(ctx, GROUPS_TYPE, mapOf("tenant" to tenant)).map {
+        it.getResourceModel()
     }
     syncGrafanaOrgs(ctx, groupsToSync)
 }
@@ -66,10 +76,10 @@ class AttributeIdentity(val attrs: Attributes) : Identity {
 
 // find projects that can be accessed by this group
 fun projectsForGroup(ctx: AuthzContext, group: UdhGroup): List<String> {
-    val attributes = Attributes.from(mapOf("data-hub.attribute.groups" to listOf("/${group.tenant}/${group.group}")))
-    val evaluationContext = DefaultEvaluationContext(AttributeIdentity(attributes), ctx.session)
+    val evaluationContext = DefaultEvaluationContext(group.getIdentity(ctx), ctx.session)
     val authzContext = ctx.copy(evaluationContext = evaluationContext)
     val flatProjects = getFlatProjects(authzContext, null, listOf("prometheus-read"))
+    LOGGER.debug("projectsForGroup, group: $group, projects: ${flatProjects.joinToString()}")
     return flatProjects
 }
 
@@ -107,8 +117,8 @@ fun syncAllGrafana(session: KeycloakSession) {
     // dummy evaluation context
     val ctx =
         getAuthzContext(session, DefaultEvaluationContext(AttributeIdentity(Attributes.from(mapOf())), session), null)
-    val orgs = lookupResources(ctx, "group", mapOf()).associate {
-        val group = UdhGroup.fromAttributes(it.attributes)
+    val orgs = lookupResources(ctx, GROUPS_TYPE, mapOf()).associate {
+        val group = it.getResourceModel()
         group.grafanaOrgName to projectsForGroup(ctx, group)
     }
     val grafanaClient = getGrafanaClient()
@@ -149,6 +159,7 @@ data class GrafanaOrgOverviewModel(
 data class GrafanaOrgOverviewModelButWithOrgId(
     val orgId: Int,
     val name: String,
+    val role: String,
 )
 
 @Serializable
@@ -168,6 +179,7 @@ data class GrafanaDatasourceModel(
     val url: String,
     val jsonData: Map<String, String>,
     val secureJsonData: Map<String, String> = mapOf(),
+    val version: Int,
     val overwrite: Boolean = false
 )
 
@@ -260,11 +272,11 @@ class GrafanaClient(val host: String, user: String, password: String) {
         return json.decodeFromString(ListSerializer(GrafanaOrgOverviewModelButWithOrgId.serializer()), response.body())
     }
 
-    fun addUserToOrg(login: String, orgId: Int) {
+    fun addUserToOrg(login: String, orgId: Int, role: String) {
         val body = json.encodeToString(
             mapOf(
                 "loginOrEmail" to login,
-                "role" to "Editor"
+                "role" to role
             )
         )
         httpRequest("$host/api/orgs/$orgId/users") { it.POST(BodyPublishers.ofString(body)) }
@@ -272,6 +284,15 @@ class GrafanaClient(val host: String, user: String, password: String) {
 
     fun removeUserFromOrg(userId: Int, orgId: Int) {
         httpRequest("$host/api/orgs/$orgId/users/$userId") { it.DELETE() }
+    }
+
+    fun updateUserRole(userId: Int, orgId: Int, role: String) {
+        val body = json.encodeToString(
+            mapOf(
+                "role" to role,
+            )
+        )
+        httpRequest("$host/api/orgs/$orgId/users/$userId") { it.method("PATCH", BodyPublishers.ofString(body))}
     }
 
     fun createOrg(name: String): Int {
@@ -289,7 +310,8 @@ class GrafanaClient(val host: String, user: String, password: String) {
     }
 
     fun lookupOrg(name: String): GrafanaOrgOverviewModel? {
-        val response = httpRequest("$host/api/orgs/name/$name") { it.GET() }
+        val sanitizedName = URLEncoder.encode(name, "utf-8")
+        val response = httpRequest("$host/api/orgs/name/$sanitizedName") { it.GET() }
         return if (response.statusCode() == 404) {
             null
         } else {
@@ -360,7 +382,8 @@ class GrafanaClient(val host: String, user: String, password: String) {
             ),
             secureJsonData = mapOf(
                 "httpHeaderValue1" to projectHeader
-            )
+            ),
+            version = existingPrometheusDatasource?.let { it.version + 1 } ?: 1,
         )
         // if it exists, check if it needs to be updated
         if (existingPrometheusDatasource != null) {
@@ -373,11 +396,11 @@ class GrafanaClient(val host: String, user: String, password: String) {
         }
     }
 
-    fun syncGrafanaUser(user: UserModel, desiredOrgNames: List<String>) {
-        syncGrafanaUser(user.id, user.email, desiredOrgNames)
+    fun syncGrafanaUser(user: UserModel, desiredEditOrgNames: List<String>, desiredViewOrgNames: List<String>) {
+        syncGrafanaUser(user.id, user.email, desiredEditOrgNames, desiredViewOrgNames)
     }
 
-    fun syncGrafanaUser(username: String, email: String, desiredOrgNames: List<String>) {
+    fun syncGrafanaUser(username: String, email: String, desiredEditOrgNames: List<String>, desiredViewOrgNames: List<String>) {
         // lookup user by login (username)
         val existingUser = lookupUser(username)
         // if it doesn't exist, create it
@@ -391,16 +414,39 @@ class GrafanaClient(val host: String, user: String, password: String) {
         // get all orgs the user is currently part of
         val currentUserOrgs = getUserOrgs(userId)
         val currentUserOrgNames = currentUserOrgs.map { it.name }.toSet()
-        val desiredOrgNamesSet = desiredOrgNames.toSet()
+        val desiredEditOrgNamesSet = desiredEditOrgNames.toSet()
+        val desiredViewOrgNamesSet = desiredViewOrgNames.toSet()
         // if there are orgs the user isn't supposed to be in, remove them
-        currentUserOrgs.filter { !desiredOrgNamesSet.contains(it.name) }.forEach {
+        currentUserOrgs.filter { !desiredEditOrgNamesSet.contains(it.name) && !desiredViewOrgNamesSet.contains(it.name)}.forEach {
             removeUserFromOrg(userId, it.orgId)
         }
         // if there are orgs the user is supposed to be in, add them
-        desiredOrgNames.filter { !currentUserOrgNames.contains(it) }.forEach {
-            // skip orgs that can't be found, might be another update in progress
-            val org = lookupOrg(it) ?: return@forEach
-            addUserToOrg(username, org.id)
+        desiredEditOrgNames.forEach { editOrgName ->
+            if(currentUserOrgNames.contains(editOrgName)) {
+                //find org
+                val currentUserOrg = currentUserOrgs.find { it.name == editOrgName && it.role != "Editor" }
+                if(currentUserOrg != null) {
+                    updateUserRole(userId, currentUserOrg.orgId, "Editor")
+                }
+            } else {
+                val org = lookupOrg(editOrgName) ?: return@forEach
+
+                addUserToOrg(username, org.id, "Editor")
+            }
+        }
+
+        desiredViewOrgNames.filter {!desiredEditOrgNames.contains(it)}.forEach{ viewOrgName ->
+            if(currentUserOrgNames.contains(viewOrgName)) {
+                //find org
+                val currentUserOrg = currentUserOrgs.find { it.name == viewOrgName && it.role != "Viewer" }
+                if(currentUserOrg != null) {
+                    updateUserRole(userId, currentUserOrg.orgId, "Viewer")
+                }
+            } else {
+                val org = lookupOrg(viewOrgName) ?: return@forEach
+
+                addUserToOrg(username, org.id, "Viewer")
+            }
         }
     }
 

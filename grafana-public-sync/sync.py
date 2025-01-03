@@ -63,9 +63,9 @@ def main():
   existing_datasources = tenant_public_grafana_api.datasource.list_datasources()
   existing_datasources = [x for x in existing_datasources if x["type"] == 'prometheus']
 
-  # maps the public datasource uid to id
-  datasource_uid_to_id = {datasource['uid']: datasource['id'] for datasource in existing_datasources}
-  datasource_uid_to_version = {}
+  # maps the public datasource name to (id and uid)
+  datasource_name_to_id = {datasource['name']: {'id': datasource['id'], 'uid': datasource['uid']} for datasource in existing_datasources}
+  datasource_name_to_version = {}
 
   # maps org + the private dashboard uid to its version
   dashboard_uid_to_version: dict[tuple[str, str], str] = {}
@@ -84,7 +84,7 @@ def main():
   while True:
     with termination_lock:
       unused_folders = set(public_folder_cache.keys())
-      unused_datasources = set(datasource_uid_to_id.keys())
+      unused_datasources = set(datasource_name_to_id.keys())
       unused_dashboards = {dashboard['uid'] for dashboard in tenant_public_grafana_api.search.search_dashboards(query='%', type_='dash-db')}
 
       for private_org in main_grafana.organizations.list_organization():
@@ -108,7 +108,7 @@ def main():
         prometheus_datasource_version = prometheus_datasource['version']
         del prometheus_datasource['id']
         del prometheus_datasource['version']
-        prometheus_datasource['uid'] = org_prometheus_name
+        del prometheus_datasource['uid']
         prometheus_datasource['name'] = org_prometheus_name
 
         # fix jsonData stuff
@@ -119,22 +119,24 @@ def main():
           prometheus_datasource['secureJsonData'][key] = value
           prometheus_datasource['secureJsonFields'][key] = True
 
-        if datasource_id := datasource_uid_to_id.get(prometheus_datasource['uid']):
-          existing_version = datasource_uid_to_version.get(prometheus_datasource['uid'])
+        if datasource_id_uid := datasource_name_to_id.get(prometheus_datasource['name']):
+          existing_version = datasource_name_to_version.get(prometheus_datasource['name'])
           if existing_version != prometheus_datasource_version:
             logging.info(f'updating datasource {org_prometheus_name}')
-            changed_datasource = tenant_public_grafana_api.datasource.update_datasource(datasource_id, prometheus_datasource)
-            datasource_uid_to_version[prometheus_datasource['uid']] = changed_datasource['datasource']['version']
+            changed_datasource = tenant_public_grafana_api.datasource.update_datasource(datasource_id_uid['id'], prometheus_datasource)
+            datasource_name_to_version[prometheus_datasource['name']] = prometheus_datasource_version
             logging.info(f'datasource {org_prometheus_name} updated')
           else:
             logging.debug(f'datasource {org_prometheus_name} left untouched')
         else:
           logging.info(f'creating datasource {org_prometheus_name}')
           changed_datasource = tenant_public_grafana_api.datasource.create_datasource(prometheus_datasource)
-          datasource_uid_to_version[prometheus_datasource['uid']] = changed_datasource['datasource']['version']
-          datasource_uid_to_id[changed_datasource['datasource']['uid']] = changed_datasource['datasource']['id']
+          datasource_name_to_version[prometheus_datasource['name']] = prometheus_datasource_version
+          datasource_name_to_id[prometheus_datasource['name']] = {'id': changed_datasource['datasource']['id'], 'uid': changed_datasource['datasource']['uid']}
           logging.info(f'datasource {org_prometheus_name} created')
         
+        prometheus_datasource_uid = datasource_name_to_id[prometheus_datasource['name']]['uid']
+
         for dashboard_entry in dashboards:
           logging.debug(f'reconciling dashboard {dashboard_entry["title"]}')
           # we need to load each dashboard, because it might have changed since the last iteration
@@ -158,7 +160,7 @@ def main():
             logging.debug(f"skipping dashboard {full_dashboard_title} because it's already up to date")
             continue
           logging.debug(f'before patching dashboard: {json.dumps(full_dashboard)}')
-          patch_dashboard(full_dashboard, org_prometheus_name)
+          patch_dashboard(full_dashboard, prometheus_datasource_uid)
           logging.debug(f'after patching dashboard: {json.dumps(full_dashboard)}')
           del full_dashboard['dashboard']['id']
           full_dashboard['folderUid'] = ensure_and_get_folder(private_org_name)
@@ -174,11 +176,11 @@ def main():
         tenant_public_grafana_api.dashboard.delete_dashboard(dashboard_uid=dashboard_uid)
         logging.info(f'deleted dashboard {dashboard_uid}')
 
-      for datasource_uid in unused_datasources:
-        logging.info(f'deleting datasource {datasource_uid}')
-        tenant_public_grafana_api.datasource.delete_datasource_by_uid(datasource_uid)
-        del datasource_uid_to_id[datasource_uid]
-        logging.info(f'deleted datasource {datasource_uid}')
+      for datasource_name in unused_datasources:
+        logging.info(f'deleting datasource {datasource_name}')
+        tenant_public_grafana_api.datasource.delete_datasource_by_name(datasource_name)
+        del datasource_name_to_id[datasource_name]
+        logging.info(f'deleted datasource {datasource_name}')
 
       for folder in unused_folders:
         logging.info(f'deleting folder {folder}')

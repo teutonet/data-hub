@@ -1,29 +1,35 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import PermissionEdit from '$lib/permissions/PermissionEdit.svelte';
-	import { apiFetch, fetchGroups, fetchScopes } from '$lib/nav/fetchUtils';
+	import {
+		fetchGroups,
+		fetchPermission,
+		fetchScopes,
+		type ProjectResource
+	} from '$lib/nav/fetchUtils';
 	import { accessToken } from '$lib/common/auth';
 	import { Spinner } from 'flowbite-svelte';
-	import type { UdhPrincipal } from '$lib/permissions/types';
 
 	export let data: PageData;
 	const tenant = data.tenant;
 	const project = data.project;
 	const permission = data.permission;
 
+	const resource: ProjectResource = {
+		type: 'project',
+		tenant,
+		project
+	};
+
 	let isNew = permission == 'new';
 
 	const groupsPromise = fetchGroups(tenant, $accessToken);
 
-	const scopesPromise = fetchScopes(tenant, project, $accessToken);
+	const scopesPromise = fetchScopes(resource, $accessToken);
 
 	const permissionPromise = isNew
 		? { scopes: [], principals: [] }
-		: apiFetch<{ principals: UdhPrincipal[]; scopes: string[] }>(
-				`data-hub/tenants/${tenant}/projects/${project}/permissions/${permission}`,
-				$accessToken,
-				false
-			);
+		: fetchPermission(resource, permission, $accessToken);
 </script>
 
 {#await Promise.all([permissionPromise, groupsPromise, scopesPromise])}
@@ -31,8 +37,7 @@
 {:then responseData}
 	<PermissionEdit
 		{isNew}
-		{tenant}
-		{project}
+		{resource}
 		{permission}
 		permissionObject={responseData[0]}
 		selectableGroups={responseData[1]}

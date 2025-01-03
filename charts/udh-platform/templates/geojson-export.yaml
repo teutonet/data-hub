@@ -43,6 +43,16 @@ spec:
           - name: PROMETHEUS_HOST
             value: {{ printf "http://%s/prometheus" (include "data-hub.name" (dict "context" . "name" "mimir-nginx")) }}
         resources: {{- toYaml .Values.geojsonExport.resources | nindent 10 }}
+        livenessProbe:
+          periodSeconds: 2
+          httpGet:
+            path: /livez
+            port: http
+        readinessProbe:
+          periodSeconds: 5
+          httpGet:
+            path: /readyz
+            port: http
 
 ---
 {{- $serviceName := printf "%s-%s" (include "common.names.fullname" .) $name -}}
@@ -81,3 +91,16 @@ spec:
   - hosts:
     - {{ $host }}
     secretName: {{ $host }}-tls
+    
+{{- if gt (.Values.geojsonExport.replicas | int64) 1 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ printf "%s-pdb-%s" (include "common.names.fullname" .) $name }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+{{- end }}

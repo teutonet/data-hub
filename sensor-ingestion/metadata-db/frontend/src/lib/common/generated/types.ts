@@ -14,6 +14,17 @@ export type Scalars = {
   Float: { input: number; output: number; }
   /** A floating point number that requires more precision than IEEE 754 binary 64 */
   BigFloat: { input: any; output: any; }
+  /**
+   * A signed eight-byte integer. The upper big integer values are greater than the
+   * max value for a JavaScript number. Therefore all big integers will be output as
+   * strings and not numbers.
+   */
+  BigInt: { input: any; output: any; }
+  /**
+   * A point in time as described by the [ISO
+   * 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+   */
+  Datetime: { input: string; output: string; }
   /** A JavaScript object encoded in the JSON format as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: { input: string; output: string; }
   /** A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122). */
@@ -40,6 +51,18 @@ export type AssignSensortypeToNewDevicesPayload = {
   clientMutationId?: Maybe<Scalars['String']['output']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type AuditEvent = {
+  auditId?: Maybe<Scalars['BigInt']['output']>;
+  auditUserName?: Maybe<Scalars['String']['output']>;
+  eventKey?: Maybe<Scalars['String']['output']>;
+  id?: Maybe<Scalars['BigInt']['output']>;
+  sessionInfo?: Maybe<Scalars['JSON']['output']>;
+  stmtDate?: Maybe<Scalars['Datetime']['output']>;
+  transactionId?: Maybe<Scalars['Int']['output']>;
+  valuesAfter?: Maybe<Scalars['JSON']['output']>;
+  valuesBefore?: Maybe<Scalars['JSON']['output']>;
 };
 
 /** All input for the create `Property` mutation. */
@@ -153,6 +176,7 @@ export type CreateSensorWithPropsInput = {
   datasheet?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
+  outOfOrderSeconds?: InputMaybe<Scalars['Int']['input']>;
   project?: InputMaybe<Scalars['String']['input']>;
   properties?: InputMaybe<Array<InputMaybe<PropertyInputRecordInput>>>;
   public?: InputMaybe<Scalars['Boolean']['input']>;
@@ -179,6 +203,32 @@ export type CreateThingInput = {
   clientMutationId?: InputMaybe<Scalars['String']['input']>;
   /** The `Thing` to be created by this mutation. */
   thing: ThingInput;
+};
+
+/** All input for the create `ThingLivedatum` mutation. */
+export type CreateThingLivedatumInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: InputMaybe<Scalars['String']['input']>;
+  /** The `ThingLivedatum` to be created by this mutation. */
+  thingLivedatum: ThingLivedatumInput;
+};
+
+/** The output of our create `ThingLivedatum` mutation. */
+export type CreateThingLivedatumPayload = {
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']['output']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Thing` that is related to this `ThingLivedatum`. */
+  thing?: Maybe<Thing>;
+  /** The `ThingLivedatum` that was created by this mutation. */
+  thingLivedatum?: Maybe<ThingLivedatum>;
 };
 
 /** All input for the create `ThingOffset` mutation. */
@@ -220,6 +270,44 @@ export type CreateThingPayload = {
   sensor?: Maybe<Sensor>;
   /** The `Thing` that was created by this mutation. */
   thing?: Maybe<Thing>;
+};
+
+/** All input for the `createThingWithPayload` mutation. */
+export type CreateThingWithPayloadInput = {
+  altitude?: InputMaybe<Scalars['BigFloat']['input']>;
+  appid?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: InputMaybe<Scalars['String']['input']>;
+  customLabels?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  deveui?: InputMaybe<Scalars['String']['input']>;
+  devid?: InputMaybe<Scalars['String']['input']>;
+  install?: InputMaybe<Scalars['Boolean']['input']>;
+  lastValues?: InputMaybe<Scalars['JSON']['input']>;
+  lat?: InputMaybe<Scalars['BigFloat']['input']>;
+  locationdesc?: InputMaybe<Scalars['String']['input']>;
+  locationname?: InputMaybe<Scalars['String']['input']>;
+  long?: InputMaybe<Scalars['BigFloat']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  ownedby?: InputMaybe<Scalars['String']['input']>;
+  payload?: InputMaybe<Scalars['JSON']['input']>;
+  project?: InputMaybe<Scalars['String']['input']>;
+  public?: InputMaybe<Scalars['Boolean']['input']>;
+  sensorId?: InputMaybe<Scalars['UUID']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** The output of our `createThingWithPayload` mutation. */
+export type CreateThingWithPayloadPayload = {
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']['output']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `deletePropertyByNodeId` mutation. */
@@ -411,6 +499,43 @@ export type DeleteThingInput = {
   id: Scalars['UUID']['input'];
 };
 
+/** All input for the `deleteThingLivedatumByNodeId` mutation. */
+export type DeleteThingLivedatumByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: InputMaybe<Scalars['String']['input']>;
+  /** The globally unique `ID` which will identify a single `ThingLivedatum` to be deleted. */
+  nodeId: Scalars['ID']['input'];
+};
+
+/** All input for the `deleteThingLivedatum` mutation. */
+export type DeleteThingLivedatumInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: InputMaybe<Scalars['String']['input']>;
+  thingId: Scalars['UUID']['input'];
+};
+
+/** The output of our delete `ThingLivedatum` mutation. */
+export type DeleteThingLivedatumPayload = {
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']['output']>;
+  deletedThingLivedatumNodeId?: Maybe<Scalars['ID']['output']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Thing` that is related to this `ThingLivedatum`. */
+  thing?: Maybe<Thing>;
+  /** The `ThingLivedatum` that was deleted by this mutation. */
+  thingLivedatum?: Maybe<ThingLivedatum>;
+};
+
 /** All input for the `deleteThingOffsetByNodeId` mutation. */
 export type DeleteThingOffsetByNodeIdInput = {
   /**
@@ -489,8 +614,11 @@ export type Mutation = {
   createSensorWithProps?: Maybe<CreateSensorWithPropsPayload>;
   /** Creates a single `Thing`. */
   createThing?: Maybe<CreateThingPayload>;
+  /** Creates a single `ThingLivedatum`. */
+  createThingLivedatum?: Maybe<CreateThingLivedatumPayload>;
   /** Creates a single `ThingOffset`. */
   createThingOffset?: Maybe<CreateThingOffsetPayload>;
+  createThingWithPayload?: Maybe<CreateThingWithPayloadPayload>;
   /** Deletes a single `Property` using a unique key. */
   deleteProperty?: Maybe<DeletePropertyPayload>;
   /** Deletes a single `Property` using its globally unique id. */
@@ -515,6 +643,10 @@ export type Mutation = {
   deleteThingByNodeId?: Maybe<DeleteThingPayload>;
   /** Deletes a single `Thing` using a unique key. */
   deleteThingByProjectAndName?: Maybe<DeleteThingPayload>;
+  /** Deletes a single `ThingLivedatum` using a unique key. */
+  deleteThingLivedatum?: Maybe<DeleteThingLivedatumPayload>;
+  /** Deletes a single `ThingLivedatum` using its globally unique id. */
+  deleteThingLivedatumByNodeId?: Maybe<DeleteThingLivedatumPayload>;
   /** Deletes a single `ThingOffset` using a unique key. */
   deleteThingOffset?: Maybe<DeleteThingOffsetPayload>;
   /** Deletes a single `ThingOffset` using its globally unique id. */
@@ -539,6 +671,7 @@ export type Mutation = {
   mnUpdateSensorProperty?: Maybe<MnUpdateSensorPropertyPayload>;
   /** Updates one or many `Thing` using a unique key and a patch. */
   mnUpdateThing?: Maybe<MnUpdateThingPayload>;
+  sensortypeImport?: Maybe<SensortypeImportPayload>;
   /** Updates a single `Property` using a unique key and a patch. */
   updateProperty?: Maybe<UpdatePropertyPayload>;
   /** Updates a single `Property` using its globally unique id and a patch. */
@@ -563,6 +696,10 @@ export type Mutation = {
   updateThingByNodeId?: Maybe<UpdateThingPayload>;
   /** Updates a single `Thing` using a unique key and a patch. */
   updateThingByProjectAndName?: Maybe<UpdateThingPayload>;
+  /** Updates a single `ThingLivedatum` using a unique key and a patch. */
+  updateThingLivedatum?: Maybe<UpdateThingLivedatumPayload>;
+  /** Updates a single `ThingLivedatum` using its globally unique id and a patch. */
+  updateThingLivedatumByNodeId?: Maybe<UpdateThingLivedatumPayload>;
   /** Updates a single `ThingOffset` using a unique key and a patch. */
   updateThingOffset?: Maybe<UpdateThingOffsetPayload>;
   /** Updates a single `ThingOffset` using its globally unique id and a patch. */
@@ -615,8 +752,20 @@ export type MutationCreateThingArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateThingLivedatumArgs = {
+  input: CreateThingLivedatumInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateThingOffsetArgs = {
   input: CreateThingOffsetInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateThingWithPayloadArgs = {
+  input: CreateThingWithPayloadInput;
 };
 
 
@@ -693,6 +842,18 @@ export type MutationDeleteThingByProjectAndNameArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteThingLivedatumArgs = {
+  input: DeleteThingLivedatumInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteThingLivedatumByNodeIdArgs = {
+  input: DeleteThingLivedatumByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteThingOffsetArgs = {
   input: DeleteThingOffsetInput;
 };
@@ -765,6 +926,12 @@ export type MutationMnUpdateThingArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSensortypeImportArgs = {
+  input: SensortypeImportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdatePropertyArgs = {
   input: UpdatePropertyInput;
 };
@@ -833,6 +1000,18 @@ export type MutationUpdateThingByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateThingByProjectAndNameArgs = {
   input: UpdateThingByProjectAndNameInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateThingLivedatumArgs = {
+  input: UpdateThingLivedatumInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateThingLivedatumByNodeIdArgs = {
+  input: UpdateThingLivedatumByNodeIdInput;
 };
 
 
@@ -1014,6 +1193,8 @@ export type Query = Node & {
   property?: Maybe<Property>;
   /** Reads a single `Property` using its globally unique `ID`. */
   propertyByNodeId?: Maybe<Property>;
+  /** Reads and enables pagination through a set of `AuditEvent`. */
+  propertyChanges?: Maybe<Array<Maybe<AuditEvent>>>;
   /** Reads a set of `PublicQuery`. */
   publicQueries?: Maybe<Array<PublicQuery>>;
   publicQuery?: Maybe<PublicQuery>;
@@ -1028,17 +1209,28 @@ export type Query = Node & {
   /** Reads a single `Sensor` using its globally unique `ID`. */
   sensorByNodeId?: Maybe<Sensor>;
   sensorByProjectAndName?: Maybe<Sensor>;
+  /** Reads and enables pagination through a set of `AuditEvent`. */
+  sensorChanges?: Maybe<Array<Maybe<AuditEvent>>>;
   /** Reads a set of `SensorProperty`. */
   sensorProperties?: Maybe<Array<SensorProperty>>;
   sensorProperty?: Maybe<SensorProperty>;
   /** Reads a single `SensorProperty` using its globally unique `ID`. */
   sensorPropertyByNodeId?: Maybe<SensorProperty>;
+  /** Reads and enables pagination through a set of `AuditEvent`. */
+  sensorPropertyChanges?: Maybe<Array<Maybe<AuditEvent>>>;
   /** Reads a set of `Sensor`. */
   sensors?: Maybe<Array<Sensor>>;
   thing?: Maybe<Thing>;
   /** Reads a single `Thing` using its globally unique `ID`. */
   thingByNodeId?: Maybe<Thing>;
   thingByProjectAndName?: Maybe<Thing>;
+  /** Reads and enables pagination through a set of `AuditEvent`. */
+  thingChanges?: Maybe<Array<Maybe<AuditEvent>>>;
+  /** Reads a set of `ThingLivedatum`. */
+  thingLivedata?: Maybe<Array<ThingLivedatum>>;
+  thingLivedatum?: Maybe<ThingLivedatum>;
+  /** Reads a single `ThingLivedatum` using its globally unique `ID`. */
+  thingLivedatumByNodeId?: Maybe<ThingLivedatum>;
   thingOffset?: Maybe<ThingOffset>;
   /** Reads a single `ThingOffset` using its globally unique `ID`. */
   thingOffsetByNodeId?: Maybe<ThingOffset>;
@@ -1113,6 +1305,14 @@ export type QueryPropertyByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryPropertyChangesArgs = {
+  _id?: InputMaybe<Scalars['UUID']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPublicQueriesArgs = {
   condition?: InputMaybe<PublicQueryCondition>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -1154,6 +1354,14 @@ export type QuerySensorByProjectAndNameArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QuerySensorChangesArgs = {
+  _id?: InputMaybe<Scalars['UUID']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySensorPropertiesArgs = {
   condition?: InputMaybe<SensorPropertyCondition>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -1172,6 +1380,14 @@ export type QuerySensorPropertyArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySensorPropertyByNodeIdArgs = {
   nodeId: Scalars['ID']['input'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySensorPropertyChangesArgs = {
+  _id?: InputMaybe<Scalars['UUID']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1200,6 +1416,35 @@ export type QueryThingByNodeIdArgs = {
 export type QueryThingByProjectAndNameArgs = {
   name: Scalars['String']['input'];
   project: Scalars['String']['input'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryThingChangesArgs = {
+  _id?: InputMaybe<Scalars['UUID']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryThingLivedataArgs = {
+  condition?: InputMaybe<ThingLivedatumCondition>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<Array<ThingLivedataOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryThingLivedatumArgs = {
+  thingId: Scalars['UUID']['input'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryThingLivedatumByNodeIdArgs = {
+  nodeId: Scalars['ID']['input'];
 };
 
 
@@ -1247,6 +1492,7 @@ export type Sensor = Node & {
   name: Scalars['String']['output'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID']['output'];
+  outOfOrderSeconds?: Maybe<Scalars['Int']['output']>;
   project: Scalars['String']['output'];
   public: Scalars['Boolean']['output'];
   /** Reads and enables pagination through a set of `SensorProperty`. */
@@ -1283,6 +1529,8 @@ export type SensorCondition = {
   id?: InputMaybe<Scalars['UUID']['input']>;
   /** Checks for equality with the object’s `name` field. */
   name?: InputMaybe<Scalars['String']['input']>;
+  /** Checks for equality with the object’s `outOfOrderSeconds` field. */
+  outOfOrderSeconds?: InputMaybe<Scalars['Int']['input']>;
   /** Checks for equality with the object’s `project` field. */
   project?: InputMaybe<Scalars['String']['input']>;
   /** Checks for equality with the object’s `public` field. */
@@ -1295,6 +1543,7 @@ export type SensorInput = {
   datasheet?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
+  outOfOrderSeconds?: InputMaybe<Scalars['Int']['input']>;
   project: Scalars['String']['input'];
   public?: InputMaybe<Scalars['Boolean']['input']>;
 };
@@ -1305,6 +1554,7 @@ export type SensorPatch = {
   datasheet?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
+  outOfOrderSeconds?: InputMaybe<Scalars['Int']['input']>;
   project?: InputMaybe<Scalars['String']['input']>;
   public?: InputMaybe<Scalars['Boolean']['input']>;
 };
@@ -1395,6 +1645,8 @@ export enum SensorsOrderBy {
   NameAsc = 'NAME_ASC',
   NameDesc = 'NAME_DESC',
   Natural = 'NATURAL',
+  OutOfOrderSecondsAsc = 'OUT_OF_ORDER_SECONDS_ASC',
+  OutOfOrderSecondsDesc = 'OUT_OF_ORDER_SECONDS_DESC',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ProjectAsc = 'PROJECT_ASC',
@@ -1403,8 +1655,31 @@ export enum SensorsOrderBy {
   PublicDesc = 'PUBLIC_DESC'
 }
 
+/** All input for the `sensortypeImport` mutation. */
+export type SensortypeImportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: InputMaybe<Scalars['String']['input']>;
+  currentProject?: InputMaybe<Scalars['String']['input']>;
+  data?: InputMaybe<Scalars['JSON']['input']>;
+};
+
+/** The output of our `sensortypeImport` mutation. */
+export type SensortypeImportPayload = {
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']['output']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  uuid?: Maybe<Scalars['UUID']['output']>;
+};
+
 export type Thing = Node & {
-  altitude?: Maybe<Scalars['String']['output']>;
+  altitude?: Maybe<Scalars['BigFloat']['output']>;
   appid?: Maybe<Scalars['String']['output']>;
   customLabels?: Maybe<Array<Maybe<Scalars['String']['output']>>>;
   deveui?: Maybe<Scalars['String']['output']>;
@@ -1412,7 +1687,6 @@ export type Thing = Node & {
   geohash?: Maybe<Scalars['String']['output']>;
   id: Scalars['UUID']['output'];
   install?: Maybe<Scalars['Boolean']['output']>;
-  lastValues?: Maybe<Scalars['JSON']['output']>;
   lat?: Maybe<Scalars['BigFloat']['output']>;
   locationdesc?: Maybe<Scalars['String']['output']>;
   locationname?: Maybe<Scalars['String']['output']>;
@@ -1421,13 +1695,14 @@ export type Thing = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID']['output'];
   ownedby?: Maybe<Scalars['String']['output']>;
-  payload?: Maybe<Scalars['JSON']['output']>;
   project: Scalars['String']['output'];
   public?: Maybe<Scalars['Boolean']['output']>;
   /** Reads a single `Sensor` that is related to this `Thing`. */
   sensor?: Maybe<Sensor>;
   sensorId?: Maybe<Scalars['UUID']['output']>;
   status?: Maybe<Scalars['String']['output']>;
+  /** Reads a single `ThingLivedatum` that is related to this `Thing`. */
+  thingLivedatum?: Maybe<ThingLivedatum>;
   /** Reads and enables pagination through a set of `ThingOffset`. */
   thingOffsets: Array<ThingOffset>;
 };
@@ -1443,7 +1718,7 @@ export type ThingThingOffsetsArgs = {
 /** A condition to be used against `Thing` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ThingCondition = {
   /** Checks for equality with the object’s `altitude` field. */
-  altitude?: InputMaybe<Scalars['String']['input']>;
+  altitude?: InputMaybe<Scalars['BigFloat']['input']>;
   /** Checks for equality with the object’s `appid` field. */
   appid?: InputMaybe<Scalars['String']['input']>;
   /** Checks for equality with the object’s `customLabels` field. */
@@ -1458,8 +1733,6 @@ export type ThingCondition = {
   id?: InputMaybe<Scalars['UUID']['input']>;
   /** Checks for equality with the object’s `install` field. */
   install?: InputMaybe<Scalars['Boolean']['input']>;
-  /** Checks for equality with the object’s `lastValues` field. */
-  lastValues?: InputMaybe<Scalars['JSON']['input']>;
   /** Checks for equality with the object’s `lat` field. */
   lat?: InputMaybe<Scalars['BigFloat']['input']>;
   /** Checks for equality with the object’s `locationdesc` field. */
@@ -1472,8 +1745,6 @@ export type ThingCondition = {
   name?: InputMaybe<Scalars['String']['input']>;
   /** Checks for equality with the object’s `ownedby` field. */
   ownedby?: InputMaybe<Scalars['String']['input']>;
-  /** Checks for equality with the object’s `payload` field. */
-  payload?: InputMaybe<Scalars['JSON']['input']>;
   /** Checks for equality with the object’s `project` field. */
   project?: InputMaybe<Scalars['String']['input']>;
   /** Checks for equality with the object’s `public` field. */
@@ -1486,25 +1757,73 @@ export type ThingCondition = {
 
 /** An input for mutations affecting `Thing` */
 export type ThingInput = {
-  altitude?: InputMaybe<Scalars['String']['input']>;
+  altitude?: InputMaybe<Scalars['BigFloat']['input']>;
   appid?: InputMaybe<Scalars['String']['input']>;
   customLabels?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
   deveui?: InputMaybe<Scalars['String']['input']>;
   devid?: InputMaybe<Scalars['String']['input']>;
   geohash?: InputMaybe<Scalars['String']['input']>;
   install?: InputMaybe<Scalars['Boolean']['input']>;
-  lastValues?: InputMaybe<Scalars['JSON']['input']>;
   lat?: InputMaybe<Scalars['BigFloat']['input']>;
   locationdesc?: InputMaybe<Scalars['String']['input']>;
   locationname?: InputMaybe<Scalars['String']['input']>;
   long?: InputMaybe<Scalars['BigFloat']['input']>;
   name: Scalars['String']['input'];
   ownedby?: InputMaybe<Scalars['String']['input']>;
-  payload?: InputMaybe<Scalars['JSON']['input']>;
   project: Scalars['String']['input'];
   public?: InputMaybe<Scalars['Boolean']['input']>;
   sensorId?: InputMaybe<Scalars['UUID']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Methods to use when ordering `ThingLivedatum`. */
+export enum ThingLivedataOrderBy {
+  LastValuesAsc = 'LAST_VALUES_ASC',
+  LastValuesDesc = 'LAST_VALUES_DESC',
+  Natural = 'NATURAL',
+  PayloadAsc = 'PAYLOAD_ASC',
+  PayloadDesc = 'PAYLOAD_DESC',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ThingIdAsc = 'THING_ID_ASC',
+  ThingIdDesc = 'THING_ID_DESC'
+}
+
+export type ThingLivedatum = Node & {
+  lastValues?: Maybe<Scalars['JSON']['output']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID']['output'];
+  payload?: Maybe<Scalars['JSON']['output']>;
+  /** Reads a single `Thing` that is related to this `ThingLivedatum`. */
+  thing?: Maybe<Thing>;
+  thingId: Scalars['UUID']['output'];
+};
+
+/**
+ * A condition to be used against `ThingLivedatum` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type ThingLivedatumCondition = {
+  /** Checks for equality with the object’s `lastValues` field. */
+  lastValues?: InputMaybe<Scalars['JSON']['input']>;
+  /** Checks for equality with the object’s `payload` field. */
+  payload?: InputMaybe<Scalars['JSON']['input']>;
+  /** Checks for equality with the object’s `thingId` field. */
+  thingId?: InputMaybe<Scalars['UUID']['input']>;
+};
+
+/** An input for mutations affecting `ThingLivedatum` */
+export type ThingLivedatumInput = {
+  lastValues?: InputMaybe<Scalars['JSON']['input']>;
+  payload?: InputMaybe<Scalars['JSON']['input']>;
+  thingId: Scalars['UUID']['input'];
+};
+
+/** Represents an update to a `ThingLivedatum`. Fields that are set will be updated. */
+export type ThingLivedatumPatch = {
+  lastValues?: InputMaybe<Scalars['JSON']['input']>;
+  payload?: InputMaybe<Scalars['JSON']['input']>;
+  thingId?: InputMaybe<Scalars['UUID']['input']>;
 };
 
 export type ThingOffset = Node & {
@@ -1578,21 +1897,19 @@ export enum ThingOffsetsOrderBy {
 
 /** Represents an update to a `Thing`. Fields that are set will be updated. */
 export type ThingPatch = {
-  altitude?: InputMaybe<Scalars['String']['input']>;
+  altitude?: InputMaybe<Scalars['BigFloat']['input']>;
   appid?: InputMaybe<Scalars['String']['input']>;
   customLabels?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
   deveui?: InputMaybe<Scalars['String']['input']>;
   devid?: InputMaybe<Scalars['String']['input']>;
   geohash?: InputMaybe<Scalars['String']['input']>;
   install?: InputMaybe<Scalars['Boolean']['input']>;
-  lastValues?: InputMaybe<Scalars['JSON']['input']>;
   lat?: InputMaybe<Scalars['BigFloat']['input']>;
   locationdesc?: InputMaybe<Scalars['String']['input']>;
   locationname?: InputMaybe<Scalars['String']['input']>;
   long?: InputMaybe<Scalars['BigFloat']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   ownedby?: InputMaybe<Scalars['String']['input']>;
-  payload?: InputMaybe<Scalars['JSON']['input']>;
   project?: InputMaybe<Scalars['String']['input']>;
   public?: InputMaybe<Scalars['Boolean']['input']>;
   sensorId?: InputMaybe<Scalars['UUID']['input']>;
@@ -1617,8 +1934,6 @@ export enum ThingsOrderBy {
   IdDesc = 'ID_DESC',
   InstallAsc = 'INSTALL_ASC',
   InstallDesc = 'INSTALL_DESC',
-  LastValuesAsc = 'LAST_VALUES_ASC',
-  LastValuesDesc = 'LAST_VALUES_DESC',
   LatAsc = 'LAT_ASC',
   LatDesc = 'LAT_DESC',
   LocationdescAsc = 'LOCATIONDESC_ASC',
@@ -1632,8 +1947,6 @@ export enum ThingsOrderBy {
   Natural = 'NATURAL',
   OwnedbyAsc = 'OWNEDBY_ASC',
   OwnedbyDesc = 'OWNEDBY_DESC',
-  PayloadAsc = 'PAYLOAD_ASC',
-  PayloadDesc = 'PAYLOAD_DESC',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ProjectAsc = 'PROJECT_ASC',
@@ -1853,6 +2166,46 @@ export type UpdateThingInput = {
   id: Scalars['UUID']['input'];
   /** An object where the defined keys will be set on the `Thing` being updated. */
   patch: ThingPatch;
+};
+
+/** All input for the `updateThingLivedatumByNodeId` mutation. */
+export type UpdateThingLivedatumByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: InputMaybe<Scalars['String']['input']>;
+  /** The globally unique `ID` which will identify a single `ThingLivedatum` to be updated. */
+  nodeId: Scalars['ID']['input'];
+  /** An object where the defined keys will be set on the `ThingLivedatum` being updated. */
+  patch: ThingLivedatumPatch;
+};
+
+/** All input for the `updateThingLivedatum` mutation. */
+export type UpdateThingLivedatumInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: InputMaybe<Scalars['String']['input']>;
+  /** An object where the defined keys will be set on the `ThingLivedatum` being updated. */
+  patch: ThingLivedatumPatch;
+  thingId: Scalars['UUID']['input'];
+};
+
+/** The output of our update `ThingLivedatum` mutation. */
+export type UpdateThingLivedatumPayload = {
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']['output']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Thing` that is related to this `ThingLivedatum`. */
+  thing?: Maybe<Thing>;
+  /** The `ThingLivedatum` that was updated by this mutation. */
+  thingLivedatum?: Maybe<ThingLivedatum>;
 };
 
 /** All input for the `updateThingOffsetByNodeId` mutation. */
@@ -2153,16 +2506,16 @@ export type GetThingByIdQueryVariables = Exact<{
 }>;
 
 
-export type GetThingByIdQuery = { thing?: { id: string, name: string, project: string, status?: string | null, lat?: any | null, locationdesc?: string | null, locationname?: string | null, long?: any | null, nodeId: string, install?: boolean | null, ownedby?: string | null, public?: boolean | null, altitude?: string | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, payload?: string | null, sensorId?: string | null, customLabels?: Array<string | null> | null, sensor?: { name: string, id: string, nodeId: string, datasheet?: string | null, appeui?: string | null } | null } | null };
+export type GetThingByIdQuery = { thing?: { id: string, name: string, project: string, status?: string | null, lat?: any | null, locationdesc?: string | null, locationname?: string | null, long?: any | null, nodeId: string, install?: boolean | null, ownedby?: string | null, public?: boolean | null, altitude?: any | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, sensorId?: string | null, customLabels?: Array<string | null> | null, sensor?: { name: string, id: string, nodeId: string, datasheet?: string | null, appeui?: string | null } | null, thingLivedatum?: { payload?: string | null } | null } | null };
 
 export type GetSensorByIdQueryVariables = Exact<{
   id: Scalars['UUID']['input'];
 }>;
 
 
-export type GetSensorByIdQuery = { sensor?: { id: string, name: string, project: string, description?: string | null, public: boolean, nodeId: string, datasheet?: string | null, appeui?: string | null, things: Array<{ name: string, id: string, project: string, lat?: any | null, locationdesc?: string | null, locationname?: string | null, long?: any | null, nodeId: string, ownedby?: string | null, public?: boolean | null, altitude?: string | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, customLabels?: Array<string | null> | null }>, sensorProperties: Array<{ alias?: string | null, propertyId: string, writeDelta: boolean, property?: { id: string, description?: string | null, measure?: string | null, metricName?: string | null, name: string } | null }> } | null };
+export type GetSensorByIdQuery = { sensor?: { id: string, name: string, project: string, description?: string | null, public: boolean, nodeId: string, datasheet?: string | null, appeui?: string | null, outOfOrderSeconds?: number | null, things: Array<{ name: string, id: string, project: string, lat?: any | null, locationdesc?: string | null, locationname?: string | null, long?: any | null, nodeId: string, ownedby?: string | null, public?: boolean | null, altitude?: any | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, customLabels?: Array<string | null> | null }>, sensorProperties: Array<{ alias?: string | null, propertyId: string, writeDelta: boolean, property?: { id: string, description?: string | null, measure?: string | null, metricName?: string | null, name: string } | null }> } | null };
 
-export type ThingFragment = { id: string, name: string, project: string, status?: string | null, locationname?: string | null, locationdesc?: string | null, lat?: any | null, long?: any | null, altitude?: string | null, nodeId: string, ownedby?: string | null, public?: boolean | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, customLabels?: Array<string | null> | null, payload?: string | null, sensor?: { name: string, id: string, project: string, nodeId: string, datasheet?: string | null, appeui?: string | null } | null };
+export type ThingFragment = { id: string, name: string, project: string, status?: string | null, locationname?: string | null, locationdesc?: string | null, lat?: any | null, long?: any | null, altitude?: any | null, nodeId: string, ownedby?: string | null, public?: boolean | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, customLabels?: Array<string | null> | null, sensor?: { name: string, id: string, project: string, nodeId: string, datasheet?: string | null, appeui?: string | null } | null, thingLivedatum?: { payload?: string | null } | null };
 
 export type CreateThingsMutationVariables = Exact<{
   mnThing?: InputMaybe<Array<ThingInput> | ThingInput>;
@@ -2176,7 +2529,7 @@ export type GetThingsQueryVariables = Exact<{
 }>;
 
 
-export type GetThingsQuery = { things?: Array<{ id: string, name: string, project: string, status?: string | null, locationname?: string | null, locationdesc?: string | null, lat?: any | null, long?: any | null, altitude?: string | null, nodeId: string, ownedby?: string | null, public?: boolean | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, customLabels?: Array<string | null> | null, payload?: string | null, sensor?: { name: string, id: string, project: string, nodeId: string, datasheet?: string | null, appeui?: string | null } | null }> | null };
+export type GetThingsQuery = { things?: Array<{ id: string, name: string, project: string, status?: string | null, locationname?: string | null, locationdesc?: string | null, lat?: any | null, long?: any | null, altitude?: any | null, nodeId: string, ownedby?: string | null, public?: boolean | null, appid?: string | null, deveui?: string | null, devid?: string | null, geohash?: string | null, customLabels?: Array<string | null> | null, sensor?: { name: string, id: string, project: string, nodeId: string, datasheet?: string | null, appeui?: string | null } | null, thingLivedatum?: { payload?: string | null } | null }> | null };
 
 export type UpdateThingByIdMutationVariables = Exact<{
   id: Scalars['UUID']['input'];
@@ -2196,7 +2549,14 @@ export type GetPropertiesQueryVariables = Exact<{
 }>;
 
 
-export type GetPropertiesQuery = { properties?: Array<{ id: string, measure?: string | null, name: string, project?: string | null, metricName?: string | null }> | null };
+export type GetPropertiesQuery = { properties?: Array<{ description?: string | null, id: string, measure?: string | null, name: string, project?: string | null, metricName?: string | null }> | null };
+
+export type ThingsQueryVariables = Exact<{
+  project: Scalars['String']['input'];
+}>;
+
+
+export type ThingsQuery = { properties?: Array<{ description?: string | null, id: string, measure?: string | null, name: string, metricName?: string | null }> | null, publicProps?: Array<{ description?: string | null, id: string, measure?: string | null, name: string, metricName?: string | null }> | null };
 
 export type GetPropertyByIdQueryVariables = Exact<{
   id: Scalars['UUID']['input'];
@@ -2329,3 +2689,46 @@ export type UpdateOffsetMutationVariables = Exact<{
 
 
 export type UpdateOffsetMutation = { updateThingOffset?: { clientMutationId?: string | null } | null };
+
+export type ThingChangesQueryVariables = Exact<{
+  id: Scalars['UUID']['input'];
+}>;
+
+
+export type ThingChangesQuery = { thingChanges?: Array<{ auditId?: any | null, auditUserName?: string | null, eventKey?: string | null, id?: any | null, sessionInfo?: string | null, stmtDate?: string | null, valuesAfter?: string | null, valuesBefore?: string | null, transactionId?: number | null } | null> | null };
+
+export type SensorChangesQueryVariables = Exact<{
+  id: Scalars['UUID']['input'];
+}>;
+
+
+export type SensorChangesQuery = { sensorChanges?: Array<{ auditId?: any | null, auditUserName?: string | null, eventKey?: string | null, id?: any | null, sessionInfo?: string | null, stmtDate?: string | null, valuesAfter?: string | null, valuesBefore?: string | null, transactionId?: number | null } | null> | null };
+
+export type SensorPropertyChangesQueryVariables = Exact<{
+  id: Scalars['UUID']['input'];
+}>;
+
+
+export type SensorPropertyChangesQuery = { sensorPropertyChanges?: Array<{ auditId?: any | null, auditUserName?: string | null, eventKey?: string | null, id?: any | null, sessionInfo?: string | null, stmtDate?: string | null, valuesAfter?: string | null, valuesBefore?: string | null, transactionId?: number | null } | null> | null };
+
+export type PropertyChangesQueryVariables = Exact<{
+  id: Scalars['UUID']['input'];
+}>;
+
+
+export type PropertyChangesQuery = { propertyChanges?: Array<{ auditId?: any | null, auditUserName?: string | null, eventKey?: string | null, id?: any | null, sessionInfo?: string | null, stmtDate?: string | null, valuesAfter?: string | null, valuesBefore?: string | null, transactionId?: number | null } | null> | null };
+
+export type ImportSensortypeMutationVariables = Exact<{
+  currentProject: Scalars['String']['input'];
+  data: Scalars['JSON']['input'];
+}>;
+
+
+export type ImportSensortypeMutation = { sensortypeImport?: { uuid?: string | null } | null };
+
+export type GetSensortypeAndSensorpropsQueryVariables = Exact<{
+  uuid: Scalars['UUID']['input'];
+}>;
+
+
+export type GetSensortypeAndSensorpropsQuery = { sensor?: { name: string, project: string, description?: string | null, datasheet?: string | null, appeui?: string | null, public: boolean, outOfOrderSeconds?: number | null, sensorProperties: Array<{ writeDelta: boolean, alias?: string | null, property?: { name: string, metricName?: string | null, measure?: string | null, description?: string | null, project?: string | null } | null }> } | null };

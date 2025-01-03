@@ -1,7 +1,7 @@
-flask==3.0.0
-requests==2.31.0
-waitress==2.1.2
+flask==3.1.0
+requests==2.32.3
+waitress==3.0.2
 pygeohash==1.2.0
-protobuf==3.20.3
-python-snappy==0.6.1
-openapi-core==0.18.2
+protobuf==5.29.2
+python-snappy==0.7.3
+openapi-core==0.19.4

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: mimir
-          image: grafana/mimir:r249-12792f6
+          image: grafana/mimir:r320-de6d3fb
           args:
             - -config.file=/etc/mimir/demo.yaml
           volumeMounts:
@@ -92,6 +92,9 @@ data:
     # Do not use this configuration in production.
     # It is for demonstration purposes only.
     multitenancy_enabled: true
+
+    tenant_federation:
+      enabled: true
 
     memberlist:
       cluster_label: mimir

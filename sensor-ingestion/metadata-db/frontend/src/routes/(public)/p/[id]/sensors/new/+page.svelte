@@ -2,29 +2,53 @@
 	import { _ } from 'svelte-i18n';
 	import { Button } from 'flowbite-svelte';
 
-	import { getContextClient } from '@urql/svelte';
+	import { getContextClient, queryStore } from '@urql/svelte';
 	import type {
 		CreateThingsMutation,
 		CreateThingsMutationVariables,
+		GetAllSensorsQuery,
+		GetAllSensorsQueryVariables,
 		ThingInput
 	} from '$lib/common/generated/types';
-	import { CREATE_THINGS } from '$lib/common/graphql/queries';
+	import { CREATE_THINGS, GET_ALL_SENSORS } from '$lib/common/graphql/queries';
 	import { handleCombinedErrors, performMutation } from '$lib/common/graphql/utils';
 	import SensorForm from '$lib/SensorForm.svelte';
 	import { success } from '$lib/common/toast/toast';
 	import { goto } from '$app/navigation';
 	import type { PageData } from '../import/$types';
+	import { emptyToNull, replaceComma } from '$lib/stringUtils';
 
 	const client = getContextClient();
 
 	export let data: PageData;
+
+	if (data.projectId === 'all') {
+		goto('./').catch((e) => {
+			console.error(e.message);
+		});
+	}
+
 	let thing: ThingInput = {
 		project: data.projectId,
 		name: ''
 	};
 
+	$: sensorTypeStore = queryStore<GetAllSensorsQuery, GetAllSensorsQueryVariables>({
+		client: client,
+		query: GET_ALL_SENSORS
+	});
+
+	$: allSensorTypes =
+		$sensorTypeStore.data?.sensors?.filter((sensorType) => sensorType.project == thing?.project) ??
+		[];
+
 	async function createThing(status: string) {
 		thing.status = status;
+
+		thing.lat = emptyToNull(replaceComma(thing.lat ?? ''));
+		thing.long = emptyToNull(replaceComma(thing.long ?? ''));
+		thing.altitude = emptyToNull(replaceComma(thing.altitude ?? ''));
+
 		await performMutation<CreateThingsMutation, CreateThingsMutationVariables>(
 			client,
 			CREATE_THINGS,
@@ -43,7 +67,12 @@
 	}
 </script>
 
-<SensorForm title={$_('page.sensorPage.createSensor')} bind:thing>
+<SensorForm
+	title={$_('page.sensorPage.createSensor')}
+	bind:thing
+	payload={undefined}
+	sensorTypes={allSensorTypes}
+>
 	<svelte:fragment slot="bottom-buttons">
 		<Button class="my-4 grow" on:click={() => createThing('created')}>
 			{$_('sensorView.createSensor')}

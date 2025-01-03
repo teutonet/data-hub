@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { API_NAME_REGEX, apiFetchResponse, handleSubmit } from '$lib/nav/fetchUtils';
+	import {
+		API_NAME_REGEX,
+		apiFetchResponse,
+		handleSubmit,
+		toResourceUrl,
+		type GroupResource,
+		type ResourceType,
+		type UdhPrincipal
+	} from '$lib/nav/fetchUtils';
 	import { accessToken } from '$lib/common/auth';
 	import { Button, Label, MultiSelect, Spinner } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
@@ -7,35 +15,24 @@
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
 	import { goto } from '$app/navigation';
 
-	type UdhPrincipal = TenantPrincipal | GroupPrincipal;
-
-	interface TenantPrincipal {
-		type: 'tenant';
-		tenant: string;
-	}
-
-	interface GroupPrincipal {
-		type: 'group';
-		tenant: string;
-		group: string;
-	}
-
-	export let tenant: string;
-	export let project: string | null = null;
+	export let resource: ResourceType;
 	export let permission: string;
-
+	export let isNew: boolean;
 	export let permissionObject: { principals: UdhPrincipal[]; scopes: string[] };
+	export let selectableGroups: string[];
+	export let selectableScopes: string[];
+
 	let newPermissionObject: { groups: string[]; scopes: string[] } = {
 		// replace incoming null with 'all' option
 		groups: permissionObject.principals.some((principal) => principal.type == 'tenant')
 			? ['all']
-			: permissionObject.principals.map((principal) => (principal as GroupPrincipal).group),
+			: permissionObject.principals.map((principal) => (principal as GroupResource).group),
 		scopes: permissionObject.scopes
 	};
-	export let selectableGroups: string[];
-	export let selectableScopes: string[];
 
-	export let isNew: boolean;
+	if (isNew) {
+		permission = '';
+	}
 
 	let requestSent = false;
 
@@ -64,16 +61,16 @@
 		requestSent = true;
 
 		void apiFetchResponse(
-			`data-hub/tenants/${tenant}${project ? `/projects/${project}` : ''}/permissions/${permission}`,
+			`${toResourceUrl(resource)}/permissions/${permission}`,
 			$accessToken,
 			'PUT',
 			{
 				scopes: newPermissionObject.scopes,
 				principals: newPermissionObject.groups.includes('all')
-					? [{ type: 'tenant', tenant: tenant }]
+					? [{ type: 'tenant', tenant: resource.tenant }]
 					: newPermissionObject.groups.map((group) => ({
 							type: 'group',
-							tenant: tenant,
+							tenant: resource.tenant,
 							group: group
 						}))
 			}

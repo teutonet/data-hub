@@ -54,7 +54,7 @@ export async function aquireTokenViaDeviceCode(
 	await page.getByLabel('Username or email').fill(username);
 	await page.getByLabel('Password', { exact: true }).fill(password);
 	await page.getByRole('button', { name: 'Sign In' }).click();
-	await page.getByRole('button', { name: 'Yes' }).click();
+	await page.getByRole('button', { name: 'Yes', exact: true }).click();
 
 	for (;;) {
 		const authResult = await httpClient.post<{ error: string; access_token: string }>(
@@ -164,7 +164,6 @@ export class MdbApi {
 				}
 			}
 		);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 		return response.data;
 	}
 	async createSensorType(name: string): Promise<string> {

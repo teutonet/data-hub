@@ -1,7 +1,7 @@
 ARG REGISTRY_MIRROR_LIB=""
 ARG REGISTRY_MIRROR=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:21.5.0-alpine AS build
+FROM ${REGISTRY_MIRROR_LIB}node:23.5.0-alpine AS build
 
 RUN mkdir /app
 WORKDIR /app
@@ -16,6 +16,6 @@ COPY src/ src/
 
 RUN npm run build
 
-FROM ${REGISTRY_MIRROR}joseluisq/static-web-server:2.24.2
+FROM ${REGISTRY_MIRROR}joseluisq/static-web-server:2.34.0
 
 COPY --from=build /app/build /public 

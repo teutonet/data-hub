@@ -108,7 +108,6 @@
 			{style}
 			type={inputType}
 			bind:value
-			label={inputLabel}
 			id={inputId}
 			{disabled}
 			{required}
@@ -117,7 +116,7 @@
 			{name}
 			color={invalid ? 'red' : 'base'}
 			{classInput}
-			classDiv={innerDivClasses}
+			classDiv={innerDivClasses ?? undefined}
 			{classLabel}
 			{...$$restProps}
 		>

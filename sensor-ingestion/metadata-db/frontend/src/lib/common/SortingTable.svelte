@@ -154,7 +154,7 @@
 						setSorting(key);
 					}
 				}}
-				class={!!cellClasses && cellClasses}
+				class={cellClasses}
 			>
 				{#if name}
 					<span class="flex">

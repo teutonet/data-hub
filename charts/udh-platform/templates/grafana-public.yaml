@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: grafana
-      version: 6.58.8
+      version: 6.58.8 # renovate: datasource=helm depName=grafana versioning=helm registryUrl=https://grafana.github.io/helm-charts
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
@@ -16,6 +16,11 @@ spec:
   interval: 1h0m0s
   targetNamespace: {{ .Release.Namespace }}
   values:
+    replicas: {{ .Values.grafanaPublic.replicas }}
+    {{- if gt (.Values.grafanaPublic.replicas | int64) 1 }}
+    podDisruptionBudget:
+      minAvailable: 1
+    {{- end }}
     ingress:
       enabled: true
       hosts:
@@ -25,9 +30,21 @@ spec:
         - hosts:
           - dashboard-public.{{ .Values.global.baseDomain }}
           secretName: dashboard-public.{{ .Values.global.baseDomain }}-tls
+    extraSecretMounts:
+      - name: secret-files-postgres
+        mountPath: /etc/secrets/postgres
+        secretName: {{ printf "grafana-public-owner-user.%s-postgres.credentials.postgresql.acid.zalan.do" (include "common.names.fullname" .) | quote }}
+        readOnly: true
     grafana.ini:
       auth.anonymous:
         enabled: true
+      database:
+        type: postgres
+        name: grafana_public
+        ssl_mode: require
+        user: $__file{/etc/secrets/postgres/username}
+        password: $__file{/etc/secrets/postgres/password}
+        host: {{ printf "%s-postgres:5432" (include "common.names.fullname" .) }}
       security:
         allow_embedding: true
     resources: {{- $.Values.grafanaPublic.resources | toYaml | nindent 6 }}

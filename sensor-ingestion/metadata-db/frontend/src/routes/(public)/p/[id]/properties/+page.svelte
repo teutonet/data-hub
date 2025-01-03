@@ -36,7 +36,9 @@
 <PageTitle headingTag="h2" headingClass="pb-4" title={$_('page.propertyList.title')} />
 
 <PropertiesOverview {properties} />
-<Button href="property/new">
-	<PlusIcon />
-	{$_('page.propertyList.newPropertyButton')}
-</Button>
+{#if data.projectId !== 'all'}
+	<Button href="property/new">
+		<PlusIcon />
+		{$_('page.propertyList.newPropertyButton')}
+	</Button>
+{/if}

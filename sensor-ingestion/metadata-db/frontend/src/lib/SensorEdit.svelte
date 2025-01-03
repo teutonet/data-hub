@@ -4,34 +4,44 @@
 		GetPropertiesQuery,
 		GetSensorByIdQuery,
 		GetSensorPropsQuery,
-		PropertyInputRecordInput
+		PropertyInputRecordInput,
+		GetSensortypeAndSensorpropsQuery,
+		GetSensortypeAndSensorpropsQueryVariables
 	} from '$lib/common/generated/types';
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
 	import { Button, Modal, P, TableBodyCell, TableBodyRow, Toggle } from 'flowbite-svelte';
 	import FloatingLabelSelect from '$lib/flowbite-extensions/FloatingLabelSelect.svelte';
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
 	import type { Scalars } from '$lib/common/generated/types';
-	import { error } from '$lib/common/toast/toast';
+	import { error, success } from '$lib/common/toast/toast';
 	import PlusIcon from '~icons/heroicons/plus';
 	import EditIcon from '~icons/heroicons/pencil-square';
 	import SortingTable from './common/SortingTable.svelte';
+	import CopyIcon from '~icons/heroicons/clipboard';
+	import FloatingLabelTextArea from './flowbite-extensions/FloatingLabelTextArea.svelte';
+	import { getContextClient } from '@urql/svelte';
+	import { handleCombinedErrors } from './common/graphql/utils';
+	import { GET_SENSOR_AND_SENSOR_PROPERTIES } from './common/graphql/queries';
+
+	const client = getContextClient();
 
 	export let create = false;
 	export let sensor: Pick<
 		NonNullable<GetSensorByIdQuery['sensor']>,
-		'appeui' | 'datasheet' | 'description' | 'name' | 'project' | 'public' | 'things'
+		| 'appeui'
+		| 'datasheet'
+		| 'description'
+		| 'name'
+		| 'project'
+		| 'public'
+		| 'things'
+		| 'outOfOrderSeconds'
 	>;
+	export let sensorId: string | null = null;
 
 	export let submitFunction: (properties?: PropertyInputRecordInput[]) => Promise<void>;
 	export let deleteSensorFunction: (() => Promise<void>) | undefined = undefined;
 	export let id: string;
-	export let projects:
-		| {
-				value: string;
-				name: string;
-		  }[]
-		| undefined;
-	export let projectId: string | undefined = undefined;
 	export let sensorProps: NonNullable<GetSensorPropsQuery['sensorProperties']> | undefined =
 		undefined;
 	export let properties: NonNullable<GetPropertiesQuery['properties']>;
@@ -230,28 +240,102 @@
 						...sensorProp.property
 					};
 				})) ?? [];
+
+	let exportModalOpen = false;
+	let jsonExport: string;
+	type SensorPropertiesExport = {
+		name: string | undefined;
+		metricName: string | null | undefined;
+		measure: string | null | undefined;
+		delta: boolean;
+		alias: string | null | undefined;
+		description: string | null | undefined;
+	};
+	type SensorDataExport = {
+		name: string;
+		public: boolean;
+		appeui?: string | null | undefined;
+		description?: string | null | undefined;
+		datasheet?: string | null | undefined;
+		outOfOrderSeconds?: number | null | undefined;
+	};
+
+	async function copyExportToClipboard() {
+		try {
+			if (jsonExport) {
+				await navigator.clipboard.writeText(jsonExport);
+			}
+			success('page.projectOverview.apiTokenModal.copySuccess');
+		} catch {
+			error('page.projectOverview.apiTokenModal.copyError');
+		}
+	}
+
+	async function exportSensortypeAsJSON() {
+		try {
+			if (sensorId != null) {
+				await client
+					.query<GetSensortypeAndSensorpropsQuery, GetSensortypeAndSensorpropsQueryVariables>(
+						GET_SENSOR_AND_SENSOR_PROPERTIES,
+						{
+							uuid: sensorId
+						}
+					)
+					.toPromise()
+					.then((result) => {
+						if (result.error) {
+							handleCombinedErrors(result.error, { showToasts: true });
+						} else {
+							const sensor = result.data?.sensor;
+							if (sensor) {
+								const sensorData: SensorDataExport = {
+									name: sensor.name,
+									public: sensor.public,
+									appeui: sensor.appeui,
+									description: sensor.description,
+									datasheet: sensor.datasheet,
+									outOfOrderSeconds: sensor.outOfOrderSeconds
+								};
+								const sensorProperties: SensorPropertiesExport[] = [];
+								for (const prop of sensor.sensorProperties) {
+									if (prop.property) {
+										sensorProperties.push({
+											name: prop.property.name,
+											alias: prop.alias,
+											metricName: prop.property.metricName,
+											measure: prop.property.measure,
+											delta: prop.writeDelta,
+											description: prop.property.description
+										});
+									}
+								}
+
+								const json = {
+									sensordata: sensorData,
+									sensorprops: sensorProperties
+								};
+								jsonExport = JSON.stringify(json, null, '\t');
+
+								exportModalOpen = true;
+							}
+						}
+					});
+			}
+		} catch (e) {
+			error(e.message);
+		}
+	}
 </script>
 
 <form class="needs-validation" on:submit|preventDefault={handleFormSubmit} novalidate {id}>
 	<div class="grid grid-cols-1 gap-4 pb-4">
-		{#if projects && (!projectId || (create && projectId === 'all'))}
-			<FloatingLabelSelect
-				bind:value={sensor.project}
-				items={projects}
-				id="project-select"
-				name="project-select"
-				labelText={$_('component.sensorEdit.project')}
-				required
-				disabled={!create}
-			/>
-		{/if}
 		<ValidatedFormField
 			bind:value={sensor.name}
 			inputLabel={$_('component.sensorEdit.name')}
 			inputId="sensor-name"
 			required
 		/>
-		<Toggle bind:checked={sensor.public} inputId="sensor-public">
+		<Toggle bind:checked={sensor.public} id="sensor-public">
 			{$_('component.sensorEdit.public')}
 		</Toggle>
 		<ValidatedFormField
@@ -270,6 +354,12 @@
 			inputType="textarea"
 			inputLabel={$_('component.sensorEdit.datasheet')}
 			inputId="sensor-datasheet"
+		/>
+		<ValidatedFormField
+			bind:value={sensor.outOfOrderSeconds}
+			inputType="number"
+			inputLabel={$_('component.sensorEdit.outOfOrderSeconds')}
+			inputId="sensor-outOfOrderSeconds"
 		/>
 	</div>
 	<P class="mb-4">
@@ -353,7 +443,7 @@
 			</svelte:fragment>
 			<svelte:fragment slot="defaultContent">
 				<TableBodyRow>
-					<TableBodyCell colspan="4">
+					<TableBodyCell colspan={4}>
 						<div class="flex w-full flex-row">
 							{$_('component.sensorEdit.sensorProp.noProps')}
 						</div>
@@ -372,6 +462,11 @@
 		<Button type="submit" color="green">
 			{$_('shared.action.save')}
 		</Button>
+		{#if !create}
+			<Button on:click={exportSensortypeAsJSON} color="blue">
+				{$_('shared.action.export')}
+			</Button>
+		{/if}
 		{#if !create && !!deleteSensorFunction}
 			<DeleteButton
 				disabled={sensorHasThings}
@@ -494,4 +589,21 @@
 			</Button>
 		</div>
 	</form>
+</Modal>
+
+<Modal bind:open={exportModalOpen} title={$_('component.importExportModal.export.title')}>
+	<Button
+		on:click={() => {
+			void copyExportToClipboard();
+			exportModalOpen = false;
+		}}
+		><span class="flex flex-row gap-2">
+			<CopyIcon />
+			{$_('shared.action.copy')}
+		</span>
+	</Button>
+	<div id="import" class="rounded-md">
+		<FloatingLabelTextArea bind:value={jsonExport} disabled="true" rows="30"
+		></FloatingLabelTextArea>
+	</div>
 </Modal>

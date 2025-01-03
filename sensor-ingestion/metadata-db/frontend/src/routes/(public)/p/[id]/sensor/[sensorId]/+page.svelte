@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { getContextClient, queryStore } from '@urql/svelte';
-	import { DELETE_THING, GET_THING_BY_ID, UPDATE_THING_BY_ID } from '$lib/common/graphql/queries';
+	import {
+		DELETE_THING,
+		GET_ALL_SENSORS,
+		GET_THING_BY_ID,
+		GET_THING_CHANGES,
+		UPDATE_THING_BY_ID
+	} from '$lib/common/graphql/queries';
 	import type { PageData } from './$types';
 	import { Button, Alert, Heading, P } from 'flowbite-svelte';
 	import { handleCombinedErrors, performMutation } from '$lib/common/graphql/utils';
@@ -11,7 +17,9 @@
 		UpdateThingByIdMutation,
 		UpdateThingByIdMutationVariables,
 		DeleteThingMutation,
-		DeleteThingMutationVariables
+		DeleteThingMutationVariables,
+		GetAllSensorsQuery,
+		GetAllSensorsQueryVariables
 	} from '$lib/common/generated/types';
 	import { _ } from 'svelte-i18n';
 	import { success } from '$lib/common/toast/toast';
@@ -19,8 +27,15 @@
 	import { goto } from '$app/navigation';
 	import SensorForm from '$lib/SensorForm.svelte';
 	import ThingOffsetList from '$lib/ThingOffsetList.svelte';
+	import { emptyToNull, replaceComma } from '$lib/stringUtils';
+	import HistoryModal from '$lib/HistoryModal.svelte';
 	export let data: PageData;
 	const client = getContextClient();
+
+	$: sensorTypeStore = queryStore<GetAllSensorsQuery, GetAllSensorsQueryVariables>({
+		client: client,
+		query: GET_ALL_SENSORS
+	});
 
 	$: thingStore = queryStore<GetThingByIdQuery, GetThingByIdQueryVariables>({
 		client: client,
@@ -29,12 +44,23 @@
 	});
 
 	$: thing = $thingStore.data?.thing;
+	$: allSensorTypes =
+		$sensorTypeStore.data?.sensors?.filter((sensorType) => sensorType.project == thing?.project) ??
+		[];
+	$: sensorTypeNames = Object.fromEntries(
+		allSensorTypes.map((item) => {
+			return [item.id, item.name];
+		})
+	);
 
 	async function updateThing(activate: boolean) {
 		if (!thing) {
 			return;
 		}
 
+		thing.lat = emptyToNull(replaceComma(thing.lat ?? ''));
+		thing.long = emptyToNull(replaceComma(thing.long ?? ''));
+		thing.altitude = emptyToNull(replaceComma(thing.altitude ?? ''));
 		await performMutation<UpdateThingByIdMutation, UpdateThingByIdMutationVariables>(
 			client,
 			UPDATE_THING_BY_ID,
@@ -98,12 +124,16 @@
 				handleCombinedErrors(e, { showToasts: true });
 			});
 	}
+
+	$: payload = $thingStore.data?.thing?.thingLivedatum?.payload ?? undefined;
 </script>
 
-{#if !$thingStore.fetching && thing}
+{#if !$thingStore.fetching && thing && !$sensorTypeStore.fetching && allSensorTypes}
 	<SensorForm
 		title={$_('page.sensorPage.title', { values: { name: thing.name, id: thing.id } })}
+		sensorTypes={allSensorTypes}
 		bind:thing
+		{payload}
 	>
 		<svelte:fragment slot="alert-top">
 			{#if thing.status === 'created'}
@@ -152,4 +182,11 @@
 			<ThingOffsetList thingId={thing.id} sensorTypeId={thing.sensorId} />
 		{/if}
 	</SensorForm>
+	<HistoryModal
+		entityId={thing.id}
+		excludedKeys={['thing_id']}
+		dataKey="thingChanges"
+		query={GET_THING_CHANGES}
+		additionalNames={sensorTypeNames}
+	/>
 {/if}

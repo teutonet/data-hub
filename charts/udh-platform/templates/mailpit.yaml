@@ -1,0 +1,58 @@
+{{- if .Values.mailpit.enabled -}}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: {{ printf "%s-mailpit" (include "common.names.fullname" .) | quote }}
+  namespace: {{ .Release.namespace }}
+spec:
+  interval: 5m0s
+  url: https://jouve.github.io/charts/
+---
+{{- $url := include "data-hub.mailpit.hostname" . }}
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ (printf "%s-%s" (include "common.names.fullname" .) "mailpit") | trunc 53 }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: mailpit
+spec:
+  chart:
+    spec:
+      chart: mailpit
+      sourceRef:
+        kind: HelmRepository
+        name: {{ printf "%s-mailpit" (include "common.names.fullname" .) | quote}}
+        namespace: {{ .Release.Namespace }}
+      version: 0.21.0 # renovate: datasource=helm depName=mailpit versioning=helm registryUrl=https://jouve.github.io/charts/
+  interval: 10m
+  values:
+    {{ with .Values.mailpit }}
+    image: {{- .image | toYaml  | nindent 8 }}
+    resources: {{- .resources | toYaml  | nindent 8 }}
+    {{ if .livenessProbe }}
+    livenessProbe: {{- .livenessProbe | toYaml | nindent 8 }}
+    {{ end }}
+    {{ if .readinessProbe }}
+    readinessProbe: {{- .readinessProbe | toYaml | nindent 8 }}
+    {{ end }}
+    {{ end }}
+    mailpit:
+      ui:
+        authFile:
+          enabled: true
+          htpasswd: |
+            {{- range $user, $password := .Values.mailpit.auth.users }}
+            {{ htpasswd $user $password }}
+            {{- end }}
+    ingress:
+      enabled: true
+      annotations: {{- include "udh.ingress.annotations" (dict "annotations" .Values.mailpit.ingress.annotations "context" .) | nindent 8 }}
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      hostname: {{ $url | quote }}
+      tls: true
+    persistence:
+      enabled: true
+      size: {{ (.Values.mailpit.volume).size | default "1Gi" }}
+{{- end -}}

@@ -32,11 +32,13 @@
 		title={$_('component.nav.sensortypes')}
 		description={$_('component.projectOverview.description.sensorTypes')}
 	/>
-	<OverviewCard
-		href="sensors/new"
-		title={$_('component.nav.createSensor')}
-		description={$_('component.projectOverview.description.createSensor')}
-	/>
+	{#if data.projectId !== 'all'}
+		<OverviewCard
+			href="sensors/new"
+			title={$_('component.nav.createSensor')}
+			description={$_('component.projectOverview.description.createSensor')}
+		/>
+	{/if}
 	{#if tenant && project}
 		<OverviewCard
 			href={`/api/tenants/${tenant}/projects/${project}`}

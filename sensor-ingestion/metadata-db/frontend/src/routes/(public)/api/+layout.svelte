@@ -14,7 +14,13 @@
 			index: 2,
 			specialCase: { new: 'newPermission' }
 		},
-		{ part: 'permissions', partName: 'permission', index: 4, specialCase: { new: 'newPermission' } }
+		{
+			part: 'permissions',
+			partName: 'permission',
+			index: 4,
+			specialCase: { new: 'newPermission' }
+		},
+		{ part: 'groups', partName: 'group', index: 2, specialCase: { new: 'newPermission' } }
 	];
 </script>
 

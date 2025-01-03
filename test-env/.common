@@ -10,7 +10,7 @@ REPO=$(readlink -f "$TEST_ENV/..")
 source "$TEST_ENV/versions.sh"
 
 KUBECTL="kubectl --context minikube"
-REGISTRY=localhost:5000
+REGISTRY=localhost:32000
 
 confirm () {
   printf '%s [yN]: ' "$1"

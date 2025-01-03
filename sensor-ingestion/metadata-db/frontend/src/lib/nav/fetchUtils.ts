@@ -10,13 +10,67 @@ export const deleteResource = async (resourcePath: string, accessToken: string) 
 	);
 };
 
+export type UdhPrincipal = TenantResource | GroupResource;
+
+export interface TenantResource {
+	type: 'tenant';
+	tenant: string;
+}
+
+export interface GroupResource {
+	type: 'group';
+	tenant: string;
+	group: string;
+}
+
+export interface ProjectResource {
+	type: 'project';
+	tenant: string;
+	project: string;
+}
+
+export type PermissionItem = {
+	name: string;
+	principals: UdhPrincipal[];
+	scopes: string[];
+};
+
+export type ResourceType = TenantResource | GroupResource | ProjectResource;
+
+export function toResourceUrl(resource: ResourceType): string {
+	switch (resource.type) {
+		case 'tenant':
+			return `data-hub/tenants/${resource.tenant}`;
+		case 'group':
+			return `data-hub/tenants/${resource.tenant}/groups/${resource.group}`;
+		case 'project':
+			return `data-hub/tenants/${resource.tenant}/projects/${resource.project}`;
+	}
+}
+
 export const fetchGroups = async (tenant: string, accessToken: string) => {
 	return apiFetch<string[]>(`data-hub/tenants/${tenant}/groups`, accessToken, true);
 };
 
-export const fetchScopes = async (tenant: string, project: string | null, accessToken: string) => {
+export const fetchScopes = async (resource: ResourceType, accessToken: string) => {
 	return apiFetch<{ all: string[]; granted: string[] }>(
-		`data-hub/tenants/${tenant}${project ? `/projects/${project}` : ''}/scopes`,
+		`${toResourceUrl(resource)}/scopes`,
+		accessToken,
+		false
+	);
+};
+
+export const fetchPermissions = async (resource: ResourceType, accessToken: string) => {
+	return apiFetch<PermissionItem[]>(`${toResourceUrl(resource)}/permissions`, accessToken, false);
+};
+
+export const fetchPermission = async (
+	resource: ResourceType,
+	permission: string,
+	accessToken: string
+) => {
+	return apiFetch<PermissionItem>(
+		`${toResourceUrl(resource)}/permissions/${permission}`,
 		accessToken,
 		false
 	);
@@ -54,7 +108,7 @@ export const apiFetchResponse = async (
 			default:
 				error('shared.message.networkError', 'shared.message.networkErrorDetail');
 		}
-		return Promise.reject('response not ok');
+		return Promise.reject(new Error('response not ok'));
 	}
 
 	return response;
@@ -85,7 +139,7 @@ export const apiFetch = async <T>(
 	}
 	if (isMalformed) {
 		console.error(getMessageFormatter('shared.message.responseError').format(), data);
-		return Promise.reject('malformed data');
+		return Promise.reject(new Error('malformed data'));
 	}
 
 	return data as T;

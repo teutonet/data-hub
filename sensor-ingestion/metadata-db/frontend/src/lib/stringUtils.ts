@@ -2,10 +2,14 @@ export function caseInsensitiveIncludes(s: string, searchString: string): boolea
 	return s.toLowerCase().includes(searchString.toLowerCase());
 }
 
-export function emptyToNull(s: string): string | null {
-	if (s.trim()) {
+export function emptyToNull(s: string | null): string | null {
+	if (s && s.trim()) {
 		return s.trim();
 	} else {
 		return null;
 	}
+}
+
+export function replaceComma(num: string): string {
+	return num.replace(',', '.');
 }

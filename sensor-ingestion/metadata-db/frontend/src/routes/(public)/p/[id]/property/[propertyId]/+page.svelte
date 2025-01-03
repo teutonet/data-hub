@@ -16,28 +16,18 @@
 	import {
 		DELETE_PROPERTY,
 		GET_PROPERTY_BY_ID,
+		GET_PROPERTY_CHANGES,
 		UPDATE_PROPERTY_BY_ID
 	} from '$lib/common/graphql/queries';
 	import { handleCombinedErrors, performMutation } from '$lib/common/graphql/utils';
 	import { success } from '$lib/common/toast/toast';
-	import { projectAccess } from '$lib/common/auth';
 	import { goto } from '$app/navigation';
+	import HistoryModal from '$lib/HistoryModal.svelte';
 
 	export let data: PageData;
 
 	$: propertyId = data.propertyId;
 	$: projectId = data.projectId === 'all' ? undefined : data.projectId;
-
-	$: rawProjects =
-		data.projectId === 'all'
-			? $projectAccess.map((project) => {
-					return { name: project, value: project };
-				})
-			: undefined;
-
-	$: projects = rawProjects?.length
-		? [{ name: $_('component.nav.allProjects'), value: 'all' }, ...rawProjects]
-		: undefined;
 
 	$: propertyStore = queryStore<GetPropertyByIdQuery, GetPropertyByIdQueryVariables>({
 		client,
@@ -112,15 +102,9 @@
 		<P>
 			{$_('page.propertyPage.editInfo')}
 		</P>
-		<PropertyEdit
-			{projectId}
-			{projects}
-			id="property-edit"
-			bind:property
-			{submitFunction}
-			{deleteFunction}
-		/>
+		<PropertyEdit id="property-edit" bind:property {submitFunction} {deleteFunction} />
 	</Card>
+	<HistoryModal entityId={property.id} dataKey="propertyChanges" query={GET_PROPERTY_CHANGES} />
 {:else}
 	<CardPlaceholder />
 {/if}

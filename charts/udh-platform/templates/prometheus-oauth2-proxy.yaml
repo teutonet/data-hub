@@ -9,17 +9,14 @@ metadata:
   name: {{ include "data-hub.name" (dict "context" . "name" (printf "%s-%s" "mimir-auth" .name)) }}
 spec:
   releaseName: {{ include "data-hub.name" (dict "context" . "name" (printf "%s-%s" "mimir-auth" .name)) }}
-  chart:
-    spec:
-      chart: oauth2-proxy
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        name: {{ include "data-hub.name" (dict "context" . "name" "oauth2") }}
+  chartRef:
+    kind: OCIRepository
+    name: {{ printf "%s-oauth2" (include "common.names.fullname" .) | quote }}
   interval: 1h0m0s
   dependsOn:
     - name: {{ include "data-hub.name" (dict "context" . "name" "keycloak") }}
   values:
+    replicaCount: {{ .Values.prometheusOauth2Proxy.replicas }}
     config:
       clientID: prometheus_{{ .name }}
       cookieSecret: {{ $cookieSecretMimirOauthProxy | quote }}

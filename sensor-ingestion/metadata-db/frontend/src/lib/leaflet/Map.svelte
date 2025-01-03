@@ -3,15 +3,14 @@
 	import { createIcon } from './utils';
 	import { Button } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
+	import { replaceComma } from '$lib/stringUtils';
 
-	export let latSensor: number | null;
-	export let lngSensor: number | null;
+	export let latSensor: string | null;
+	export let lngSensor: string | null;
 	export let sensorName: string;
-	const initialView: LatLngExpression = { lat: latSensor ?? 0, lng: lngSensor ?? 0 };
 
 	let map: L.Map;
 	let markerLayers: L.LayerGroup = L.layerGroup();
-	let initalMarker: L.Marker;
 	let changeMarker: L.Marker | null = null;
 	let mouseDownCenter: LatLng;
 	let openMap: boolean;
@@ -19,12 +18,29 @@
 	function getMouseDownCenter() {
 		mouseDownCenter = map.getCenter();
 	}
-	function updateMouseManual(latSensor: number | null, lngSensor: number | null) {
-		if (latSensor && lngSensor && map) {
-			if (changeMarker) {
-				changeMarker.remove();
+
+	function getLatLngExpression(
+		latSensor: string | null,
+		lngSensor: string | null
+	): LatLngExpression | undefined {
+		if (latSensor && lngSensor) {
+			const latSensorNum = parseFloat(replaceComma(latSensor));
+			const lngSensorNum = parseFloat(replaceComma(lngSensor));
+			if (latSensorNum && lngSensorNum) {
+				return { lat: latSensorNum, lng: lngSensorNum };
 			}
-			changeMarker = createMarker({ lat: latSensor, lng: lngSensor });
+		}
+		return undefined;
+	}
+
+	function updateMouseManual(latSensor: string | null, lngSensor: string | null) {
+		if (changeMarker) {
+			changeMarker.remove();
+			changeMarker = null;
+		}
+		const expr = getLatLngExpression(latSensor, lngSensor);
+		if (map && expr) {
+			changeMarker = createMarker(expr);
 			changeMarker.addTo(markerLayers).setIcon(createIcon('text-orange-600'));
 		}
 	}
@@ -38,28 +54,30 @@
 		return marker;
 	}
 	function createMap(container: HTMLDivElement) {
-		map = L.map(container, { preferCanvas: true, center: initialView }).setView(
-			initialView,
-			latSensor && lngSensor ? 19 : 1
-		);
+		map = L.map(container, { preferCanvas: true });
+
+		const initialView = getLatLngExpression(latSensor, lngSensor);
+		if (initialView) {
+			map.setView(initialView, 19);
+			const initalMarker = createMarker(initialView);
+			markerLayers.addLayer(initalMarker);
+		} else {
+			map.setView({ lat: 0, lng: 0 }, 1);
+		}
 
 		L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 			maxZoom: 19
 		}).addTo(map);
+
+		markerLayers.addTo(map);
 	}
 	function mapAction(container: HTMLDivElement) {
 		createMap(container);
 
-		if (latSensor && lngSensor) {
-			initalMarker = createMarker(initialView);
-			markerLayers.addLayer(initalMarker);
-		}
-		markerLayers.addTo(map);
-
 		return {
 			destroy: () => {
-				map ? map.remove() : null;
+				map?.remove();
 			}
 		};
 	}
@@ -86,8 +104,8 @@
 			}
 			changeMarker = createMarker(mousePos);
 			changeMarker.addTo(markerLayers).setIcon(createIcon('text-orange-600'));
-			latSensor = mousePos.lat;
-			lngSensor = mousePos.lng;
+			latSensor = `${mousePos.lat}`;
+			lngSensor = `${mousePos.lng}`;
 		}
 	}
 </script>

@@ -102,6 +102,23 @@ type Query implements Node {
     condition: ThingCondition
   ): [Thing!]
 
+  """Reads a set of `ThingLivedatum`."""
+  thingLivedata(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `ThingLivedatum`."""
+    orderBy: [ThingLivedataOrderBy!]
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ThingLivedatumCondition
+  ): [ThingLivedatum!]
+
   """Reads a set of `ThingOffset`."""
   thingOffsets(
     """Only read the first `n` values of the set."""
@@ -125,6 +142,7 @@ type Query implements Node {
   sensorProperty(sensorId: UUID!, propertyId: UUID!): SensorProperty
   thingByProjectAndName(project: String!, name: String!): Thing
   thing(id: UUID!): Thing
+  thingLivedatum(thingId: UUID!): ThingLivedatum
   thingOffset(id: UUID!): ThingOffset
   thingOffsetByThingIdAndMetricName(thingId: UUID!, metricName: String!): ThingOffset
   accessToProject(project: String): Boolean
@@ -154,6 +172,50 @@ type Query implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [UUID]
+
+  """Reads and enables pagination through a set of `AuditEvent`."""
+  propertyChanges(
+    _id: UUID
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [AuditEvent]
+
+  """Reads and enables pagination through a set of `AuditEvent`."""
+  sensorChanges(
+    _id: UUID
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [AuditEvent]
+
+  """Reads and enables pagination through a set of `AuditEvent`."""
+  sensorPropertyChanges(
+    _id: UUID
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [AuditEvent]
+
+  """Reads and enables pagination through a set of `AuditEvent`."""
+  thingChanges(
+    _id: UUID
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [AuditEvent]
 
   """Reads a single `Property` using its globally unique `ID`."""
   propertyByNodeId(
@@ -188,6 +250,14 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Thing`."""
     nodeId: ID!
   ): Thing
+
+  """Reads a single `ThingLivedatum` using its globally unique `ID`."""
+  thingLivedatumByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `ThingLivedatum`.
+    """
+    nodeId: ID!
+  ): ThingLivedatum
 
   """Reads a single `ThingOffset` using its globally unique `ID`."""
   thingOffsetByNodeId(
@@ -272,6 +342,7 @@ type Sensor implements Node {
   appeui: String
   datasheet: String
   public: Boolean!
+  outOfOrderSeconds: Int
 
   """Reads and enables pagination through a set of `SensorProperty`."""
   sensorProperties(
@@ -366,15 +437,13 @@ type Thing implements Node {
   long: BigFloat
   status: String
   install: Boolean
-  altitude: String
+  altitude: BigFloat
   public: Boolean
   ownedby: String
   locationname: String
   locationdesc: String
   sensorId: UUID
   geohash: String
-  payload: JSON
-  lastValues: JSON
   customLabels: [String]
 
   """Reads a single `Sensor` that is related to this `Thing`."""
@@ -396,17 +465,15 @@ type Thing implements Node {
     """
     condition: ThingOffsetCondition
   ): [ThingOffset!]!
+
+  """Reads a single `ThingLivedatum` that is related to this `Thing`."""
+  thingLivedatum: ThingLivedatum
 }
 
 """
 A floating point number that requires more precision than IEEE 754 binary 64
 """
 scalar BigFloat
-
-"""
-A JavaScript object encoded in the JSON format as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
-"""
-scalar JSON
 
 type ThingOffset implements Node {
   """
@@ -474,6 +541,24 @@ input ThingOffsetCondition {
   offsetValue: BigFloat
 }
 
+type ThingLivedatum implements Node {
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  thingId: UUID!
+  payload: JSON
+  lastValues: JSON
+
+  """Reads a single `Thing` that is related to this `ThingLivedatum`."""
+  thing: Thing
+}
+
+"""
+A JavaScript object encoded in the JSON format as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
 """Methods to use when ordering `Thing`."""
 enum ThingsOrderBy {
   NATURAL
@@ -511,10 +596,6 @@ enum ThingsOrderBy {
   SENSOR_ID_DESC
   GEOHASH_ASC
   GEOHASH_DESC
-  PAYLOAD_ASC
-  PAYLOAD_DESC
-  LAST_VALUES_ASC
-  LAST_VALUES_DESC
   CUSTOM_LABELS_ASC
   CUSTOM_LABELS_DESC
   PRIMARY_KEY_ASC
@@ -556,7 +637,7 @@ input ThingCondition {
   install: Boolean
 
   """Checks for equality with the object’s `altitude` field."""
-  altitude: String
+  altitude: BigFloat
 
   """Checks for equality with the object’s `public` field."""
   public: Boolean
@@ -575,12 +656,6 @@ input ThingCondition {
 
   """Checks for equality with the object’s `geohash` field."""
   geohash: String
-
-  """Checks for equality with the object’s `payload` field."""
-  payload: JSON
-
-  """Checks for equality with the object’s `lastValues` field."""
-  lastValues: JSON
 
   """Checks for equality with the object’s `customLabels` field."""
   customLabels: [String]
@@ -684,6 +759,8 @@ enum SensorsOrderBy {
   DATASHEET_DESC
   PUBLIC_ASC
   PUBLIC_DESC
+  OUT_OF_ORDER_SECONDS_ASC
+  OUT_OF_ORDER_SECONDS_DESC
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
 }
@@ -712,7 +789,63 @@ input SensorCondition {
 
   """Checks for equality with the object’s `public` field."""
   public: Boolean
+
+  """Checks for equality with the object’s `outOfOrderSeconds` field."""
+  outOfOrderSeconds: Int
 }
+
+"""Methods to use when ordering `ThingLivedatum`."""
+enum ThingLivedataOrderBy {
+  NATURAL
+  THING_ID_ASC
+  THING_ID_DESC
+  PAYLOAD_ASC
+  PAYLOAD_DESC
+  LAST_VALUES_ASC
+  LAST_VALUES_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+A condition to be used against `ThingLivedatum` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input ThingLivedatumCondition {
+  """Checks for equality with the object’s `thingId` field."""
+  thingId: UUID
+
+  """Checks for equality with the object’s `payload` field."""
+  payload: JSON
+
+  """Checks for equality with the object’s `lastValues` field."""
+  lastValues: JSON
+}
+
+type AuditEvent {
+  id: BigInt
+  auditId: BigInt
+  eventKey: String
+  transactionId: Int
+  auditUserName: String
+  stmtDate: Datetime
+  sessionInfo: JSON
+  valuesBefore: JSON
+  valuesAfter: JSON
+}
+
+"""
+A signed eight-byte integer. The upper big integer values are greater than the
+max value for a JavaScript number. Therefore all big integers will be output as
+strings and not numbers.
+"""
+scalar BigInt
+
+"""
+A point in time as described by the [ISO
+8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+"""
+scalar Datetime
 
 """
 The root mutation type which contains root level fields which mutate data.
@@ -757,6 +890,14 @@ type Mutation {
     """
     input: CreateThingInput!
   ): CreateThingPayload
+
+  """Creates a single `ThingLivedatum`."""
+  createThingLivedatum(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateThingLivedatumInput!
+  ): CreateThingLivedatumPayload
 
   """Creates a single `ThingOffset`."""
   createThingOffset(
@@ -865,6 +1006,24 @@ type Mutation {
     """
     input: UpdateThingInput!
   ): UpdateThingPayload
+
+  """
+  Updates a single `ThingLivedatum` using its globally unique id and a patch.
+  """
+  updateThingLivedatumByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingLivedatumByNodeIdInput!
+  ): UpdateThingLivedatumPayload
+
+  """Updates a single `ThingLivedatum` using a unique key and a patch."""
+  updateThingLivedatum(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateThingLivedatumInput!
+  ): UpdateThingLivedatumPayload
 
   """
   Updates a single `ThingOffset` using its globally unique id and a patch.
@@ -988,6 +1147,22 @@ type Mutation {
     input: DeleteThingInput!
   ): DeleteThingPayload
 
+  """Deletes a single `ThingLivedatum` using its globally unique id."""
+  deleteThingLivedatumByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingLivedatumByNodeIdInput!
+  ): DeleteThingLivedatumPayload
+
+  """Deletes a single `ThingLivedatum` using a unique key."""
+  deleteThingLivedatum(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteThingLivedatumInput!
+  ): DeleteThingLivedatumPayload
+
   """Deletes a single `ThingOffset` using its globally unique id."""
   deleteThingOffsetByNodeId(
     """
@@ -1023,6 +1198,18 @@ type Mutation {
     """
     input: CreateSensorWithPropsInput!
   ): CreateSensorWithPropsPayload
+  createThingWithPayload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateThingWithPayloadInput!
+  ): CreateThingWithPayloadPayload
+  sensortypeImport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SensortypeImportInput!
+  ): SensortypeImportPayload
 
   """Creates one or many `Property`."""
   mnCreateProperty(
@@ -1208,6 +1395,7 @@ input SensorInput {
   appeui: String
   datasheet: String
   public: Boolean
+  outOfOrderSeconds: Int
 }
 
 """The output of our create `SensorProperty` mutation."""
@@ -1298,16 +1486,53 @@ input ThingInput {
   long: BigFloat
   status: String
   install: Boolean
-  altitude: String
+  altitude: BigFloat
   public: Boolean
   ownedby: String
   locationname: String
   locationdesc: String
   sensorId: UUID
   geohash: String
+  customLabels: [String]
+}
+
+"""The output of our create `ThingLivedatum` mutation."""
+type CreateThingLivedatumPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ThingLivedatum` that was created by this mutation."""
+  thingLivedatum: ThingLivedatum
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Thing` that is related to this `ThingLivedatum`."""
+  thing: Thing
+}
+
+"""All input for the create `ThingLivedatum` mutation."""
+input CreateThingLivedatumInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `ThingLivedatum` to be created by this mutation."""
+  thingLivedatum: ThingLivedatumInput!
+}
+
+"""An input for mutations affecting `ThingLivedatum`"""
+input ThingLivedatumInput {
+  thingId: UUID!
   payload: JSON
   lastValues: JSON
-  customLabels: [String]
 }
 
 """The output of our create `ThingOffset` mutation."""
@@ -1520,6 +1745,7 @@ input SensorPatch {
   appeui: String
   datasheet: String
   public: Boolean
+  outOfOrderSeconds: Int
 }
 
 """All input for the `updateSensorByProjectAndName` mutation."""
@@ -1675,15 +1901,13 @@ input ThingPatch {
   long: BigFloat
   status: String
   install: Boolean
-  altitude: String
+  altitude: BigFloat
   public: Boolean
   ownedby: String
   locationname: String
   locationdesc: String
   sensorId: UUID
   geohash: String
-  payload: JSON
-  lastValues: JSON
   customLabels: [String]
 }
 
@@ -1716,6 +1940,69 @@ input UpdateThingInput {
   """
   patch: ThingPatch!
   id: UUID!
+}
+
+"""The output of our update `ThingLivedatum` mutation."""
+type UpdateThingLivedatumPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ThingLivedatum` that was updated by this mutation."""
+  thingLivedatum: ThingLivedatum
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Thing` that is related to this `ThingLivedatum`."""
+  thing: Thing
+}
+
+"""All input for the `updateThingLivedatumByNodeId` mutation."""
+input UpdateThingLivedatumByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `ThingLivedatum` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `ThingLivedatum` being updated.
+  """
+  patch: ThingLivedatumPatch!
+}
+
+"""
+Represents an update to a `ThingLivedatum`. Fields that are set will be updated.
+"""
+input ThingLivedatumPatch {
+  thingId: UUID
+  payload: JSON
+  lastValues: JSON
+}
+
+"""All input for the `updateThingLivedatum` mutation."""
+input UpdateThingLivedatumInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `ThingLivedatum` being updated.
+  """
+  patch: ThingLivedatumPatch!
+  thingId: UUID!
 }
 
 """The output of our update `ThingOffset` mutation."""
@@ -2042,6 +2329,51 @@ input DeleteThingInput {
   id: UUID!
 }
 
+"""The output of our delete `ThingLivedatum` mutation."""
+type DeleteThingLivedatumPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ThingLivedatum` that was deleted by this mutation."""
+  thingLivedatum: ThingLivedatum
+  deletedThingLivedatumNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Thing` that is related to this `ThingLivedatum`."""
+  thing: Thing
+}
+
+"""All input for the `deleteThingLivedatumByNodeId` mutation."""
+input DeleteThingLivedatumByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `ThingLivedatum` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteThingLivedatum` mutation."""
+input DeleteThingLivedatumInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  thingId: UUID!
+}
+
 """The output of our delete `ThingOffset` mutation."""
 type DeleteThingOffsetPayload {
   """
@@ -2149,6 +2481,7 @@ input CreateSensorWithPropsInput {
   name: String
   appeui: String
   description: String
+  outOfOrderSeconds: Int
   datasheet: String
   public: Boolean
   properties: [PropertyInputRecordInput]
@@ -2159,6 +2492,73 @@ input PropertyInputRecordInput {
   propertyId: UUID
   alias: String
   writeDelta: Boolean
+}
+
+"""The output of our `createThingWithPayload` mutation."""
+type CreateThingWithPayloadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createThingWithPayload` mutation."""
+input CreateThingWithPayloadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  project: String
+  name: String
+  appid: String
+  devid: String
+  deveui: String
+  lat: BigFloat
+  long: BigFloat
+  status: String
+  sensorId: UUID
+  install: Boolean
+  altitude: BigFloat
+  public: Boolean
+  ownedby: String
+  locationname: String
+  locationdesc: String
+  customLabels: [String]
+  payload: JSON
+  lastValues: JSON
+}
+
+"""The output of our `sensortypeImport` mutation."""
+type SensortypeImportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  uuid: UUID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `sensortypeImport` mutation."""
+input SensortypeImportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  data: JSON
+  currentProject: String
 }
 
 """The output of our many create `Property` mutation."""

@@ -2,7 +2,7 @@ global:
   auth:
     issuer: https://login.example.com/exampleIssuer
     tokenPath: protocol/openid-connect/token
-    readyPath: /health/ready
+    readyPath: /
   baseDomain: example.com
   udhImageTag: latest
   udhImageRegistry: "registry-gitlab.teuto.net"
@@ -20,7 +20,7 @@ global:
       registry: "docker.io"
       pullPolicy: Always
       repository: "babashka/babashka"
-      tag: 1.3.189
+      tag: 1.12.196
       digest: ""
   sslInsecureSkipVerify: false
   ingress:
@@ -29,7 +29,7 @@ global:
   loglevel: info
 keycloak:
   realm: udh
-  replicaCount: 1
+  replicas: 1
   extensions:
     image:
       registry: "registry-gitlab.teuto.net"
@@ -54,20 +54,34 @@ keycloak:
     ssl: false
     user: username
     password: password
-mailhog:
-  enabled: false
-  replicas: 1
-  auth:
-    enabled: true
-  ingress:
-    enabled: false
-    annotations: {}
+
+mailpit:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: axllent/mailpit
+    tag: v1.21.8
+  readinessProbe:
+    initialDelaySeconds: 0
+    periodSeconds: 1
+    timeoutSeconds: 2
+    successThreshold: 1
+  livenessProbe:
+    initialDelaySeconds: 0
+    periodSeconds: 1
+    timeoutSeconds: 2
+    successThreshold: 1
   resources:
-    limits:
-      memory: 128Mi
     requests:
-      cpu: 20m
-      memory: 128Mi
+      memory: 32Mi
+      cpu: 10m
+    limits:
+      memory: 96Mi
+      cpu: 100m
+  ingress:
+    annotations: {}
+  auth:
+    users: {}
 
 database:
   version: 15
@@ -93,8 +107,8 @@ database:
     allowedSourceRanges: [ ]
   image:
     registry: ghcr.io
-    repository: zalando/spilo-16
-    tag: 3.2-p2
+    repository: teutonet/oci-images/spilo
+    tag: 16.0.0
   replicas: 1
   resources:
     requests:
@@ -107,8 +121,10 @@ database:
     size: 4Gi
   ssl:
     enabled: false
+  shadowTables: false
 
 grafana:
+  replicas: 1
   ingress:
     annotations: {}
   smtp:
@@ -136,6 +152,7 @@ grafanaOauth2Proxy:
       memory: 300Mi
 
 grafanaPublic:
+  replicas: 1
   ingress:
     annotations: {}
   resources:
@@ -293,7 +310,6 @@ sensorIngestion:
       resources: *default_node_resources
   lorawanReceiver:
     enabled: true
-    replicas: 1
     #loglevel: DEBUG|INFO|WARNING|ERROR|CRITICAL
     targets: &all_targets
       - prometheus-writer
@@ -316,7 +332,6 @@ sensorIngestion:
   prometheusWriter:
     enabled: true
     #loglevel: DEBUG|INFO|WARNING|ERROR|CRITICAL
-    replicas: 1
     outOfOrderSeconds: 0
     alwaysUpdatePayload: true
     ingress:

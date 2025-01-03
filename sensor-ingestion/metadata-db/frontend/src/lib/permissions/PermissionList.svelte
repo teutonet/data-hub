@@ -1,24 +1,26 @@
 <script lang="ts">
 	import { Badge, Button, Card, Heading, P } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
-	import type { PermissionItem } from './types';
 	import { goto } from '$app/navigation';
-	import { deleteResource } from '$lib/nav/fetchUtils';
+	import {
+		deleteResource,
+		toResourceUrl,
+		type PermissionItem,
+		type ResourceType
+	} from '$lib/nav/fetchUtils';
 	import { accessToken } from '$lib/common/auth';
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
 
-	export let tenant: string;
-	export let project: string | null;
+	export let resource: ResourceType;
 
 	export let permissions: PermissionItem[];
 
 	async function deletePermission(permission: string) {
-		await deleteResource(
-			`data-hub/tenants/${tenant}/${project ? `projects/${project}/` : ''}permissions/${permission}`,
-			$accessToken
-		).then(() => {
-			reload();
-		});
+		await deleteResource(`${toResourceUrl(resource)}/permissions/${permission}`, $accessToken).then(
+			() => {
+				reload();
+			}
+		);
 	}
 
 	export let reload: () => void;
@@ -50,6 +52,6 @@
 	</P>
 {/each}
 
-<Button on:click={() => goto('permissions/new')} color="green"
-	>{$_('component.permissions.create')}</Button
->
+<Button on:click={() => goto('permissions/new')} color="green">
+	{$_('component.permissions.create')}
+</Button>

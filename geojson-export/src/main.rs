@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::Arc, time::Duration};
+use std::{collections::{BTreeMap, HashMap}, env, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use axum::{
@@ -8,6 +8,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use geojson::{Feature, Geometry};
 use prometheus_http_query::response::PromqlResult;
 use promql_parser::{
@@ -20,7 +21,7 @@ use promql_parser::{
 use reqwest::header::HeaderValue;
 use rustls::{client::danger::ServerCertVerifier, crypto::CryptoProvider};
 use serde::Deserialize;
-use tokio::time::Instant;
+use tokio::{signal::unix::SignalKind, time::Instant};
 use tokio_postgres::config::SslMode;
 use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
 use tracing::{error, info, warn};
@@ -89,21 +90,19 @@ async fn main() -> anyhow::Result<()> {
 
     let tls = tokio_postgres_rustls::MakeRustlsConnect::new(client_config);
 
-    let (postgres_client, connection) = tokio_postgres::Config::new()
-        .user(&db_user)
+    let mut client_config = tokio_postgres::Config::new();
+    client_config.user(&db_user)
         .password(&db_password)
         .host(&db_host)
         .dbname(&db_name)
         .connect_timeout(Duration::from_secs(10))
-        .ssl_mode(SslMode::Prefer)
-        .connect(tls)
-        .await?;
+        .ssl_mode(SslMode::Prefer);
 
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            error!("connection error: {}", e);
-        }
-    });
+    let pool = Pool::builder(
+        Manager::from_config(client_config, tls, ManagerConfig {
+            recycling_method: RecyclingMethod::Fast
+        })
+    ).max_size(16).build().context("pool build failed")?;
 
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(5))
@@ -114,12 +113,13 @@ async fn main() -> anyhow::Result<()> {
         .context("could not create prometheus client")?;
     let state = Arc::new(AppState {
         prometheus_client,
-        postgres_client,
+        pool,
     });
     // build our application with a route
     let app = Router::new()
         .route("/geojson", get(geojson_handler))
-        .route("/ready", get(ready_handler))
+        .route("/livez", get(live_handler))
+        .route("/readyz", get(ready_handler))
         .layer(CompressionLayer::new())
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
@@ -130,14 +130,26 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("could not bind tcp listener")?;
     axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_handler())
         .await
         .context("could not start server")?;
     Ok(())
 }
 
+async fn shutdown_handler() {
+    let mut quit_sig = tokio::signal::unix::signal(SignalKind::quit()).expect("failed to install signal handler");
+    let mut term_sig = tokio::signal::unix::signal(SignalKind::terminate()).expect("failed to install signal handler");
+    let mut int_sig = tokio::signal::unix::signal(SignalKind::interrupt()).expect("failed to install signal handler");
+    tokio::select! {
+        _ = quit_sig.recv() => {}
+        _ = term_sig.recv() => {}
+        _ = int_sig.recv() => {}
+    }
+}
+
 struct AppState {
     prometheus_client: prometheus_http_query::Client,
-    postgres_client: tokio_postgres::Client,
+    pool: Pool,
 }
 
 type ArcAppState = Arc<AppState>;
@@ -149,8 +161,34 @@ struct GeojsonHandlerQuery {
     project: String,
 }
 
-async fn ready_handler() -> &'static str {
+async fn live_handler() -> &'static str {
     "ok"
+}
+
+async fn ready_handler(State(state): State<ArcAppState>) -> (StatusCode, Json<BTreeMap<&'static str, &'static str>>) {
+    let db_ready_fut = async {
+        match state.pool.get().await {
+            Ok(postgres_client) => {
+                postgres_client.query_one("SELECT 1", &[]).await.inspect_err(|e| warn!(error = ?e, "can't reach database")).is_ok()
+            },
+            Err(e) => {
+                warn!(error = ?e, "could not connect to database");
+                false
+            }
+        }
+    };
+    let prometheus_ready_fut = async {
+        state.prometheus_client.query("1").get_raw().await.inspect_err(|e| warn!(error = ?e, "prometheus is unhealthy")).is_ok()
+    };
+    let (db_ready, prometheus_ready) = tokio::join!(db_ready_fut, prometheus_ready_fut);
+    let ready_list = [("database", db_ready), ("prometheus", prometheus_ready)];
+    let code = if ready_list.iter().all(|(_, ready)| *ready) {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+    let result = BTreeMap::from(ready_list.map(|(name, ready)| (name, if ready { "READY" } else { "NOT READY" })));
+    return (code, Json(result))
 }
 
 async fn get_public_query_by_name(
@@ -181,8 +219,12 @@ async fn geojson_handler(
         warn!(error = "invalid project", project = query.project);
         return Err((StatusCode::BAD_REQUEST, "invalid project"));
     };
+    let postgres_client = state.pool.get().await.map_err(|e| {
+        error!(error = ?e, "could not connect to database");
+        (StatusCode::INTERNAL_SERVER_ERROR, "database problem")
+    })?;
     let prom_query = if let Some(query_name) = &query.name {
-        match get_public_query_by_name(&state.postgres_client, &query.project, query_name).await {
+        match get_public_query_by_name(&postgres_client, &query.project, query_name).await {
             Err(e) => {
                 error!(error = ?e, "could not get query");
                 return Err((StatusCode::INTERNAL_SERVER_ERROR, "database problem"));
@@ -202,7 +244,7 @@ async fn geojson_handler(
         collect_metric_names(&parsed_query, &mut metric_names)
             .inspect_err(|e| error!(error = ?e, query = full_query, "invalid query"))
             .map_err(|_| (StatusCode::BAD_REQUEST, "invalid query"))?;
-        let allowed_result = state.postgres_client.query("SELECT sensor.id::TEXT, property.metric_name FROM sensor.sensor JOIN sensor.sensor_property ON sensor.id = sensor_property.sensor_id JOIN sensor.property ON sensor_property.property_id = property.id WHERE sensor.project = $1 AND property.metric_name = ANY ($2) AND COALESCE(sensor_property.public, sensor.public)", &[
+        let allowed_result = postgres_client.query("SELECT sensor.id::TEXT, property.metric_name FROM sensor.sensor JOIN sensor.sensor_property ON sensor.id = sensor_property.sensor_id JOIN sensor.property ON sensor_property.property_id = property.id WHERE sensor.project = $1 AND property.metric_name = ANY ($2) AND COALESCE(sensor_property.public, sensor.public)", &[
             &query.project,
             &metric_names
         ]).await.map_err(|e| {
@@ -408,6 +450,9 @@ fn make_query_allowed(
             let Some(allowed_types) = allow_list.get(name.as_str()) else {
                 return Err(name.to_string());
             };
+            if !matchers.or_matchers.is_empty() {
+                return Err("or matchers not supported".to_string());
+            }
             matchers.matchers.push(
                 Matcher::new_matcher(
                     T_EQL_REGEX,

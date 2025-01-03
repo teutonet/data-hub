@@ -3,7 +3,7 @@ import { GRAFANA, GRAFANA_PUBLIC, KEYCLOAK } from './helper/urls';
 import axios from 'axios';
 import { Agent } from 'https';
 import { getRandomString } from './helper/util';
-import { aquireTokenViaDeviceCode } from './helper/mdb-api';
+import { aquireTokenViaDeviceCode, MdbApi } from './helper/mdb-api';
 import {
 	DATA_HUB_ADMIN_PASSWORD,
 	DATA_HUB_ADMIN_USERNAME,
@@ -126,7 +126,7 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenant}:public-dashboards`).click();
 	await page.getByLabel('Toggle menu').click();
-	await page.getByRole('link', { name: 'Dashboards' }).click();
+	await page.getByTestId('navbarmenu').getByRole('link', { name: 'Dashboards' }).click();
 	await page.locator('button').filter({ hasText: 'New' }).click();
 	await page.getByRole('link', { name: 'New Folder' }).click();
 	await page.getByLabel('Folder name').fill('Unterordner');
@@ -169,5 +169,109 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	await refreshUntil(
 		publicGrafanaPage,
 		async () => (await publicGrafanaPage.getByText(`${tenant}:public-dashboards`).count()) == 0
+	);
+});
+
+test('public-dashboard-sync syncs datasource changes', async ({ page, context }) => {
+	await signInAdminKeycloak(page);
+
+	const tenant = `knuffingen-${getRandomString(6)}`;
+	console.log(`tenant sync create: ${tenant}`);
+
+	const realmAdminToken = await aquireTokenViaDeviceCode(
+		page,
+		DATA_HUB_ADMIN_USERNAME,
+		DATA_HUB_ADMIN_PASSWORD,
+		['data-hub']
+	);
+
+	const realmAdminClient = axios.create({
+		httpsAgent: new Agent({ rejectUnauthorized: false }),
+		headers: { Authorization: `Bearer ${realmAdminToken}` }
+	});
+
+	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenant}`);
+	await realmAdminClient.put(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/${tenant}/project/trainstation`
+	);
+
+	await page.goto(GRAFANA);
+
+	const publicGrafanaPage = await context.newPage();
+	await publicGrafanaPage.goto(`${GRAFANA_PUBLIC}dashboards`);
+
+	// create a dashboard without data
+	await page.getByLabel('Change organization').click();
+	await page.getByLabel('Select options menu').getByText(`${tenant}:admin`).click();
+	await page.getByLabel('New', { exact: true }).click();
+	await page.getByRole('link', { name: 'New dashboard' }).click();
+	await page.getByTestId('data-testid Add panel button').click();
+	await page.getByTestId('data-testid Add new visualization menu item').click();
+	await page.getByTestId('Select a data source').click();
+	await page.getByRole('button', { name: 'Prometheus' }).click();
+	const metricInput = page.getByLabel('Metric');
+	await metricInput.click();
+	await metricInput.fill('test_metric');
+	await expect(async () => {
+		await page.keyboard.press('Enter');
+		await page.getByRole('button', { name: 'Save' }).click({ timeout: 500 });
+	}).toPass({ intervals: [0] });
+	await page.getByLabel('Save dashboard title field').fill('Test Dashboard');
+	await page.getByLabel('Save dashboard button').click();
+	// due to a bug in grafana it's not possible to create the dashboard with a tag
+	await page.getByLabel('Dashboard settings', { exact: true }).click();
+	await page.getByPlaceholder('New tag (enter key to add)').fill('public');
+	await page.getByPlaceholder('New tag (enter key to add)').press('Enter');
+	await page.getByLabel('Dashboard settings aside actions Save button').click();
+	await page.getByLabel('Dashboard settings Save').click();
+
+	// navigate to published dashboard
+	await refreshUntil(publicGrafanaPage, () =>
+		publicGrafanaPage.getByText(`${tenant}:admin`).isVisible()
+	);
+	await publicGrafanaPage.getByText(`${tenant}:admin`).click();
+	await expect(publicGrafanaPage.getByRole('link', { name: 'Test Dashboard' })).toBeVisible();
+	await publicGrafanaPage.getByRole('link', { name: 'Test Dashboard' }).click();
+
+	// there is no data yet
+	await expect(publicGrafanaPage.getByText('No data')).toBeVisible();
+
+	// create a new project and push data to it
+	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenant}/project/busstation`);
+
+	const sensorCredentials = await realmAdminClient.put<{ username: string; password: string }>(
+		`${KEYCLOAK}realms/udh/data-hub/tenants/${tenant}/projects/busstation/sensor-credentials/token`
+	);
+
+	const apiClient = new MdbApi(
+		`${tenant}.busstation`,
+		sensorCredentials.data.username,
+		sensorCredentials.data.password
+	);
+
+	const sensorTypeId = await apiClient.createSensorTypeWithProperties(`e2e-${tenant}`, [
+		{
+			alias: null,
+			measure: null,
+			metricName: 'test_metric',
+			name: 'testMetric'
+		}
+	]);
+	const deveui = await apiClient.createThing(sensorTypeId, `e2e-thing-${tenant}`, 'activated');
+
+	await apiClient.remoteWriteVars(
+		{
+			deveui,
+			appid: 'test',
+			devid: 'test'
+		},
+		{
+			testMetric: 50
+		}
+	);
+
+	// there is data on the public dashboard now
+	await refreshUntil(publicGrafanaPage, () =>
+		publicGrafanaPage.getByRole('button', { name: 'test_metric{' }).isVisible()
 	);
 });

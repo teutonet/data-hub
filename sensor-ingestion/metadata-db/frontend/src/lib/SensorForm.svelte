@@ -43,9 +43,7 @@
 	import MapPinIcon from '~icons/heroicons/map-pin-solid';
 	import Map from './leaflet/Map.svelte';
 	import FloatingLabelSelect from './flowbite-extensions/FloatingLabelSelect.svelte';
-	import { getContextClient, queryStore } from '@urql/svelte';
-	import type { GetAllSensorsQuery, GetAllSensorsQueryVariables } from './common/generated/types';
-	import { GET_ALL_SENSORS } from './common/graphql/queries';
+	import type { GetAllSensorsQuery } from './common/generated/types';
 	import { parsePayload } from './common/sensor-ingestion';
 	import SensorFind from './SensorFind.svelte';
 	import SortingTable from './common/SortingTable.svelte';
@@ -60,8 +58,9 @@
 	import EditIcon from '~icons/heroicons/pencil-square';
 
 	export let title: string;
-
+	export let sensorTypes: GetAllSensorsQuery['sensors'] = [];
 	export let thing: ThingPatch | ThingInput;
+	export let payload: string | undefined;
 
 	const labelKeyInputRegex = '^(?!__)^[a-zA-Z_][a-zA-Z0-9_]*$';
 	const labelValueInputRegex = '^[^\x00-\x1F\x7F]+$';
@@ -80,19 +79,12 @@
 		});
 	}
 
-	const client = getContextClient();
-	$: sensorTypeStore = queryStore<GetAllSensorsQuery, GetAllSensorsQueryVariables>({
-		client: client,
-		query: GET_ALL_SENSORS
-	});
-
-	$: allSensorTypes = $sensorTypeStore.data?.sensors?.filter(
-		(sensorType) => sensorType.project == thing?.project
-	);
+	$: allSensorTypes =
+		sensorTypes?.filter((sensorType) => sensorType.project == thing?.project) ?? [];
 
 	$: currentSensorTypeId = thing?.sensorId;
 	$: currentSensorType = allSensorTypes?.find((e) => e.id === currentSensorTypeId);
-	$: parsedPayload = parsePayload(thing?.payload);
+	$: parsedPayload = parsePayload(payload);
 	$: customLabels =
 		thing?.customLabels
 			?.filter((label) => {
@@ -296,7 +288,7 @@
 		<Heading tag="h3">
 			{$_('sensorView.sensorType')}
 		</Heading>
-		{#if !$sensorTypeStore.fetching && allSensorTypes}
+		{#if allSensorTypes}
 			{@const allSensorItems = allSensorTypes.map((e) => ({ name: e.name, value: e.id }))}
 			<FloatingLabelSelect
 				id="sensorSelect"
@@ -560,7 +552,7 @@
 						</TableBodyRow>
 					{:else}
 						<TableBodyRow>
-							<TableBodyCell colspan="3">
+							<TableBodyCell colspan={3}>
 								<div class="flex h-full content-center justify-center p-4">
 									{$_('sensorView.noCustomLabels')}
 								</div>

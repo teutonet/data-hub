@@ -43,13 +43,24 @@ spec:
   numberOfInstances: {{ .Values.database.replicas }}
   users:
     postgraphile: []
+    mdb_backend:
+      - bypassrls
   preparedDatabases:
     grafana:
       defaultUsers: true
+    grafana_public:
+      defaultUsers: true
     keycloak:
       defaultUsers: true
+    {{- if .Values.database.shadowTables }}
+    mdb_shadow: {}
+    {{- end }}
     mdb:
+      schemas:
+        pgmemento: {}
       defaultUsers: true
+      extensions:
+        pgmemento: pgmemento
   postgresql:
     version: {{ .Values.database.version | quote }}
   resources: {{- .Values.database.resources | toYaml | nindent 4 }}

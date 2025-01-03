@@ -17,17 +17,20 @@ export async function createKeycloakUser(
 	joinTenants: Tenant[],
 	realmAdmin: boolean
 ): Promise<void> {
-	await page.getByTestId('realmSelectorToggle').click();
+	await page.getByTestId('realmSelector').click();
 	await page.getByRole('menuitem', { name: 'udh' }).click();
 	await page.getByRole('link', { name: 'Users' }).click();
 	await page.getByTestId('add-user').click();
 
-	await page.getByLabel('Username *').click();
-	await page.getByLabel('Username *').fill(username);
-	await page.getByTestId('email-input').click();
-	await page.getByTestId('email-input').fill(`${username}@example.com`);
+	await page.getByTestId('username').fill(username);
+	await page.getByTestId('email').fill(`${username}@example.com`);
+	await page.getByTestId('firstName').fill('Test');
+	await page.getByTestId('lastName').fill('User');
 	// set email to be verified
-	await page.locator('label').filter({ hasText: 'YesNo' }).locator('span').first().click();
+	await page.locator('label').filter({ hasText: 'OnOff' }).locator('span').first().click();
+	// set language to english
+	await page.getByLabel('toggle', { exact: true }).click();
+	await page.getByRole('option', { name: 'English' }).click();
 
 	if (joinTenants.length > 0) {
 		await page.getByTestId('join-groups-button').click();
@@ -44,7 +47,7 @@ export async function createKeycloakUser(
 		await page.getByTestId('join-button').click();
 	}
 
-	await page.getByTestId('create-user').click();
+	await page.getByTestId('user-creation-save').click();
 	await page.getByTestId('global-alerts').getByRole('button').click();
 
 	await page.getByTestId('credentials').click();
@@ -71,9 +74,14 @@ export async function createKeycloakUser(
 	}
 }
 
+export async function signInWith(page: Page, username: string, password: string): Promise<void> {
+	await page.locator('#username').fill(username);
+	await page.locator('#password').fill(password);
+	await page.locator('#kc-login').click();
+}
+
 export async function signInAdminKeycloak(page: Page) {
 	await page.goto(KEYCLOAK);
-	await page.getByRole('link', { name: 'Administration Console' }).click();
 	await page.getByLabel('Username or email').fill('user');
 	await page.getByLabel('Password', { exact: true }).fill(KEYCLOAK_ADMIN_PASSWORD);
 	await page.getByRole('button', { name: 'Sign In' }).click();

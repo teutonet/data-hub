@@ -102,36 +102,6 @@
         }
       }
     },
-    "mailhog": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "replicas": {
-          "type": "integer"
-        },
-        "auth": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            }
-          }
-        },
-        "ingress": {
-          "type": "object",
-          "properites": {
-            "enabled": {
-              "type": "boolean"
-            }
-          },
-          "annotations": {
-            "type": "object"
-          }
-        }
-      }
-    },
     "objectStorage": {
       "type": "object",
       "additionalProperties": false,

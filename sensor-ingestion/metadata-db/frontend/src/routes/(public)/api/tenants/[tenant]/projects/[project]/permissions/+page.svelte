@@ -4,8 +4,7 @@
 	import type { PageData } from './$types';
 	import { _ } from 'svelte-i18n';
 	import PermissionList from '$lib/permissions/PermissionList.svelte';
-	import { apiFetch } from '$lib/nav/fetchUtils';
-	import type { PermissionItem } from '$lib/permissions/types';
+	import { fetchPermissions, type ProjectResource } from '$lib/nav/fetchUtils';
 	import { accessToken } from '$lib/common/auth';
 
 	export let data: PageData;
@@ -13,18 +12,16 @@
 	const tenant: string = data.tenant;
 	const project: string = data.project;
 
-	let promise = fetchPermissions();
+	const resource: ProjectResource = {
+		type: 'project',
+		tenant,
+		project
+	};
 
-	function fetchPermissions() {
-		return apiFetch<PermissionItem[]>(
-			`data-hub/tenants/${tenant}/projects/${project}/permissions`,
-			$accessToken,
-			true
-		);
-	}
+	let promise = fetchPermissions(resource, $accessToken);
 
 	function reload() {
-		promise = fetchPermissions();
+		promise = fetchPermissions(resource, $accessToken);
 	}
 </script>
 
@@ -33,5 +30,5 @@
 {#await promise}
 	<Spinner />
 {:then permissions}
-	<PermissionList {tenant} {project} {reload} {permissions} />
+	<PermissionList {resource} {reload} {permissions} />
 {/await}

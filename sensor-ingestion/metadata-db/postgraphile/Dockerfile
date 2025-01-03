@@ -1,6 +1,19 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:21.6.1-alpine
+FROM ${REGISTRY_MIRROR_LIB}node:23.5.0-alpine as build
+
+COPY package.json package-lock.json /postgraphile/
+
+WORKDIR /postgraphile
+
+RUN npm ci
+
+COPY tsconfig.json /postgraphile/
+COPY src /postgraphile/src
+
+RUN npm run build
+
+FROM ${REGISTRY_MIRROR_LIB}node:23.5.0-alpine
 
 COPY package.json package-lock.json /postgraphile/
 
@@ -8,8 +21,8 @@ WORKDIR /postgraphile
 
 RUN npm ci --omit=dev
 
-COPY index.js options.js /postgraphile/
+COPY --from=build /postgraphile/build /postgraphile/build
 
 USER node
 
-ENTRYPOINT [ "node", "index.js" ]
+ENTRYPOINT [ "node", "build/index.js" ]

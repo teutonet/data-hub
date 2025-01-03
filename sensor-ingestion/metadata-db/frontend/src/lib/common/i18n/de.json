@@ -1,5 +1,7 @@
 {
 	"shared": {
+		"next": "Weiter",
+		"previous": "Zurück",
 		"keycloakAPI": {
 			"resourceNameInvalid": "Name darf nur Zahlen und Kleinbuchstaben enthalten, dazwischen können Bindestriche verwendet werden.",
 			"requestErros": {
@@ -19,7 +21,8 @@
 			"responseError": "Fehlerhafte Serverantwort",
 			"authorizationError": "Fehler bei der Authentifizierung: Status {status}",
 			"yes": "Ja",
-			"no": "Nein"
+			"no": "Nein",
+			"importedSuccessfully": "Erfolgreich importiert"
 		},
 		"action": {
 			"continue": "Fortfahren",
@@ -27,7 +30,10 @@
 			"close": "Schließen",
 			"create": "Erstellen",
 			"save": "Speichern",
-			"delete": "Löschen"
+			"delete": "Löschen",
+			"copy": "Kopieren",
+			"export": "Exportieren",
+			"import": "Importieren"
 		},
 		"breadcrumbs": {
 			"home": "Startseite",
@@ -43,6 +49,50 @@
 		}
 	},
 	"component": {
+		"historyModal": {
+			"modalTitle": "Änderungshistorie",
+			"resetFilters": "Filter zurücksetzen",
+			"toggleButton": "Änderungshistorie",
+			"filterHeader": "Filter",
+			"itemsPerPage": "Einträge pro Seite",
+			"nameHeader": "Name",
+			"attributeHeader": "Attribut",
+			"dateRangeFrom": "Zeitpunkt von",
+			"dateRangeTo": "Zeitpunkt bis",
+			"datetime": "Zeitpunkt",
+			"user": "Benutzer oder API",
+			"attribute": "Attribut",
+			"before": "Vorher",
+			"after": "Nachher",
+			"attributes": {
+				"appid": "appId",
+				"deveui": "DevEUI",
+				"devid": "devId",
+				"install": "install",
+				"name": "Name",
+				"project": "Projekt",
+				"public": "Öffentlich",
+				"status": "Status",
+				"sensor_id": "Sensortyp-ID",
+				"geohash": "Geohash",
+				"lat": "Breitengrad",
+				"long": "Längengrad",
+				"description": "Beschreibung",
+				"measure": "Messeinheit",
+				"metric_name": "Metrikname",
+				"custom_labels": "Benutzerdef. Labels",
+				"offset_type": "Offset-Typ",
+				"offset_value": "Offset-Wert",
+				"locationname": "Ortsname",
+				"appeui": "AppEUI",
+				"datasheet": "Datasheet",
+				"property_id": "Eigenschafts-ID",
+				"write_delta": "Delta-Werte",
+				"sensorName": "Sensortyp-Name",
+				"propertyName": "Eigenschafts-Name",
+				"alias": "Alias"
+			}
+		},
 		"permissions": {
 			"name": "Name",
 			"groups": "Gruppe/n",
@@ -177,6 +227,7 @@
 			"project": "Projekt",
 			"appeui": "appeui",
 			"public": "Öffentlich",
+			"outOfOrderSeconds": "Inaktive Sekunden",
 			"editAndDeleteWarning": "Wenn Eigenschaften entfernt oder der Sensortyp gelöscht wird, werden Offsets, die für Geräte dieses Sensortyps oder die gelöschte Eigenschaft definiert sind, gelöscht.",
 			"sensorHasThings": "Es gibt noch {numberOfThings} Sensoren diese Sensortyps. Es müssen erst alle Sensoren diese Typs gelöscht werden, um den Sensortyp zu löschen.",
 			"deleteModal": {
@@ -221,10 +272,26 @@
 			"deleteModal": {
 				"title": "Eigenschaft wirklich löschen?",
 				"body": "Wollen sie die Eigenschaft wirklich löschen? Diese Aktion ist nicht reversibel."
-			}
+			},
+			"editGlobalToolTip": "Globale Eigenschaften können nicht bearbeitet werden!",
+			"deleteGlobalToolTip": "Globale Eigenschaften können nicht gelöscht werden!",
+			"technicalPrefixNotAllowed": "Der Technische Prefix \"technical_\" ist nicht erlaubt bei Metriknamen."
 		},
 		"map": {
 			"openMap": "Karte öffnen"
+		},
+		"importExportModal": {
+			"export": {
+				"title": "Exportiere Sensortyp als JSON"
+			},
+			"import": {
+				"title": "Importiere Sensortyp als JSON",
+				"textAreaHelp": "JSON-Daten eingeben",
+				"example": "Beispiel:",
+				"error": "Die JSON-Daten sind Fehlerhaft",
+				"notAValidJsonFormat": "Das ist keine Valide JSON-Datei",
+				"validJsonFormat": "Alles in Ordnung!"
+			}
 		}
 	},
 	"sensorTypeAutodetect": {
@@ -351,7 +418,8 @@
 			"deleteModal": {
 				"title": "Gruppe wirklich löschen?",
 				"body": "Wollen sie diese Gruppe wirklich löschen? Diese Aktion ist nicht reversibel."
-			}
+			},
+			"permissionListTitle": "Gruppenberechtigungen"
 		},
 		"projectList": {
 			"title": "Projekte",
@@ -428,7 +496,8 @@
 		},
 		"sensorTypes": {
 			"title": "Sensortypen",
-			"newSensortype": "Neuen Sensortyp erstellen"
+			"newSensortype": "Neuen Sensortyp erstellen",
+			"importSensortype": "Sensortyp Importieren"
 		},
 		"sensortypePage": {
 			"title": "Sensortyp {name} bearbeiten"
