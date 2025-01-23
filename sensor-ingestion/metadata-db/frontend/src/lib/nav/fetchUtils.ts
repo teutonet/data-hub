@@ -146,6 +146,7 @@ export const apiFetch = async <T>(
 };
 
 export const handleSubmit = function handleSubmit(e: Event, callBackFunction: () => void) {
+	e.preventDefault();
 	const formElement = e.target as HTMLFormElement;
 	if (!formElement.checkValidity()) {
 		formElement.classList.add('was-validated');

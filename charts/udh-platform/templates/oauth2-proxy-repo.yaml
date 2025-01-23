@@ -7,4 +7,4 @@ spec:
   interval: 1h0m0s
   url: oci://ghcr.io/oauth2-proxy/charts/oauth2-proxy
   ref:
-    tag: 7.9.0 # renovate: datasource=docker depName=ghcr.io/oauth2-proxy/charts/oauth2-proxy
+    tag: 7.9.2 # renovate: datasource=docker depName=ghcr.io/oauth2-proxy/charts/oauth2-proxy

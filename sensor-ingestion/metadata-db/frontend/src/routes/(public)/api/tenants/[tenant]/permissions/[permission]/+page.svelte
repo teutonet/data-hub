@@ -10,7 +10,11 @@
 	import { accessToken } from '$lib/common/auth';
 	import { Spinner } from 'flowbite-svelte';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	const tenant = data.tenant;
 	const permission = data.permission;
 

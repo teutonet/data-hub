@@ -16,7 +16,7 @@ dependencies {
     compileOnly("org.keycloak:keycloak-server-spi:$keycloakVersion")
     compileOnly("org.keycloak:keycloak-server-spi-private:$keycloakVersion")
     compileOnly("org.keycloak:keycloak-model-jpa:$keycloakVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     implementation("io.github.reactivecircus.cache4k:cache4k:0.13.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }

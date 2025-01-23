@@ -30,41 +30,72 @@
 	import ChevronUpIcon from '~icons/heroicons/chevron-up';
 	import ChevronDownIcon from '~icons/heroicons/chevron-down';
 	import ChevronUpDown from '~icons/heroicons/chevron-up-down';
+	import type { Snippet } from 'svelte';
+
+	interface Props {
+		// eslint-disable-next-line no-undef
+		items: T[];
+		shownKeys: TableHeadItem[];
+		componentLocKey: string;
+		// eslint-disable-next-line no-undef
+		itemCompareFunction?: ((a: T, b: T) => number) | undefined;
+		sortKey?: string | null;
+		sortDirection?: 1 | -1;
+		headClass?: string | undefined;
+		tableClass?: string | undefined;
+		tableDivClass?: string | undefined;
+		paginationParams?: PaginationOptions | undefined;
+		useTableBody?: boolean;
+		usePgPagination?: boolean;
+		hoverable?: boolean;
+		striped?: boolean;
+		noborder?: boolean;
+		shadow?: boolean;
+		color?:
+			| 'blue'
+			| 'green'
+			| 'red'
+			| 'yellow'
+			| 'purple'
+			| 'pink'
+			| 'indigo'
+			| 'custom'
+			| 'default'
+			| undefined;
+		customeColor?: string | undefined;
+		caption?: Snippet;
+		bodyContent?: Snippet<[any, number]>;
+		defaultContent?: Snippet;
+		footer?: Snippet;
+	}
+
+	let {
+		items,
+		shownKeys,
+		componentLocKey,
+		itemCompareFunction = undefined,
+		sortKey = $bindable(null),
+		sortDirection = $bindable(1),
+		headClass = undefined,
+		tableClass = undefined,
+		tableDivClass = undefined,
+		paginationParams = $bindable(undefined),
+		useTableBody = true,
+		usePgPagination = false,
+		hoverable = false,
+		striped = false,
+		noborder = false,
+		shadow = false,
+		color = undefined,
+		customeColor = undefined,
+		caption,
+		bodyContent,
+		defaultContent,
+		footer
+	}: Props = $props();
 
 	// eslint-disable-next-line no-undef
-	export let items: T[];
-	export let shownKeys: TableHeadItem[];
-	export let componentLocKey: string;
-	// eslint-disable-next-line no-undef
-	export let itemCompareFunction: ((a: T, b: T) => number) | undefined = undefined;
-
-	export let sortKey: string | null = null;
-	export let sortDirection: 1 | -1 = 1;
-	// eslint-disable-next-line no-undef
-	let sortedItems: T[] = items;
-	export let headClass: string | undefined = undefined;
-	export let tableClass: string | undefined = undefined;
-	export let tableDivClass: string | undefined = undefined;
-	export let paginationParams: PaginationOptions | undefined = undefined;
-	export let useTableBody = true;
-	export let usePgPagination = false;
-
-	export let hoverable: boolean = false;
-	export let striped: boolean = false;
-	export let noborder: boolean = false;
-	export let shadow: boolean = false;
-	export let color:
-		| 'blue'
-		| 'green'
-		| 'red'
-		| 'yellow'
-		| 'purple'
-		| 'pink'
-		| 'indigo'
-		| 'custom'
-		| 'default'
-		| undefined = undefined;
-	export let customeColor: string | undefined = undefined;
+	let sortedItems: T[] = $state(items);
 
 	function setSorting(key: string | null) {
 		if (sortKey === key) {
@@ -109,9 +140,10 @@
 		}
 	};
 
-	$: hasPrevious = paginationParams && paginationParams.offset > 0;
-	$: hasNext =
-		paginationParams && items.at(paginationParams.offset + paginationParams.first) !== undefined;
+	let hasPrevious = $derived(paginationParams && paginationParams.offset > 0);
+	let hasNext = $derived(
+		paginationParams && items.at(paginationParams.offset + paginationParams.first) !== undefined
+	);
 
 	const next = () => {
 		if (paginationParams) {
@@ -122,15 +154,21 @@
 		}
 	};
 
-	$: sortedItems = sortItems(items, sortKey, sortDirection);
+	$effect(() => {
+		sortedItems = sortItems(items, sortKey, sortDirection);
+	});
 
 	// eslint-disable-next-line no-undef
-	let finalItems: T[];
-	$: finalItems = usePgPagination
-		? sortedItems
-		: paginationParams
-			? sortedItems.slice(paginationParams.offset, paginationParams.offset + paginationParams.first)
-			: sortedItems;
+	let finalItems: T[] = $derived(
+		usePgPagination
+			? sortedItems
+			: paginationParams
+				? sortedItems.slice(
+						paginationParams.offset,
+						paginationParams.offset + paginationParams.first
+					)
+				: sortedItems
+	);
 </script>
 
 <Table
@@ -143,8 +181,8 @@
 	class={tableClass}
 	divClass={tableDivClass}
 >
-	{#if $$slots.caption}
-		<slot name="caption" />
+	{#if caption}
+		{@render caption?.()}
 	{/if}
 	<TableHead theadClass={headClass}>
 		{#each shownKeys as { name, key, sortable, cellClasses }}
@@ -179,19 +217,19 @@
 		{#if useTableBody}
 			<TableBody>
 				{#each finalItems as item, index}
-					<slot name="bodyContent" {item} {index} />
+					{@render bodyContent?.(item, index)}
 				{/each}
 			</TableBody>
 		{:else}
 			{#each finalItems as item, index}
-				<slot name="bodyContent" {item} {index} />
+				{@render bodyContent?.(item, index)}
 			{/each}
 		{/if}
-	{:else if $$slots.defaultContent}
-		<slot name="defaultContent" />
+	{:else if defaultContent}
+		{@render defaultContent?.()}
 	{/if}
-	{#if $$slots.footer}
-		<slot name="footer" />
+	{#if footer}
+		{@render footer?.()}
 	{/if}
 </Table>
 {#if paginationParams}

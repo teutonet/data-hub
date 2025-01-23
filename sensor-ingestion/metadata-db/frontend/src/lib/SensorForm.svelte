@@ -1,4 +1,5 @@
-<script lang="ts" context="module">
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot making the component unusable -->
+<script lang="ts" module>
 	export enum FormMode {
 		Create,
 		Edit
@@ -56,17 +57,35 @@
 	import CancelIcon from '~icons/heroicons/x-mark';
 	import TrashIcon from '~icons/heroicons/trash';
 	import EditIcon from '~icons/heroicons/pencil-square';
+	import type { Snippet } from 'svelte';
 
-	export let title: string;
-	export let sensorTypes: GetAllSensorsQuery['sensors'] = [];
-	export let thing: ThingPatch | ThingInput;
-	export let payload: string | undefined;
+	interface Props {
+		title: string;
+		sensorTypes?: GetAllSensorsQuery['sensors'];
+		thing: ThingPatch | ThingInput;
+		payload?: string;
+		alertTop?: Snippet;
+		generalExtension?: Snippet;
+		bottomButtons?: Snippet;
+		children?: Snippet;
+	}
+
+	let {
+		title,
+		sensorTypes = [],
+		thing = $bindable(),
+		payload,
+		alertTop,
+		generalExtension,
+		bottomButtons,
+		children
+	}: Props = $props();
 
 	const labelKeyInputRegex = '^(?!__)^[a-zA-Z_][a-zA-Z0-9_]*$';
 	const labelValueInputRegex = '^[^\x00-\x1F\x7F]+$';
 
-	let showNewCustomLabelRow = false;
-	let customLabelEditingIndex = -1;
+	let showNewCustomLabelRow = $state(false);
+	let customLabelEditingIndex = $state(-1);
 
 	function getSensorPropertyItems(currentSensorType: SensorFormType) {
 		return currentSensorType.sensorProperties.map((prop) => {
@@ -79,13 +98,14 @@
 		});
 	}
 
-	$: allSensorTypes =
-		sensorTypes?.filter((sensorType) => sensorType.project == thing?.project) ?? [];
+	let allSensorTypes = $derived(
+		sensorTypes?.filter((sensorType) => sensorType.project == thing?.project) ?? []
+	);
 
-	$: currentSensorTypeId = thing?.sensorId;
-	$: currentSensorType = allSensorTypes?.find((e) => e.id === currentSensorTypeId);
-	$: parsedPayload = parsePayload(payload);
-	$: customLabels =
+	let currentSensorTypeId = $derived(thing?.sensorId);
+	let currentSensorType = $derived(allSensorTypes?.find((e) => e.id === currentSensorTypeId));
+	let parsedPayload = $derived(parsePayload(payload));
+	let customLabels = $derived(
 		thing?.customLabels
 			?.filter((label) => {
 				const splitLabel = label?.split(':', 2);
@@ -104,14 +124,15 @@
 					key: splitLabel[0],
 					value: splitLabel[1]
 				};
-			}) ?? [];
+			}) ?? []
+	);
 
-	let sensortypeSelectModalOpen = false;
-	let showLastPayload = false;
+	let sensortypeSelectModalOpen = $state(false);
+	let showLastPayload = $state(false);
 
-	let newCustomLabelKey: string | undefined = undefined;
-	let newCustomLabelValue: string | undefined = undefined;
-	let originalKey: string | undefined = undefined;
+	let newCustomLabelKey: string | undefined = $state(undefined);
+	let newCustomLabelValue: string | undefined = $state(undefined);
+	let originalKey: string | undefined = $state(undefined);
 
 	function setCustomLabelEditingIndex(index: number, key: string, value: string) {
 		customLabelEditingIndex = index;
@@ -201,10 +222,21 @@
 			resetInputs();
 		});
 	}
+
+	function labelSubmit(e: Event, index: number) {
+		e.preventDefault();
+		if (index === -1) {
+			saveNewCustomLabel(e);
+		} else {
+			saveCustomLabel(e);
+		}
+	}
 </script>
 
 <PageTitle headingTag="h2" headingClass="pb-5" {title} />
-<slot name="alert-top" />
+{#if alertTop}
+	{@render alertTop()}
+{/if}
 <Card class="max-w-full">
 	<div class="mb-4">
 		<div class="flex flex-col gap-4">
@@ -223,7 +255,10 @@
 					inputLabel={$_('sensorView.thing.deveui')}
 					inputId="things-id"
 				/>
-				<slot name="general-extension" />
+				{#if generalExtension}
+					{@render generalExtension()}
+				{/if}
+				<!-- <slot name="general-extension" /> -->
 			</div>
 		</div>
 	</div>
@@ -362,7 +397,7 @@
 					]}
 					componentLocKey="sensorView.sensorProperties"
 				>
-					<svelte:fragment slot="bodyContent" let:item>
+					{#snippet bodyContent(item)}
 						<TableBodyRow>
 							<TableBodyCell>
 								{item.aliasOrName}
@@ -374,7 +409,7 @@
 								{item.measure}
 							</TableBodyCell>
 						</TableBodyRow>
-					</svelte:fragment>
+					{/snippet}
 				</SortingTable>
 			{:else if thing.sensorId}
 				<ListPlaceholder />
@@ -388,8 +423,7 @@
 		<form
 			novalidate
 			class="needs-validation"
-			on:submit|preventDefault={(e) =>
-				customLabelEditingIndex === -1 ? saveNewCustomLabel(e) : saveCustomLabel(e)}
+			onsubmit={(e) => labelSubmit(e, customLabelEditingIndex)}
 		>
 			<SortingTable
 				hoverable
@@ -417,7 +451,7 @@
 				items={customLabels}
 				sortKey="key"
 			>
-				<svelte:fragment slot="bodyContent" let:item let:index>
+				{#snippet bodyContent(item, index)}
 					<TableBodyRow>
 						{#if customLabelEditingIndex === index}
 							<TableBodyCell>
@@ -513,8 +547,8 @@
 							</TableBodyCell>
 						</TableBodyRow>
 					{/if}
-				</svelte:fragment>
-				<svelte:fragment slot="defaultContent">
+				{/snippet}
+				{#snippet defaultContent()}
 					{#if showNewCustomLabelRow}
 						<TableBodyRow>
 							<TableBodyCell>
@@ -559,7 +593,7 @@
 							</TableBodyCell>
 						</TableBodyRow>
 					{/if}
-				</svelte:fragment>
+				{/snippet}
 			</SortingTable>
 		</form>
 		<Button
@@ -574,10 +608,14 @@
 			{$_('sensorView.customLabelHelperText')}
 		</Helper>
 	</div>
-	<slot />
+	{#if children}
+		{@render children()}
+	{/if}
 </Card>
 <div class="flex flex-row gap-4">
-	<slot name="bottom-buttons" />
+	{#if bottomButtons}
+		{@render bottomButtons()}
+	{/if}
 </div>
 
 <Modal bind:open={sensortypeSelectModalOpen}>

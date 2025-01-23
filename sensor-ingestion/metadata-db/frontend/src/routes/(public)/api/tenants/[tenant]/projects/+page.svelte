@@ -12,19 +12,23 @@
 	import { refreshAccessToken } from '$lib/common/auth/Auth.svelte';
 	import { activeProjectId } from '$lib/nav/activeProject';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	const tenant: string = data.tenant;
 	$activeProjectId = undefined;
 
-	let promise = fetchProject();
+	let promise = $state(fetchProject());
 
 	function fetchProject() {
 		return apiFetch<string[]>(`data-hub/tenants/${tenant}/projects`, $accessToken, true);
 	}
 
-	let createModalOpen = false;
-	let newProjectName = '';
-	let requestSent = false;
+	let createModalOpen = $state(false);
+	let newProjectName = $state('');
+	let requestSent = $state(false);
 
 	function createNewProject() {
 		requestSent = true;
@@ -91,7 +95,7 @@
 
 <form
 	novalidate
-	on:submit|preventDefault={(event) => handleSubmit(event, createNewProject)}
+	onsubmit={(event) => handleSubmit(event, createNewProject)}
 	class="needs-validation"
 >
 	<Modal bind:open={createModalOpen} title={$_('page.projectList.newProjectModalTitle')}>

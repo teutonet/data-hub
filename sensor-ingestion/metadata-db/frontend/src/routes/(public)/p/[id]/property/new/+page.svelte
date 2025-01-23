@@ -14,27 +14,33 @@
 	import { _ } from 'svelte-i18n';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const client = getContextClient();
 
-	$: projectId = data.projectId;
+	let projectId = $derived(data.projectId);
 
-	if (data.projectId === 'all') {
-		goto('../properties').catch((e) => {
-			console.error(e.message);
-		});
-	}
-
-	let property: PropertyInput;
-
-	$: property = {
+	const initialInput = {
 		name: '',
 		description: '',
 		metricName: '',
 		measure: '',
-		project: projectId ?? ''
+		project: data.projectId ?? ''
 	};
+
+	$effect(() => {
+		if (projectId === 'all') {
+			goto('../properties').catch((e) => {
+				console.error(e.message);
+			});
+		}
+	});
+
+	let property: PropertyInput = $state(initialInput);
 
 	async function submitFunction() {
 		await performMutation<CreatePropertyMutation, CreatePropertyMutationVariables>(

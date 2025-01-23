@@ -15,10 +15,10 @@ mime = "0.3.17"
 prometheus-http-query = { version = "0.8.3", default-features = false }
 promql-parser = "0.4.3"
 reqwest = { version = "0.12.12", default-features = false }
-rustls = { version = "0.23.20", default-features = false, features = ["ring"] }
+rustls = { version = "0.23.21", default-features = false, features = ["ring"] }
 serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.134"
-tokio = { version = "1.42.0", features = ["rt", "macros", "signal"] }
+serde_json = "1.0.135"
+tokio = { version = "1.43.0", features = ["rt", "macros", "signal"] }
 tokio-postgres = "0.7.12"
 tokio-postgres-rustls = "0.13.0"
 tower-http = { version = "0.6.2", features = ["compression-br", "compression-deflate", "compression-gzip", "compression-zstd", "cors", "trace"] }

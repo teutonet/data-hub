@@ -44,43 +44,60 @@
 	import { goto } from '$app/navigation';
 	import HistoryModal from '$lib/HistoryModal.svelte';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const client = getContextClient();
 
-	$: sensorId = data.sensortypeId;
+	let sensorId = $derived(data.sensortypeId);
 
-	$: sensorStore = queryStore<GetSensorByIdQuery, GetSensorByIdQueryVariables>({
-		client,
-		query: GET_SENSOR_BY_ID,
-		variables: { id: sensorId },
-		pause: !sensorId
-	});
-
-	$: sensor = $sensorStore.data?.sensor as unknown as Sensor;
-
-	$: projectId = data.projectId;
-
-	$: sensorProps = $sensorStore.data?.sensor?.sensorProperties;
-
-	$: propertyStore = queryStore<GetPropertiesQuery, GetPropertiesQueryVariables>({
-		client,
-		query: GET_PROPERTIES
-	});
-
-	$: properties = $propertyStore.data?.properties?.filter(
-		(prop) => prop.project === null || prop.project === data.projectId
+	let sensorStore = $derived(
+		queryStore<GetSensorByIdQuery, GetSensorByIdQueryVariables>({
+			client,
+			query: GET_SENSOR_BY_ID,
+			variables: { id: sensorId },
+			pause: !sensorId
+		})
 	);
 
-	$: propertyNames = properties
-		? Object.fromEntries(
-				properties.map((item) => {
-					return [item.id, item.name];
-				})
-			)
-		: undefined;
+	let sensor: Sensor | undefined = $state();
+	$effect(() => {
+		sensor = $sensorStore.data?.sensor as unknown as Sensor;
+	});
+
+	let projectId = $derived(data.projectId);
+
+	let sensorProps = $derived($sensorStore.data?.sensor?.sensorProperties);
+
+	let propertyStore = $derived(
+		queryStore<GetPropertiesQuery, GetPropertiesQueryVariables>({
+			client,
+			query: GET_PROPERTIES
+		})
+	);
+
+	let properties = $derived(
+		$propertyStore.data?.properties?.filter(
+			(prop) => prop.project === null || prop.project === data.projectId
+		)
+	);
+
+	let propertyNames = $derived(
+		properties
+			? Object.fromEntries(
+					properties.map((item) => {
+						return [item.id, item.name];
+					})
+				)
+			: undefined
+	);
 
 	async function submitFunction() {
+		if (!sensor) return;
+
 		const sensorPatch: SensorPatch = {
 			project: projectId,
 			name: sensor.name ?? undefined,
@@ -243,7 +260,7 @@
 
 {#if !$sensorStore.fetching && sensor && sensorProps && !$propertyStore.fetching && properties}
 	<PageTitle title={$_('page.sensortypePage.title', { values: { name: sensor.name } })} />
-	<Card class="max-w-full">
+	<Card class="max-w-full rounded-none rounded-t-lg">
 		<SensorEdit
 			bind:sensor
 			{submitFunction}
@@ -267,6 +284,7 @@
 		query={GET_SENSOR_CHANGES}
 		additionalNames={propertyNames}
 		excludedKeys={['sensor_id']}
+		openButtonClass="rounded-none rounded-b-lg"
 	/>
 {:else}
 	<CardPlaceholder />

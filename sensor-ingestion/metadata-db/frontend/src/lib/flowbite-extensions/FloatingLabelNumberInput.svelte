@@ -5,18 +5,45 @@
 	/// offer a floating label equivalent to NumberInput.svelte, which does the same thing.
 
 	import { twMerge } from 'tailwind-merge';
+	import type { FullAutoFill } from 'svelte/elements';
 
 	function generateId(): string {
 		let n = Date.now();
 		return (++n).toString(36);
 	}
 
-	export let id: string = generateId();
-	export let style: 'filled' | 'outlined' | 'standard' = 'standard';
-	export let size: 'small' | 'default' = 'default';
-	export let color: 'base' | 'green' | 'red' = 'base';
-	export let value = 0;
-	export let label = '';
+	interface Props {
+		id: string;
+		style: 'filled' | 'outlined' | 'standard';
+		size?: 'small' | 'default';
+		color: 'base' | 'green' | 'red';
+		value?: number;
+		labelText: string;
+		disabled?: boolean;
+		required?: boolean;
+		autocomplete?: FullAutoFill | null | undefined;
+		name?: string;
+		classDiv?: any;
+		classInput?: any;
+		classLabel?: any;
+	}
+
+	let {
+		id = generateId(),
+		style = 'standard',
+		size = 'default',
+		color = 'base',
+		value = $bindable(),
+		labelText = '',
+		classDiv,
+		classInput,
+		classLabel,
+		disabled = false,
+		required = false,
+		autocomplete = undefined,
+		name = undefined,
+		...others
+	}: Props = $props();
 
 	const divClasses = {
 		filled: 'relative',
@@ -86,30 +113,22 @@
 	};
 </script>
 
-<div class={twMerge(divClasses[style], $$props.classDiv)}>
+<div class={twMerge(divClasses[style], classDiv)}>
 	<input
 		{id}
-		{...$$restProps}
+		{disabled}
+		{required}
+		{autocomplete}
+		{name}
+		{...others}
 		bind:value
-		on:blur
-		on:change
-		on:click
-		on:focus
-		on:input
-		on:keydown
-		on:keypress
-		on:keyup
-		on:mouseenter
-		on:mouseleave
-		on:mouseover
-		on:paste
 		type="number"
 		placeholder=" "
 		class={twMerge(
 			inputClasses[style],
 			inputColorClasses[color],
 			inputSizes[style][size],
-			$$props.classInput
+			classInput
 		)}
 	/>
 
@@ -119,10 +138,10 @@
 			labelClasses[style],
 			labelColorClasses[color],
 			labelSizes[style][size],
-			$$props.classLabel
+			classLabel
 		)}
 	>
-		{label}
+		{labelText}
 	</label>
 </div>
 

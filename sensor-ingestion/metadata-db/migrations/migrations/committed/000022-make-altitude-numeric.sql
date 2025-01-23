@@ -1,9 +1,10 @@
+--! AllowInvalidHash
 --! Previous: sha1:bf5fd10a4bd372b6498df8cd9db3807e79ca337e
 --! Hash: sha1:7c98eac481f29eae4c761a0f2cdbb4b1b07489e2
 --! Message: make altitude numeric
 
 ALTER TABLE sensor.thing
-ALTER COLUMN altitude TYPE NUMERIC(16,12) USING lat::NUMERIC;
+ALTER COLUMN altitude TYPE NUMERIC(16,12) USING altitude::NUMERIC;
 
 DROP FUNCTION sensor.create_thing_with_payload;
 

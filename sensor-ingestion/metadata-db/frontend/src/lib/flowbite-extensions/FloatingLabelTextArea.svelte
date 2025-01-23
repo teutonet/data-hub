@@ -1,17 +1,54 @@
 <script lang="ts">
 	import { Label, Textarea } from 'flowbite-svelte';
+	import type { Snippet } from 'svelte';
 	import { twMerge } from 'tailwind-merge';
+	import type { FullAutoFill } from 'svelte/elements';
+
 	function generateId(): string {
 		let n = Date.now();
 		return (++n).toString(36);
 	}
 
-	export let id: string = generateId();
-	export let style: 'filled' | 'outlined' | 'standard' = 'standard';
-	export let size: 'small' | 'default' = 'default';
-	export let color: 'base' | 'green' | 'red' = 'base';
-	export let value: string;
-	export let label = '';
+	interface Props {
+		id?: string;
+		style?: 'standard' | 'filled' | 'outlined';
+		size?: 'small' | 'default';
+		color?: 'base' | 'green' | 'red';
+		value?: string | (string[] & string);
+		label?: string;
+		disabled?: boolean;
+		required?: boolean;
+		autocomplete?: FullAutoFill | null;
+		name?: string;
+		classDiv?: string | null;
+		classInput?: string;
+		classLabel?: string;
+		placeholder?: string;
+		rows?: number;
+		header?: Snippet;
+		footer?: Snippet;
+	}
+
+	let {
+		id = generateId(),
+		style = 'standard',
+		size = 'default',
+		color = 'base',
+		value = $bindable(),
+		label = '',
+		disabled = false,
+		required = false,
+		autocomplete = undefined,
+		name = undefined,
+		classDiv = undefined,
+		classInput = undefined,
+		classLabel = undefined,
+		placeholder = undefined,
+		header = undefined,
+		footer = undefined,
+		rows,
+		...others
+	}: Props = $props();
 
 	const divClasses = {
 		filled: 'relative',
@@ -81,42 +118,40 @@
 	};
 </script>
 
-<div class={twMerge(divClasses[style], $$props.classDiv)}>
+<div class={twMerge(divClasses[style], classDiv)}>
 	<Label
 		for={id}
 		class={twMerge(
 			labelClasses[style],
 			labelColorClasses[color],
 			labelSizes[style][size],
-			$$props.classLabel
+			classLabel
 		)}
 	>
 		{label}
 	</Label>
 	<Textarea
 		{id}
-		{...$$restProps}
+		{name}
+		{disabled}
+		{required}
+		{autocomplete}
+		{placeholder}
+		{rows}
+		{...others}
 		bind:value
-		on:blur
-		on:change
-		on:click
-		on:focus
-		on:input
-		on:keydown
-		on:keypress
-		on:keyup
-		on:mouseenter
-		on:mouseleave
-		on:mouseover
-		on:paste
 		class={twMerge(
 			inputClasses[style],
 			inputColorClasses[color],
 			inputSizes[style][size],
-			$$props.classInput
+			classInput
 		)}
 	>
-		<slot name="header" />
-		<slot name="footer" />
+		{#if header}
+			{@render header()}
+		{/if}
+		{#if footer}
+			{@render footer()}
+		{/if}
 	</Textarea>
 </div>

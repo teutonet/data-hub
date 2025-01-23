@@ -2,6 +2,6 @@ flask==3.1.0
 requests==2.32.3
 waitress==3.0.2
 pygeohash==1.2.0
-protobuf==5.29.2
+protobuf==5.29.3
 python-snappy==0.7.3
 openapi-core==0.19.4

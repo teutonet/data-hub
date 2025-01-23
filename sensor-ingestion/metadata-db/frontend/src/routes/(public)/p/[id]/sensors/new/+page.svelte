@@ -20,7 +20,11 @@
 
 	const client = getContextClient();
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	if (data.projectId === 'all') {
 		goto('./').catch((e) => {
@@ -28,19 +32,22 @@
 		});
 	}
 
-	let thing: ThingInput = {
+	let thing: ThingInput = $state({
 		project: data.projectId,
 		name: ''
-	};
-
-	$: sensorTypeStore = queryStore<GetAllSensorsQuery, GetAllSensorsQueryVariables>({
-		client: client,
-		query: GET_ALL_SENSORS
 	});
 
-	$: allSensorTypes =
+	let sensorTypeStore = $derived(
+		queryStore<GetAllSensorsQuery, GetAllSensorsQueryVariables>({
+			client: client,
+			query: GET_ALL_SENSORS
+		})
+	);
+
+	let allSensorTypes = $derived(
 		$sensorTypeStore.data?.sensors?.filter((sensorType) => sensorType.project == thing?.project) ??
-		[];
+			[]
+	);
 
 	async function createThing(status: string) {
 		thing.status = status;
@@ -73,12 +80,12 @@
 	payload={undefined}
 	sensorTypes={allSensorTypes}
 >
-	<svelte:fragment slot="bottom-buttons">
+	{#snippet bottomButtons()}
 		<Button class="my-4 grow" on:click={() => createThing('created')}>
 			{$_('sensorView.createSensor')}
 		</Button>
 		<Button color="green" class="my-4 basis-1/6" on:click={() => createThing('activated')}>
 			{$_('sensorView.createActivateSensor')}
 		</Button>
-	</svelte:fragment>
+	{/snippet}
 </SensorForm>

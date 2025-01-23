@@ -10,7 +10,11 @@
 		type GroupResource
 	} from '$lib/nav/fetchUtils';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	const tenant = data.tenant;
 	const group = data.group;
 	const permission = data.permission;

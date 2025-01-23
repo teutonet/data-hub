@@ -16,6 +16,11 @@
 	import { requestPolicyExchange } from '@urql/exchange-request-policy';
 
 	import * as Sentry from '@sentry/sveltekit';
+	interface Props {
+		children?: import('svelte').Snippet;
+	}
+
+	let { children }: Props = $props();
 
 	if (browser) {
 		const wsClient = createWSClient({
@@ -89,4 +94,4 @@
 	}
 </script>
 
-<slot />
+{@render children?.()}

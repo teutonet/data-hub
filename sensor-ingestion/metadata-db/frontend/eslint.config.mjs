@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
 import { FlatCompat } from '@eslint/eslintrc';
+import tseslint from 'typescript-eslint';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,10 +85,28 @@ export default [
 	},
 	{
 		files: ['**/*.{spec,test}.ts', 'src/lib/tests/**/*.ts'],
-
+		plugins: {
+			vitest
+		},
+		languageOptions: {
+			globals: {
+				...vitest.environments.env.globals
+			}
+		},
 		rules: {
+			...vitest.configs.recommended.rules,
 			'@typescript-eslint/unbound-method': 'off',
-			'@typescript-eslint/no-unsafe-call': 'off'
+			'@typescript-eslint/no-unsafe-call': 'off',
+			'no-unused-vars': 'off',
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+			]
+		},
+		settings: {
+			vitest: {
+				typecheck: true
+			}
 		}
 	},
 	{
@@ -108,6 +127,12 @@ export default [
 			'@typescript-eslint/no-unsafe-member-access': 'off',
 			'@typescript-eslint/no-unsafe-assignment': 'off',
 			'@typescript-eslint/no-unsafe-argument': 'off'
+		}
+	},
+	{
+		files: ['**/*.ts'],
+		languageOptions: {
+			parser: tseslint.parser
 		}
 	}
 ];

@@ -15,26 +15,37 @@
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
 	import { goto } from '$app/navigation';
 
-	export let resource: ResourceType;
-	export let permission: string;
-	export let isNew: boolean;
-	export let permissionObject: { principals: UdhPrincipal[]; scopes: string[] };
-	export let selectableGroups: string[];
-	export let selectableScopes: string[];
+	interface Props {
+		resource: ResourceType;
+		permission: string;
+		isNew: boolean;
+		permissionObject: { principals: UdhPrincipal[]; scopes: string[] };
+		selectableGroups: string[];
+		selectableScopes: string[];
+	}
 
-	let newPermissionObject: { groups: string[]; scopes: string[] } = {
+	let {
+		resource,
+		permission = $bindable(),
+		isNew,
+		permissionObject,
+		selectableGroups,
+		selectableScopes
+	}: Props = $props();
+
+	let newPermissionObject: { groups: string[]; scopes: string[] } = $state({
 		// replace incoming null with 'all' option
 		groups: permissionObject.principals.some((principal) => principal.type == 'tenant')
 			? ['all']
 			: permissionObject.principals.map((principal) => (principal as GroupResource).group),
 		scopes: permissionObject.scopes
-	};
+	});
 
 	if (isNew) {
 		permission = '';
 	}
 
-	let requestSent = false;
+	let requestSent = $state(false);
 
 	function mapForSelect(items: string[]): Array<{ value: string; name: string }> {
 		return items.map((item) => ({ value: item, name: item }));
@@ -84,7 +95,7 @@
 			});
 	}
 
-	$: {
+	$effect(() => {
 		// remove other selected options if contains 'all'
 		if (newPermissionObject.groups.includes('all') && newPermissionObject.groups.length > 1) {
 			warning(
@@ -93,12 +104,12 @@
 			);
 			newPermissionObject.groups = ['all'];
 		}
-	}
+	});
 </script>
 
 <form
 	novalidate
-	on:submit|preventDefault={(event) => handleSubmit(event, createOrUpdatePermission)}
+	onsubmit={(event) => handleSubmit(event, createOrUpdatePermission)}
 	class="needs-validation"
 >
 	<div class="flex flex-col gap-2">

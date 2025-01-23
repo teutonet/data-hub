@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
 	import { goto } from '$app/navigation';
 	import { UserManager, type UserManagerSettings } from 'oidc-client-ts';
 	import {
@@ -169,13 +169,16 @@
 	import { InMemoryWebStorage, WebStorageStateStore } from 'oidc-client-ts';
 	import { get } from 'svelte/store';
 
-	// Props
-	export let settings: Pick<
-		UserManagerSettings,
-		'authority' | 'client_id' | 'redirect_uri' | 'silent_redirect_uri'
-	>;
+	interface Props {
+		// Props
+		settings: Pick<
+			UserManagerSettings,
+			'authority' | 'client_id' | 'redirect_uri' | 'silent_redirect_uri'
+		>;
+		redirect?: boolean;
+	}
 
-	export let redirect = true;
+	let { settings, redirect = true }: Props = $props();
 
 	if (browser) {
 		userManager = new UserManager({

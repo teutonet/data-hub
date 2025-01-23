@@ -11,10 +11,6 @@
 	import { accessToken } from '$lib/common/auth';
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
 
-	export let resource: ResourceType;
-
-	export let permissions: PermissionItem[];
-
 	async function deletePermission(permission: string) {
 		await deleteResource(`${toResourceUrl(resource)}/permissions/${permission}`, $accessToken).then(
 			() => {
@@ -23,7 +19,13 @@
 		);
 	}
 
-	export let reload: () => void;
+	interface Props {
+		resource: ResourceType;
+		permissions: PermissionItem[];
+		reload: () => void;
+	}
+
+	let { resource, permissions, reload }: Props = $props();
 </script>
 
 {#each permissions as permission}

@@ -4,9 +4,13 @@
 	import { _ } from 'svelte-i18n';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
 
-	$: [tenant, project] = data.projectId.split('.');
+	let { data }: Props = $props();
+
+	let [tenant, project] = $derived(data.projectId.split('.'));
 </script>
 
 <PageTitle title={$_('page.projectOverview.title')} />

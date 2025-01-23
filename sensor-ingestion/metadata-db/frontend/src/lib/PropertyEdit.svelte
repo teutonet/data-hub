@@ -6,13 +6,24 @@
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
 	import { Tooltip } from 'flowbite-svelte';
 
-	export let id: string;
-	export let create = false;
-	export let property: NonNullable<GetPropertyByIdQuery['property']> | PropertyInput;
-	export let submitFunction: () => Promise<void>;
-	export let deleteFunction: (() => Promise<void>) | undefined = undefined;
+	interface Props {
+		id: string;
+		create?: boolean;
+		property: NonNullable<GetPropertyByIdQuery['property']> | PropertyInput;
+		submitFunction: () => Promise<void>;
+		deleteFunction?: (() => Promise<void>) | undefined;
+	}
+
+	let {
+		id,
+		create = false,
+		property = $bindable(),
+		submitFunction,
+		deleteFunction = undefined
+	}: Props = $props();
 
 	async function handleFormSubmit(event: Event) {
+		event.preventDefault();
 		const formElement = event.target as HTMLFormElement;
 		if (!formElement.checkValidity()) {
 			formElement.classList.add('was-validated');
@@ -22,10 +33,10 @@
 		}
 	}
 
-	$: isPropertyProjectNull = property.project == null;
+	let isPropertyProjectNull = $derived(property.project == null);
 </script>
 
-<form class="needs-validation" on:submit|preventDefault={handleFormSubmit} novalidate {id}>
+<form class="needs-validation" onsubmit={handleFormSubmit} novalidate {id}>
 	<div class="grid grid-cols-1 gap-4 pb-4">
 		<ValidatedFormField
 			bind:value={property.name}

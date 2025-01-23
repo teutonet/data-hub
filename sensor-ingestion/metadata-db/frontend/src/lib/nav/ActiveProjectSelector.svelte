@@ -6,15 +6,19 @@
 	import { activeProjectId } from '$lib/nav/activeProject';
 	import { projectAccess } from '$lib/common/auth';
 
-	export let autoselectProject = true;
+	interface Props {
+		autoselectProject?: boolean;
+	}
+
+	let { autoselectProject = $bindable(true) }: Props = $props();
 
 	//TODO: Show project name instead of ID
-	$: {
+	$effect(() => {
 		if ($projectAccess.length === 1 && autoselectProject) {
 			activeProjectId.set($projectAccess[0]);
 		}
 		autoselectProject = $projectAccess.length === 0;
-	}
+	});
 </script>
 
 <div class="py-[0.15rem]">

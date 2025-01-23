@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import time
 from copy import deepcopy
 from datetime import datetime
@@ -162,6 +163,8 @@ def readyz():
             200 if all(dependencies.values())
             else 503)
 
+LABEL_INVALID_CHARS_RE = re.compile('[^a-zA-Z0-9_]')
+NUMBER_START_RE = re.compile('^[0-9]+([^0-9].*$)')
 
 def write(msg, project):
     logging.debug("writing to %s: %s", project, msg)
@@ -169,8 +172,10 @@ def write(msg, project):
     series = write_request.timeseries.add()
 
     for label in msg["labels"]:
+        sanitized_name = LABEL_INVALID_CHARS_RE.sub('_', label)
+        sanitized_name = NUMBER_START_RE.sub(lambda x: x.group(1), sanitized_name)
         series_label = series.labels.add()
-        series_label.name = label
+        series_label.name = sanitized_name
         series_label.value = str(msg["labels"][label])
 
     sample = series.samples.add()
@@ -344,10 +349,6 @@ def create_samples(request_payload, id_labels, thing_metadata, last_values,
         if variable_name in variables:
             labels[label_property["property"]["name"]] = variables[
                 variable_name]
-        else:
-            # TODO should this behavior be kept?
-            # was this used for attaching constant labels to sensors
-            labels[variable_name] = label_property["property"]["name"]
     if set_location and len(set_location) > 0:
         labels["geohash"] = gh.encode(longitude=set_location["longitude"],
                                       latitude=set_location["latitude"],

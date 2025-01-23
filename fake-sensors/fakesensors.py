@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 class SensorType:
-  def __init__(self, name: str, project: str, name_to_metric: dict[str, str]):
+  def __init__(self, name: str, project: str, name_to_metric: dict[str, str | None]):
     self.name = name
     self.project = project
     self.name_to_metric = name_to_metric
@@ -96,12 +96,12 @@ class SensorType:
         print(f'prop {prop_name} {metric} already exists')
       else:
         # check if a property with the correct metric already exists
-        if (prop := properties_by_metric.get(metric)):
+        if metric is not None and (prop := properties_by_metric.get(metric)):
           pass
         else:
           # create property
           create_property_query = """
-          mutation createProperty($metricName: String!, $name: String!, $project: String!) {
+          mutation createProperty($metricName: String, $name: String!, $project: String!) {
             createProperty(
               input: {property: {name: $name, metricName: $metricName, project: $project}}
             ) {

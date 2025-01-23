@@ -8,22 +8,28 @@
 	import type { PageData } from './$types';
 	import { projectCondition } from '$lib/common/graphql/utils';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const client = getContextClient();
 
-	$: thingsStore = queryStore<GetThingsQuery, GetThingsQueryVariables>({
-		client: client,
-		query: GET_THINGS,
-		variables: {
-			condition: {
-				status: 'created',
-				project: projectCondition(data.projectId)
+	let thingsStore = $derived(
+		queryStore<GetThingsQuery, GetThingsQueryVariables>({
+			client: client,
+			query: GET_THINGS,
+			variables: {
+				condition: {
+					status: 'created',
+					project: projectCondition(data.projectId)
+				}
 			}
-		}
-	});
+		})
+	);
 
-	$: things = $thingsStore.data?.things;
+	let things = $derived($thingsStore.data?.things);
 </script>
 
 <PageTitle title={$_('page.newThings.title')} />

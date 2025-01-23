@@ -8,7 +8,11 @@
 		toasts.update((toasts) => toasts.filter((t) => t !== toast));
 	}
 
-	export let toasts: Writable<ToastOptions[]> = globalToastStore;
+	interface Props {
+		toasts?: Writable<ToastOptions[]>;
+	}
+
+	let { toasts = globalToastStore }: Props = $props();
 </script>
 
 <div class="fixed bottom-0 left-1/2 z-50 w-96 -translate-x-1/2 p-3">

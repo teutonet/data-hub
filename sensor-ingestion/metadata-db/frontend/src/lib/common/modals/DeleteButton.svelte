@@ -3,31 +3,44 @@
 	import { Modal, Button, P } from 'flowbite-svelte';
 	import TrashIcon from '~icons/heroicons/trash';
 
-	export let buttonText: string | undefined = undefined;
-	export let buttonTitle: string;
-	export let disabled = false;
-	export let modalTitle: string;
-	export let modalBody: string;
-	export let action = 'delete';
-	export let color:
-		| 'red'
-		| 'yellow'
-		| 'green'
-		| 'purple'
-		| 'blue'
-		| 'light'
-		| 'dark'
-		| 'primary'
-		| 'none'
-		| 'alternative'
-		| undefined = 'red';
+	interface Props {
+		buttonText?: string | undefined;
+		buttonTitle: string;
+		disabled?: boolean;
+		modalTitle: string;
+		modalBody: string;
+		action?: string;
+		color?:
+			| 'red'
+			| 'yellow'
+			| 'green'
+			| 'purple'
+			| 'blue'
+			| 'light'
+			| 'dark'
+			| 'primary'
+			| 'none'
+			| 'alternative'
+			| undefined;
+		additionalClasses?: string | null;
+		isIcon?: boolean;
+		submitFunction: () => void;
+	}
 
-	export let additionalClasses: string | null = null;
-	export let isIcon = false;
+	let {
+		buttonText = undefined,
+		buttonTitle,
+		disabled = false,
+		modalTitle,
+		modalBody,
+		action = 'delete',
+		color = 'red',
+		additionalClasses = null,
+		isIcon = false,
+		submitFunction
+	}: Props = $props();
 
-	export let submitFunction: () => void;
-
-	let modalOpen = false;
+	let modalOpen = $state(false);
 </script>
 
 <Button

@@ -29,28 +29,42 @@
 	import ThingOffsetList from '$lib/ThingOffsetList.svelte';
 	import { emptyToNull, replaceComma } from '$lib/stringUtils';
 	import HistoryModal from '$lib/HistoryModal.svelte';
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	const client = getContextClient();
 
-	$: sensorTypeStore = queryStore<GetAllSensorsQuery, GetAllSensorsQueryVariables>({
-		client: client,
-		query: GET_ALL_SENSORS
-	});
-
-	$: thingStore = queryStore<GetThingByIdQuery, GetThingByIdQueryVariables>({
-		client: client,
-		query: GET_THING_BY_ID,
-		variables: { id: data.sensorId }
-	});
-
-	$: thing = $thingStore.data?.thing;
-	$: allSensorTypes =
-		$sensorTypeStore.data?.sensors?.filter((sensorType) => sensorType.project == thing?.project) ??
-		[];
-	$: sensorTypeNames = Object.fromEntries(
-		allSensorTypes.map((item) => {
-			return [item.id, item.name];
+	let sensorTypeStore = $derived(
+		queryStore<GetAllSensorsQuery, GetAllSensorsQueryVariables>({
+			client: client,
+			query: GET_ALL_SENSORS
 		})
+	);
+
+	let thingStore = $derived(
+		queryStore<GetThingByIdQuery, GetThingByIdQueryVariables>({
+			client: client,
+			query: GET_THING_BY_ID,
+			variables: { id: data.sensorId }
+		})
+	);
+
+	let thing: GetThingByIdQuery['thing'] = $state();
+	$effect(() => {
+		thing = $thingStore.data?.thing;
+	});
+	let allSensorTypes = $derived(
+		$sensorTypeStore.data?.sensors?.filter((sensorType) => sensorType.project == thing?.project) ??
+			[]
+	);
+	let sensorTypeNames = $derived(
+		Object.fromEntries(
+			allSensorTypes.map((item) => {
+				return [item.id, item.name];
+			})
+		)
 	);
 
 	async function updateThing(activate: boolean) {
@@ -125,7 +139,7 @@
 			});
 	}
 
-	$: payload = $thingStore.data?.thing?.thingLivedatum?.payload ?? undefined;
+	let payload = $derived($thingStore.data?.thing?.thingLivedatum?.payload ?? undefined);
 </script>
 
 {#if !$thingStore.fetching && thing && !$sensorTypeStore.fetching && allSensorTypes}
@@ -135,22 +149,24 @@
 		bind:thing
 		{payload}
 	>
-		<svelte:fragment slot="alert-top">
-			{#if thing.status === 'created'}
+		{#snippet alertTop()}
+			{#if thing && thing.status === 'created'}
 				<Alert class="my-4 w-full max-w-full">
 					{$_('sensorView.newlyCreatedAlert')}
 				</Alert>
 			{/if}
-		</svelte:fragment>
-		<svelte:fragment slot="general-extension">
-			<ValidatedFormField
-				disabled
-				bind:value={thing.status}
-				inputLabel={$_('sensorView.thing.status')}
-				inputId="things-status"
-			/>
-		</svelte:fragment>
-		<svelte:fragment slot="bottom-buttons">
+		{/snippet}
+		{#snippet generalExtension()}
+			{#if thing}
+				<ValidatedFormField
+					disabled
+					bind:value={thing.status}
+					inputLabel={$_('sensorView.thing.status')}
+					inputId="things-status"
+				/>
+			{/if}
+		{/snippet}
+		{#snippet bottomButtons()}
 			<Button class="my-4 grow" on:click={() => updateThing(false)}>
 				{$_('sensorView.saveSensor')}
 			</Button>
@@ -161,7 +177,7 @@
 				submitFunction={deleteThing}
 				additionalClasses="my-4 basis-1/6"
 			/>
-			{#if thing.status === 'created' && thing}
+			{#if thing && thing.status === 'created'}
 				<Button
 					color="green"
 					class="my-4 basis-1/6"
@@ -171,7 +187,7 @@
 					{$_('sensorView.activateSensor')}
 				</Button>
 			{/if}
-		</svelte:fragment>
+		{/snippet}
 		{#if thing.sensorId}
 			<Heading tag="h3" class="mb-2">
 				{$_('sensorView.offsetsHeading')}
@@ -188,5 +204,6 @@
 		dataKey="thingChanges"
 		query={GET_THING_CHANGES}
 		additionalNames={sensorTypeNames}
+		openButtonClass={undefined}
 	/>
 {/if}

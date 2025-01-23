@@ -4,7 +4,11 @@
 	import type { PageData } from './$types';
 	import { _ } from 'svelte-i18n';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	const group: string = data.group;
 </script>
 

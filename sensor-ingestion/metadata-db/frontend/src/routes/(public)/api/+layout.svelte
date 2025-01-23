@@ -1,7 +1,12 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import Breadcrumbs from '$lib/nav/Breadcrumbs.svelte';
 	import { _ } from 'svelte-i18n';
+	interface Props {
+		children?: import('svelte').Snippet;
+	}
+
+	let { children }: Props = $props();
 
 	const home = 'api';
 
@@ -24,5 +29,5 @@
 	];
 </script>
 
-<Breadcrumbs {home} path={$page.url.pathname} listParts={LIST_PARTS} />
-<slot />
+<Breadcrumbs {home} path={page.url.pathname} listParts={LIST_PARTS} />
+{@render children?.()}

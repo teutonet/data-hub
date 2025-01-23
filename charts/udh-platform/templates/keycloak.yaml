@@ -17,7 +17,7 @@ spec:
   chart:
     spec:
       chart: keycloak
-      version: 24.3.2 # renovate: datasource=docker depName=bitnamicharts/keycloak
+      version: 24.4.1 # renovate: datasource=docker depName=bitnamicharts/keycloak
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
@@ -38,7 +38,8 @@ spec:
       existingSecret: {{ printf "keycloak-owner-user.%s-postgres.credentials.postgresql.acid.zalan.do" (include "common.names.fullname" .) | quote }}
       existingSecretUserKey: "username"
       existingSecretPasswordKey: "password"
-    extraStartupArgs: --features=admin-fine-grained-authz
+    extraStartupArgs: --features=admin-fine-grained-authz{{ if .Values.keycloak.debug }} --debug 5005{{ end }}
+      {{ if .Values.keycloak.integrationTestClient }} --spi-brute-force-protector-default-brute-force-detector-allow-concurrent-requests=true{{ end }}
     production: true
     # The keycloak chart expects a list of strings, not a map
     {{- $imagePullSecrets := get (include "udh-platform.imagePullSecrets" (dict "context" .) | fromYaml) "imagePullSecrets" }}
@@ -78,6 +79,8 @@ spec:
     extraEnvVars:
       - name: KEYCLOAK_ENABLE_HEALTH_ENDPOINTS
         value: "true"
+      - name: KC_LOG_LEVEL
+        value: {{ .Values.keycloak.logLevel | quote }}
       - name: PROMETHEUS_HOST
         value: {{ include "data-hub.name" (dict "context" . "name" "mimir-nginx") }}
       - name: GRAFANA_HOST
@@ -233,6 +236,21 @@ spec:
               defaultClientScopes: []
               publicClient: false
               optionalClientScopes: []
+            {{- if .Values.keycloak.integrationTestClient }}
+            - clientId: integration-test
+              secret: {{ dig "data-hub-admin" "password" "" .Values.keycloak.testUsers | quote }}
+              serviceAccountsEnabled: true
+              directAccessGrantsEnabled: true
+              protocolMappers:
+                - name: add-aud-data-hub
+                  protocol: openid-connect
+                  protocolMapper: oidc-audience-mapper
+                  consentRequired: false
+                  config:
+                    included.client.audience: data-hub
+                    id.token.claim: "false"
+                    access.token.claim: "true"
+            {{- end }}
           clientScopes:
             - name: prometheus_read
               protocol: openid-connect

@@ -18,6 +18,8 @@ grafana:
     user: ""
     password: ""
 keycloak:
+  debug: true
+  logLevel: info,udh:debug
   extensions:
     image:
       registry: "localimage.test"
@@ -48,6 +50,7 @@ keycloak:
     fromDisplayName: keycloak-local
     auth: false
     ssl: false
+  integrationTestClient: true
 
 database:
   shadowTables: true
@@ -140,8 +143,8 @@ sensorIngestion:
         registry: "localhost:5000"
         pullPolicy: IfNotPresent
         repository: sensor-ingestion/metadata-db/frontend
-      sentry:
-        dsn: "https://b9d6941e30a946fbb7015038e4b7d923@glitchtip.stg.teuto.dev/5"
+      # sentry:
+      #   dsn: "https://b9d6941e30a946fbb7015038e4b7d923@glitchtip.stg.teuto.dev/5"
     postgraphile:
       image:
         registry: "localhost:5000"

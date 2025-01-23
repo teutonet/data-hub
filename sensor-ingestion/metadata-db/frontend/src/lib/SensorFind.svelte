@@ -14,25 +14,29 @@
 		type SensorShape
 	} from './sensorAutodetectUtils';
 
-	export let payload: Record<string, string | number>;
-	export let project: string;
-	export let selectCallback: (sensorId: string) => void;
+	interface Props {
+		payload: Record<string, string | number>;
+		project: string;
+		selectCallback: (sensorId: string) => void;
+	}
 
-	$: payloadKeys = new Set(Object.keys(payload));
+	let { payload, project, selectCallback }: Props = $props();
+
+	let payloadKeys = $derived(new Set(Object.keys(payload)));
 
 	const client = getContextClient();
 
-	$: sensorsWithProps = queryStore<SensorsWithPropertiesQuery, SensorsWithPropertiesQueryVariables>(
-		{
+	let sensorsWithProps = $derived(
+		queryStore<SensorsWithPropertiesQuery, SensorsWithPropertiesQueryVariables>({
 			client,
 			query: GET_ALL_SENSORS_WITH_PROPERTIES,
 			variables: {
 				project
 			}
-		}
+		})
 	);
 
-	$: sensorShapes =
+	let sensorShapes = $derived(
 		$sensorsWithProps.data?.sensors?.map((sensor): SensorShape => {
 			return {
 				id: sensor.id,
@@ -44,13 +48,16 @@
 					measure: prop.property?.measure
 				}))
 			};
-		}) ?? [];
+		}) ?? []
+	);
 
-	$: sensorMatches = sensorShapes
-		.flatMap((sensorShape): SensortypeAutodetectionMatch[] =>
-			getSensorMatches(sensorShape, payloadKeys, payload)
-		)
-		.sort((a, b) => a.missingKeys.length - b.missingKeys.length);
+	let sensorMatches = $derived(
+		sensorShapes
+			.flatMap((sensorShape): SensortypeAutodetectionMatch[] =>
+				getSensorMatches(sensorShape, payloadKeys, payload)
+			)
+			.sort((a, b) => a.missingKeys.length - b.missingKeys.length)
+	);
 </script>
 
 <Heading tag="h1">{$_('component.sensorFind.pleaseSelect')}</Heading>

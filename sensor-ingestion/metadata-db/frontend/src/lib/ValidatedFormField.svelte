@@ -5,47 +5,75 @@
 	import { twMerge } from 'tailwind-merge';
 	import { _ } from 'svelte-i18n';
 	import FloatingLabelTextArea from '$lib/flowbite-extensions/FloatingLabelTextArea.svelte';
+	import type { FullAutoFill } from 'svelte/elements';
 
-	export let patternMismatchText: string | null = null;
-	export let valueMissingText: string | null = null;
+	interface Props {
+		patternMismatchText?: string | null;
+		valueMissingText?: string | null;
+		style?: 'filled' | 'outlined' | 'standard';
+		inputType?: InputType | 'textarea' | undefined;
+		value: any;
+		inputLabel: string;
+		inputId: string;
+		disabled?: boolean;
+		required?: boolean;
+		autocomplete?: FullAutoFill | undefined | null;
+		pattern?: string | null;
+		name?: string;
+		outerDivClasses?: string | null;
+		innerDivClasses?: string | null;
+		helperText?: string | null;
+		customErrorText?: string | null;
+		inputClass?: string | null;
+		labelClass?: string | null;
+		lengthWarning?: boolean;
+		[key: string]: any;
+	}
 
-	export let style: 'filled' | 'outlined' | 'standard' = 'outlined';
-	export let inputType: InputType | 'textarea' | undefined = 'text';
-	export let value;
-	export let inputLabel: string;
-	export let inputId: string;
-	export let disabled = false;
-	export let required = false;
-	export let autocomplete: string | null = null;
-	export let pattern: string | null = null;
-	export let name = '';
-	export let outerDivClasses: string | null = null;
-	export let innerDivClasses: string | null = null;
-	export let helperText: string | null = null;
-	export let customErrorText: string | null = null;
-	export let inputClass: string | null = null;
-	export let labelClass: string | null = null;
-	export let lengthWarning: boolean = true;
+	let {
+		patternMismatchText = null,
+		valueMissingText = null,
+		style = 'outlined',
+		inputType = 'text',
+		value = $bindable(),
+		inputLabel,
+		inputId,
+		disabled = false,
+		required = false,
+		autocomplete = null,
+		pattern = null,
+		name = '',
+		outerDivClasses = null,
+		innerDivClasses = null,
+		helperText = null,
+		customErrorText = null,
+		inputClass = null,
+		labelClass = null,
+		lengthWarning = true,
+		...rest
+	}: Props = $props();
 
-	$: classInput = twMerge(
-		'peer disabled:bg-gray-100 disabled:dark:bg-slate-800 disabled:text-gray-500 disabled:cursor-not-allowed bg-opacity-100 dark:bg-opacity-100 bg-white disabled:bg-gray-100 disabled:dark:bg-slate-800 dark:bg-slate-900',
-		inputClass
+	let classInput = $derived(
+		twMerge(
+			'peer disabled:bg-gray-100 disabled:dark:bg-slate-800 disabled:text-gray-500 disabled:cursor-not-allowed bg-opacity-100 dark:bg-opacity-100 bg-white disabled:bg-gray-100 disabled:dark:bg-slate-800 dark:bg-slate-900',
+			inputClass
+		)
 	);
-	$: classLabel = twMerge(
-		'peer-disabled:dark:bg-slate-800 peer-disabled:bg-gray-100 rounded-full',
-		labelClass
+	let classLabel = $derived(
+		twMerge('peer-disabled:dark:bg-slate-800 peer-disabled:bg-gray-100 rounded-full', labelClass)
 	);
-	let inputContainer: HTMLDivElement;
+	let inputContainer: HTMLDivElement | undefined = $state();
 
-	let message: undefined | string = undefined;
+	let message: undefined | string = $state(undefined);
 
-	let invalid = false;
+	let invalid = $state(false);
 
-	$: valueNearMax =
-		value && $$restProps?.maxlength && value.length && $$restProps.maxlength - value.length <= 10;
+	let valueNearMax = $derived(
+		value && rest?.maxlength && value.length && rest.maxlength - value.length <= 10
+	);
 	onMount(() => {
 		(['input', 'select', 'textarea'] as const)
-			.map((name) => Array.from(inputContainer.getElementsByTagName(name)))
+			.map((name) => Array.from(inputContainer?.getElementsByTagName(name) ?? []))
 			.flat()
 			.forEach((element) =>
 				['invalid', 'input', 'textarea'].forEach((event) =>
@@ -76,7 +104,7 @@
 		<FloatingLabelNumberInput
 			{style}
 			bind:value
-			label={inputLabel}
+			labelText={inputLabel}
 			id={inputId}
 			{disabled}
 			{required}
@@ -85,7 +113,7 @@
 			color={invalid ? 'red' : 'base'}
 			{classInput}
 			classDiv={innerDivClasses}
-			{...$$restProps}
+			{...rest}
 		/>
 	{:else if inputType === 'textarea'}
 		<FloatingLabelTextArea
@@ -99,7 +127,7 @@
 			{name}
 			{classInput}
 			classDiv={innerDivClasses}
-			{...$$restProps}
+			{...rest}
 			{classLabel}
 			color={invalid ? 'red' : 'base'}
 		/>
@@ -118,7 +146,7 @@
 			{classInput}
 			classDiv={innerDivClasses ?? undefined}
 			{classLabel}
-			{...$$restProps}
+			{...rest}
 		>
 			{inputLabel}
 		</FloatingLabelInput>
@@ -137,7 +165,7 @@
 			class="helpertext peer-focus:text-primary-600 peer-focus:dark:text-primary-500 ml-2 mt-2 text-gray-500 dark:text-gray-400"
 		>
 			{$_('shared.maxLength', {
-				values: { value: $$restProps.maxlength - value.length }
+				values: { value: rest.maxlength - value.length }
 			})}
 		</Helper>
 	{:else if helperText}

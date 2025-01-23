@@ -24,7 +24,11 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const client = getContextClient();
 
@@ -34,7 +38,7 @@
 		});
 	}
 
-	let sensor = {
+	let sensor = $state({
 		project: data.projectId,
 		description: '',
 		outOfOrderSeconds: 0,
@@ -44,15 +48,19 @@
 		name: '',
 		appeui: '',
 		things: []
-	};
-
-	$: propertyStore = queryStore<GetPropertiesQuery, GetPropertiesQueryVariables>({
-		client,
-		query: GET_PROPERTIES
 	});
 
-	$: properties = $propertyStore.data?.properties?.filter(
-		(prop) => prop.project === null || prop.project === data.projectId
+	let propertyStore = $derived(
+		queryStore<GetPropertiesQuery, GetPropertiesQueryVariables>({
+			client,
+			query: GET_PROPERTIES
+		})
+	);
+
+	let properties = $derived(
+		$propertyStore.data?.properties?.filter(
+			(prop) => prop.project === null || prop.project === data.projectId
+		)
 	);
 
 	async function submitFunction(properties: PropertyInputRecordInput[]) {

@@ -5,9 +5,16 @@
 	import { _ } from 'svelte-i18n';
 	import PageTitle from '$lib/PageTitle.svelte';
 
-	export let data: LayoutData;
+	interface Props {
+		data: LayoutData;
+		children?: import('svelte').Snippet;
+	}
 
-	$: projectMissing = data.projectId != 'all' && !$projectAccess.includes(data.projectId);
+	let { data, children }: Props = $props();
+
+	let projectMissing = $derived(
+		data.projectId != 'all' && !$projectAccess.includes(data.projectId)
+	);
 </script>
 
 {#if projectMissing}
@@ -16,5 +23,5 @@
 		{$_('page.overview.goToOverview')}
 	</Button>
 {:else}
-	<slot />
+	{@render children?.()}
 {/if}

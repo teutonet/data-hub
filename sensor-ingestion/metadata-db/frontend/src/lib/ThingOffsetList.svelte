@@ -24,7 +24,6 @@
 	import FloatingLabelSelect from '$lib/flowbite-extensions/FloatingLabelSelect.svelte';
 	import CheckIcon from '~icons/heroicons/check';
 	import CancelIcon from '~icons/heroicons/x-mark';
-	import TrashIcon from '~icons/heroicons/trash';
 	import EditIcon from '~icons/heroicons/pencil-square';
 	import { performMutation } from '$lib/common/graphql/utils';
 	import { error, success } from './common/toast/toast';
@@ -32,33 +31,36 @@
 	import { activeProjectId } from './nav/activeProject';
 	import DeleteButton from './common/modals/DeleteButton.svelte';
 
-	export let thingId: string;
-	export let sensorTypeId: string;
+	interface Props {
+		thingId: string;
+		sensorTypeId: string;
+	}
+
+	let { thingId, sensorTypeId }: Props = $props();
 
 	const client = getContextClient();
 
-	let editingOffsetIndex = -1;
-	let showNewOffsetRow = false;
+	let editingOffsetIndex = $state(-1);
+	let showNewOffsetRow = $state(false);
 
-	$: offsetsAndMetricNamesStore = queryStore<
-		GetOffsetsAndMetricNamesQuery,
-		GetOffsetsAndMetricNamesQueryVariables
-	>({
-		client,
-		query: GET_OFFSETS_AND_METRIC_NAMES,
-		variables: {
-			thingId,
-			sensorTypeId
-		},
-		context: {
-			additionalTypenames: ['ThingOffset']
-		}
-	});
+	let offsetsAndMetricNamesStore = $derived(
+		queryStore<GetOffsetsAndMetricNamesQuery, GetOffsetsAndMetricNamesQueryVariables>({
+			client,
+			query: GET_OFFSETS_AND_METRIC_NAMES,
+			variables: {
+				thingId,
+				sensorTypeId
+			},
+			context: {
+				additionalTypenames: ['ThingOffset']
+			}
+		})
+	);
 
 	let currentOffsetId: string | undefined = undefined;
-	let currentOffsetMetricName: string | undefined = undefined;
-	let currentOffsetValue: number | undefined = undefined;
-	let currentOffsetType: OffsetType | undefined = undefined;
+	let currentOffsetMetricName: string | undefined = $state(undefined);
+	let currentOffsetValue: number | undefined = $state(undefined);
+	let currentOffsetType: OffsetType | undefined = $state(undefined);
 
 	function getAvailableMetricNamesAsOptions(
 		currentMetricName?: string
@@ -78,6 +80,7 @@
 	}
 
 	async function handleFormSubmit(event: Event) {
+		event.preventDefault();
 		let formCorrect = false;
 		handleSubmit(event, () => {
 			if (currentOffsetType === OffsetType.Div && currentOffsetValue === 0) {
@@ -190,14 +193,15 @@
 			});
 	}
 
-	$: offsets = $offsetsAndMetricNamesStore.data?.thingOffsets ?? [];
-	$: metricNames =
+	let offsets = $derived($offsetsAndMetricNamesStore.data?.thingOffsets ?? []);
+	let metricNames = $derived(
 		$offsetsAndMetricNamesStore.data?.sensorProperties?.map(
 			(prop) => prop.property?.metricName ?? '-'
-		) ?? [];
+		) ?? []
+	);
 </script>
 
-<form novalidate class="needs-validation" on:submit|preventDefault={(e) => handleFormSubmit(e)}>
+<form novalidate class="needs-validation" onsubmit={(e) => handleFormSubmit(e)}>
 	<SortingTable
 		hoverable
 		sortKey="metricName"
@@ -227,7 +231,7 @@
 		componentLocKey="thingOffsetList"
 		items={offsets}
 	>
-		<svelte:fragment slot="bodyContent" let:item let:index>
+		{#snippet bodyContent(item, index)}
 			<TableBodyRow>
 				{#if index === editingOffsetIndex}
 					<TableBodyCell>
@@ -309,9 +313,7 @@
 							modalBody={$_('thingOffsetList.deleteModalBody', {
 								values: { metricName: item.metricName }
 							})}
-						>
-							<TrashIcon class="h-5 w-5" />
-						</DeleteButton>
+						></DeleteButton>
 					</TableBodyCell>
 				{/if}
 			</TableBodyRow>
@@ -370,8 +372,8 @@
 					</TableBodyCell>
 				</TableBodyRow>
 			{/if}
-		</svelte:fragment>
-		<svelte:fragment slot="defaultContent">
+		{/snippet}
+		{#snippet defaultContent()}
 			{#if showNewOffsetRow}
 				<TableBodyRow>
 					<TableBodyCell>
@@ -435,7 +437,7 @@
 					</TableBodyCell>
 				</TableBodyRow>
 			{/if}
-		</svelte:fragment>
+		{/snippet}
 	</SortingTable>
 	<Button
 		color="alternative"

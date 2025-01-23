@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	export function trimTrailingSlash(s?: string): string | undefined {
 		return s?.replace(/(.)\/*$/, '$1');
 	}
@@ -6,15 +6,19 @@
 
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { Tooltip } from 'flowbite-svelte';
 
-	export let href: string;
-	export let textKey: string;
-	export let disabled = false;
-	export let tooltipKey: string | undefined = undefined;
+	interface Props {
+		href: string;
+		textKey: string;
+		disabled?: boolean;
+		tooltipKey?: string | undefined;
+	}
 
-	$: active = trimTrailingSlash(href) === trimTrailingSlash($page.url.pathname);
+	let { href, textKey, disabled = false, tooltipKey = undefined }: Props = $props();
+
+	let active = $derived(trimTrailingSlash(href) === trimTrailingSlash(page.url.pathname));
 
 	const disabledClass =
 		'flex items-center p-2 text-base font-normal text-gray-400 rounded-lg dark:text-gray-300 pointer-events-none';

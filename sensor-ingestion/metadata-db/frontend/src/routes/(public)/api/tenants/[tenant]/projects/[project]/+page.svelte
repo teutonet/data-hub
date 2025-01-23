@@ -24,21 +24,25 @@
 	import { getConfig } from '$lib/config';
 	import CopyIcon from '~icons/heroicons/clipboard';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	const project: string = data.project;
 	const tenant: string = data.tenant;
 	$activeProjectId = `${data.tenant}.${data.project}`;
 
-	let requestSent = false;
-	let showTokenParameterModalOpen = false;
-	let nameModalOpen = false;
-	let sensorCredential: string | undefined;
-	let credentials: { username: string; password: string } = {
+	let requestSent = $state(false);
+	let showTokenParameterModalOpen = $state(false);
+	let nameModalOpen = $state(false);
+	let sensorCredential: string | undefined = $state();
+	let credentials: { username: string; password: string } = $state({
 		username: '',
 		password: ''
-	};
+	});
 
-	let credentialsPromise = fetchSensorCredentials();
+	let credentialsPromise = $state(fetchSensorCredentials());
 
 	function fetchSensorCredentials() {
 		return apiFetch<string[]>(
@@ -209,11 +213,7 @@
 	</svelte:fragment>
 </Modal>
 
-<form
-	novalidate
-	on:submit|preventDefault={(event) => handleSubmit(event, createToken)}
-	class="needs-validation"
->
+<form novalidate onsubmit={(event) => handleSubmit(event, createToken)} class="needs-validation">
 	<Modal bind:open={nameModalOpen} title={$_('page.projectOverview.apiTokenModal.nameModalTitle')}>
 		<div>
 			<ValidatedFormField

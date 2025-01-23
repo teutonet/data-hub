@@ -25,62 +25,85 @@
 
 	const client = getContextClient();
 
-	export let create = false;
-	export let sensor: Pick<
-		NonNullable<GetSensorByIdQuery['sensor']>,
-		| 'appeui'
-		| 'datasheet'
-		| 'description'
-		| 'name'
-		| 'project'
-		| 'public'
-		| 'things'
-		| 'outOfOrderSeconds'
-	>;
-	export let sensorId: string | null = null;
+	interface Props {
+		create?: boolean;
+		sensor: Pick<
+			NonNullable<GetSensorByIdQuery['sensor']>,
+			| 'appeui'
+			| 'datasheet'
+			| 'description'
+			| 'name'
+			| 'project'
+			| 'public'
+			| 'things'
+			| 'outOfOrderSeconds'
+		>;
+		sensorId?: string | null;
+		submitFunction: (properties?: PropertyInputRecordInput[]) => Promise<void>;
+		deleteSensorFunction?: (() => Promise<void>) | undefined;
+		id: string;
+		sensorProps?: NonNullable<GetSensorPropsQuery['sensorProperties']> | undefined;
+		properties: NonNullable<GetPropertiesQuery['properties']>;
+		createPropFunction: (
+			name: string,
+			description?: string,
+			measure?: string,
+			metricName?: string
+		) => Promise<Scalars['UUID']['output']>;
+		editSensorPropFunction?:
+			| ((
+					propertyId: Scalars['UUID']['input'],
+					writeDelta: boolean,
+					alias?: string
+			  ) => Promise<void>)
+			| undefined;
+		createSensorPropFunction?:
+			| ((
+					propertyId: Scalars['UUID']['input'],
+					writeDelta: boolean,
+					alias?: string
+			  ) => Promise<void>)
+			| undefined;
+		deleteSensorPropFunction?:
+			| ((propertyId: Scalars['UUID']['input']) => Promise<void>)
+			| undefined;
+	}
 
-	export let submitFunction: (properties?: PropertyInputRecordInput[]) => Promise<void>;
-	export let deleteSensorFunction: (() => Promise<void>) | undefined = undefined;
-	export let id: string;
-	export let sensorProps: NonNullable<GetSensorPropsQuery['sensorProperties']> | undefined =
-		undefined;
-	export let properties: NonNullable<GetPropertiesQuery['properties']>;
-	export let createPropFunction: (
-		name: string,
-		description?: string,
-		measure?: string,
-		metricName?: string
-	) => Promise<Scalars['UUID']['output']>;
-	export let editSensorPropFunction:
-		| ((propertyId: Scalars['UUID']['input'], writeDelta: boolean, alias?: string) => Promise<void>)
-		| undefined = undefined;
-	export let createSensorPropFunction:
-		| ((propertyId: Scalars['UUID']['input'], writeDelta: boolean, alias?: string) => Promise<void>)
-		| undefined = undefined;
-	export let deleteSensorPropFunction:
-		| ((propertyId: Scalars['UUID']['input']) => Promise<void>)
-		| undefined = undefined;
+	let {
+		create = false,
+		sensor = $bindable(),
+		sensorId = null,
+		submitFunction,
+		deleteSensorFunction = undefined,
+		id,
+		sensorProps = undefined,
+		properties,
+		createPropFunction,
+		editSensorPropFunction = undefined,
+		createSensorPropFunction = undefined,
+		deleteSensorPropFunction = undefined
+	}: Props = $props();
 
-	let editPropModalOpen = false;
-	let newSensorPropModalOpen = false;
-	let newPropModalOpen = false;
+	let editPropModalOpen = $state(false);
+	let newSensorPropModalOpen = $state(false);
+	let newPropModalOpen = $state(false);
 
-	let selectedProperty: Scalars['UUID']['input'] | undefined = undefined;
-	let propSelectHelperText: string;
-	let newSensorPropAlias: string | undefined = undefined;
-	let newSensorPropWriteDelta = false;
+	let selectedProperty: Scalars['UUID']['input'] | undefined = $state(undefined);
+	let propSelectHelperText: string | undefined = $state();
+	let newSensorPropAlias: string | undefined = $state(undefined);
+	let newSensorPropWriteDelta = $state(false);
 
-	let newPropName: string;
-	let newPropMeasure: string;
-	let newPropMetricName: string;
-	let newPropDescription: string;
+	let newPropName: string | undefined = $state();
+	let newPropMeasure: string | undefined = $state();
+	let newPropMetricName: string | undefined = $state();
+	let newPropDescription: string | undefined = $state();
 
-	let editPropAlias: string;
-	let editPropWriteDelta: boolean;
+	let editPropAlias: string | undefined = $state();
+	let editPropWriteDelta: boolean = $state(false);
 
-	let propertyInputArr: PropertyInputRecordInput[] | undefined = create ? [] : undefined;
+	let propertyInputArr: PropertyInputRecordInput[] | undefined = $state(create ? [] : undefined);
 
-	$: propertyOptions = [
+	let propertyOptions = $derived([
 		{ name: $_('component.sensorEdit.sensorProp.newPropertyOption'), value: undefined },
 		...properties
 			.map((prop) => {
@@ -96,11 +119,12 @@
 				};
 			})
 			.sort((a, b) => a.name.localeCompare(b.name))
-	];
+	]);
 
-	$: sensorHasThings = sensor.things && sensor.things.length != 0;
+	let sensorHasThings = $derived(sensor.things && sensor.things.length != 0);
 
 	async function handleFormSubmit(event: Event) {
+		event.preventDefault();
 		const formElement = event.target as HTMLFormElement;
 		if (!formElement.checkValidity()) {
 			formElement.classList.add('was-validated');
@@ -137,6 +161,7 @@
 	}
 
 	async function handleNewSensorPropSubmit(event: Event) {
+		event.preventDefault();
 		const formElement = event.target as HTMLFormElement;
 		if (!selectedProperty) {
 			propSelectHelperText = $_('component.sensorEdit.sensorProp.propSelectHelper');
@@ -180,7 +205,7 @@
 		} else {
 			formElement.classList.remove('was-validated');
 			const newPropId = await createPropFunction(
-				newPropName,
+				newPropName ?? '',
 				newPropDescription,
 				newPropMeasure,
 				newPropMetricName
@@ -192,6 +217,7 @@
 	}
 
 	async function handleSensorPropEditSubmit(event: Event) {
+		event.preventDefault();
 		const formElement = event.target as HTMLFormElement;
 		if (!selectedProperty) {
 			propSelectHelperText = $_('component.sensorEdit.sensorProp.propSelectHelper');
@@ -220,7 +246,7 @@
 		}
 	}
 
-	$: tableProps =
+	let tableProps = $derived(
 		(create
 			? propertyInputArr?.map((input) => {
 					return {
@@ -239,10 +265,11 @@
 						writeDelta: sensorProp.writeDelta,
 						...sensorProp.property
 					};
-				})) ?? [];
+				})) ?? []
+	);
 
-	let exportModalOpen = false;
-	let jsonExport: string;
+	let exportModalOpen = $state(false);
+	let jsonExport: string = $state('');
 	type SensorPropertiesExport = {
 		name: string | undefined;
 		metricName: string | null | undefined;
@@ -327,7 +354,7 @@
 	}
 </script>
 
-<form class="needs-validation" on:submit|preventDefault={handleFormSubmit} novalidate {id}>
+<form class="needs-validation" onsubmit={handleFormSubmit} novalidate {id}>
 	<div class="grid grid-cols-1 gap-4 pb-4">
 		<ValidatedFormField
 			bind:value={sensor.name}
@@ -402,7 +429,7 @@
 				}
 			]}
 		>
-			<svelte:fragment slot="bodyContent" let:item>
+			{#snippet bodyContent(item)}
 				<TableBodyRow>
 					<TableBodyCell>
 						{#if item.alias}
@@ -440,8 +467,8 @@
 						/>
 					</TableBodyCell>
 				</TableBodyRow>
-			</svelte:fragment>
-			<svelte:fragment slot="defaultContent">
+			{/snippet}
+			{#snippet defaultContent()}
 				<TableBodyRow>
 					<TableBodyCell colspan={4}>
 						<div class="flex w-full flex-row">
@@ -449,7 +476,7 @@
 						</div>
 					</TableBodyCell>
 				</TableBodyRow>
-			</svelte:fragment>
+			{/snippet}
 		</SortingTable>
 		<Button on:click={() => newSensorProp()} class="w-full rounded-none rounded-b-lg">
 			<div class="flex flex-row gap-2">
@@ -488,11 +515,7 @@
 	bind:open={editPropModalOpen}
 	title={$_('component.sensorEdit.sensorProp.editSensorPropModalTitle')}
 >
-	<form
-		novalidate
-		class="needs-validation"
-		on:submit|preventDefault={(e) => handleSensorPropEditSubmit(e)}
-	>
+	<form novalidate class="needs-validation" onsubmit={(e) => handleSensorPropEditSubmit(e)}>
 		<div class="flex flex-col gap-4">
 			<ValidatedFormField
 				inputId="editPropAliasLabel"
@@ -513,11 +536,7 @@
 	bind:open={newSensorPropModalOpen}
 	title={$_('component.sensorEdit.sensorProp.newSensorPropModalTitle')}
 >
-	<form
-		novalidate
-		class="needs-validation"
-		on:submit|preventDefault={(e) => handleNewSensorPropSubmit(e)}
-	>
+	<form novalidate class="needs-validation" onsubmit={(e) => handleNewSensorPropSubmit(e)}>
 		<div class="flex flex-col gap-4">
 			<div>
 				<FloatingLabelSelect
@@ -557,11 +576,7 @@
 </Modal>
 
 <Modal bind:open={newPropModalOpen} title={$_('component.sensorEdit.sensorProp.newPropModalTitle')}>
-	<form
-		novalidate
-		class="needs-validation"
-		on:submit|preventDefault={(e) => handleNewPropSubmit(e)}
-	>
+	<form novalidate class="needs-validation" onsubmit={(e) => handleNewPropSubmit(e)}>
 		<div class="flex flex-col gap-4">
 			<ValidatedFormField
 				inputId="newPropNameField"
@@ -603,7 +618,6 @@
 		</span>
 	</Button>
 	<div id="import" class="rounded-md">
-		<FloatingLabelTextArea bind:value={jsonExport} disabled="true" rows="30"
-		></FloatingLabelTextArea>
+		<FloatingLabelTextArea bind:value={jsonExport} disabled rows={30}></FloatingLabelTextArea>
 	</div>
 </Modal>

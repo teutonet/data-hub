@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { Heading } from 'flowbite-svelte';
 	import { twMerge } from 'tailwind-merge';
-	export let title: string;
-	export let headingClass: string | null = null;
-	export let headingTag: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' = 'h1';
+	interface Props {
+		title: string;
+		headingClass?: string | null;
+		headingTag?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+	}
 
-	$: classHeading = twMerge('mb-4', headingClass);
+	let { title, headingClass = null, headingTag = 'h1' }: Props = $props();
+
+	let classHeading = $derived(twMerge('mb-4', headingClass));
 </script>
 
 <svelte:head>

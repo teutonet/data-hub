@@ -16,12 +16,16 @@
 	import { caseInsensitiveIncludes } from './stringUtils';
 	import { activeProjectId } from './nav/activeProject';
 
-	export let properties: NonNullable<GetAllPropertiesQuery['properties']>;
+	interface Props {
+		properties: NonNullable<GetAllPropertiesQuery['properties']>;
+	}
 
-	let filteredProject: string;
-	let filteredName: string;
-	let filteredMeasure: string;
-	let filteredMetricName: string;
+	let { properties }: Props = $props();
+
+	let filteredProject: string = $state('');
+	let filteredName: string = $state('');
+	let filteredMeasure: string = $state('');
+	let filteredMetricName: string = $state('');
 
 	function resetFilters() {
 		filteredProject = '';
@@ -30,21 +34,23 @@
 		filteredMetricName = '';
 	}
 
-	$: items = properties.filter(
-		(item) =>
-			(filteredProject
-				? item.project && caseInsensitiveIncludes(item.project, filteredProject)
-				: true) &&
-			(filteredName
-				? caseInsensitiveIncludes(item.name, filteredName) ||
-					caseInsensitiveIncludes(item.id, filteredName)
-				: true) &&
-			(filteredMeasure
-				? item.measure && caseInsensitiveIncludes(item.measure, filteredMeasure)
-				: true) &&
-			(filteredMetricName
-				? item.metricName && caseInsensitiveIncludes(item.metricName, filteredMetricName)
-				: true)
+	let items = $derived(
+		properties.filter(
+			(item) =>
+				(filteredProject
+					? item.project && caseInsensitiveIncludes(item.project, filteredProject)
+					: true) &&
+				(filteredName
+					? caseInsensitiveIncludes(item.name, filteredName) ||
+						caseInsensitiveIncludes(item.id, filteredName)
+					: true) &&
+				(filteredMeasure
+					? item.measure && caseInsensitiveIncludes(item.measure, filteredMeasure)
+					: true) &&
+				(filteredMetricName
+					? item.metricName && caseInsensitiveIncludes(item.metricName, filteredMetricName)
+					: true)
+		)
 	);
 
 	const shownKeys: TableHeadItem[] = [
@@ -74,11 +80,13 @@
 		}
 	];
 
-	$: filtered = !!filteredProject || !!filteredName || !!filteredMeasure || !!filteredMetricName;
+	let filtered = $derived(
+		!!filteredProject || !!filteredName || !!filteredMeasure || !!filteredMetricName
+	);
 </script>
 
 <SortingTable hoverable componentLocKey="component.propertiesOverview" {items} {shownKeys}>
-	<svelte:fragment slot="caption">
+	{#snippet caption()}
 		<caption class="caption-top">
 			<Accordion>
 				<AccordionItem>
@@ -133,8 +141,8 @@
 				</AccordionItem>
 			</Accordion>
 		</caption>
-	</svelte:fragment>
-	<svelte:fragment slot="bodyContent" let:item>
+	{/snippet}
+	{#snippet bodyContent(item)}
 		<TableBodyRow
 			class="cursor-pointer"
 			on:click={async () => await goto(`property/${encodeURI(item.id)}`)}
@@ -149,5 +157,5 @@
 			<TableBodyCell>{item.measure ?? '-'}</TableBodyCell>
 			<TableBodyCell>{item.metricName ?? '-'}</TableBodyCell>
 		</TableBodyRow>
-	</svelte:fragment>
+	{/snippet}
 </SortingTable>

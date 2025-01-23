@@ -2,25 +2,33 @@
 	import { Breadcrumb, BreadcrumbItem } from 'flowbite-svelte';
 	import { generateCrumbs } from './breadcrumbs';
 	import { _ } from 'svelte-i18n';
+	import type { Snippet } from 'svelte';
 
-	export let home = '';
-	export let path: string;
-	export let listParts: {
-		part: string;
-		partName: string;
-		index: number;
-		specialCase?: Record<string, string>;
-	}[] = [];
+	interface Props {
+		home: string;
+		path: string;
+		listParts: {
+			part: string;
+			partName: string;
+			index: number;
+			specialCase?: Record<string, string>;
+		}[];
+		homeSnippet?: Snippet;
+	}
 
-	$: breadcrumbs = generateCrumbs(home, path, home.split('/').length, listParts);
+	let { home = '', path, listParts = [], homeSnippet }: Props = $props();
+
+	let breadcrumbs = $derived(generateCrumbs(home, path, home.split('/').length, listParts));
 </script>
 
 <Breadcrumb>
-	<slot name="home">
+	{#if homeSnippet}
+		{@render homeSnippet()}
+	{:else}
 		<BreadcrumbItem href={`/${home}`} home>
 			{$_('shared.breadcrumbs.home')}
 		</BreadcrumbItem>
-	</slot>
+	{/if}
 	{#each breadcrumbs as crumb}
 		<BreadcrumbItem href={crumb.link}>
 			{$_(crumb.text, { values: crumb.values })}

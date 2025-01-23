@@ -197,22 +197,25 @@ test('auto-create', async ({ page, context }) => {
 	await page.getByRole('button', { name: 'Sign In' }).click();
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenantName}:admin`).click();
-	await page.getByLabel('Toggle menu').click();
-	await page.getByTestId('navbarmenu').getByRole('link', { name: 'Explore' }).click();
+	await page.getByTestId('data-testid Toggle menu').click();
+	await page.getByRole('link', { name: 'Explore' }).click();
 
 	await page.getByLabel('Select a data source').click();
-	await page.getByText('Prometheus', { exact: true }).click();
+	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
 	await page.getByLabel('Metric').click();
 	await page.getByText('air_pressure_mbar', { exact: true }).click();
 
-	await page.getByLabel('Select label').click();
+	const selectLabel = page.getByTestId('data-testid Select label-input');
+	const selectValue = page.getByTestId('data-testid Select value-input');
+
+	await selectLabel.click();
 	await page.getByText('healthStatus', { exact: true }).click();
-	await page.getByLabel('Select value').click();
+	await selectValue.click();
 	await page.getByText('good', { exact: true }).click();
 	await page.getByTestId('query-editor-row').getByLabel('Add').click();
-	await page.getByLabel('Select label').nth(1).click();
+	await selectLabel.nth(1).click();
 	await page.getByText('deveui', { exact: true }).click();
-	await page.getByLabel('Select value').nth(1).click();
+	await selectValue.nth(1).click();
 
 	// only "Super Test Typ" is present
 	for (const thing of [superTestTypThing, superTestTypThingExtra]) {
@@ -223,11 +226,11 @@ test('auto-create', async ({ page, context }) => {
 	}
 	await page.getByText(superTestTypThing.deveui, { exact: true }).click();
 
-	await page.getByLabel('remove').nth(2).click();
+	await page.getByLabel('remove-deveui').click();
 
-	await page.getByLabel('Select label').click();
+	await selectLabel.click();
 	await page.getByText('deveui', { exact: true }).click();
-	await page.getByLabel('Select value').click();
+	await selectValue.click();
 
 	// check that all things are present
 	for (const thing of [

@@ -2,8 +2,12 @@
 	import { Button } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
 
-	export let href: string;
-	export let component: string;
+	interface Props {
+		href: string;
+		component: string;
+	}
+
+	let { href, component }: Props = $props();
 </script>
 
 {#if href}

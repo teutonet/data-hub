@@ -62,25 +62,28 @@ test('public-dashboard-sync create', async ({ page, context }) => {
 	// t1/g1 creates a private dashboard
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenant}:primary-group`).click();
-	await page.getByTestId('data-testid Add panel button').click();
+	await page.getByLabel('New', { exact: true }).click();
+	await page.getByRole('link', { name: 'New dashboard' }).click();
+	await page.getByTestId('data-testid Add button').click();
 	await page.getByTestId('data-testid Add new visualization menu item').click();
 	await page.getByRole('button', { name: 'Save' }).click();
 	await page.getByLabel('Save dashboard title field').fill('Test Private Dashboard 1');
-	await page.getByLabel('Save dashboard button').click();
+	await page.getByTestId('data-testid Save dashboard drawer button').click();
 	// t1/g2 creates a public dashboard
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenant}:secondary-group`).click();
-	await page.getByTestId('data-testid Add panel button').click();
+	await page.getByLabel('New', { exact: true }).click();
+	await page.getByRole('link', { name: 'New dashboard' }).click();
+	await page.getByTestId('data-testid Add button').click();
 	await page.getByTestId('data-testid Add new visualization menu item').click();
-	await page.getByRole('button', { name: 'Save' }).click();
-	await page.getByLabel('Save dashboard title field').fill('Test Public Dashboard 1');
-	await page.getByLabel('Save dashboard button').click();
-	// due to a bug in grafana it's not possible to create the dashboard with a tag
-	await page.getByLabel('Dashboard settings', { exact: true }).click();
+	await page.getByTestId('data-testid Back to dashboard button').click();
+	await page.getByTestId('data-testid Dashboard settings').click();
+	await page.getByPlaceholder('New tag (enter key to add)').click();
 	await page.getByPlaceholder('New tag (enter key to add)').fill('public');
 	await page.getByPlaceholder('New tag (enter key to add)').press('Enter');
-	await page.getByLabel('Dashboard settings aside actions Save button').click();
-	await page.getByLabel('Dashboard settings Save').click();
+	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByLabel('Save dashboard title field').fill('Test Public Dashboard 1');
+	await page.getByTestId('data-testid Save dashboard drawer button').click();
 
 	// ensure, the public dashboard is visible
 	await refreshUntil(publicGrafanaPage, () =>
@@ -125,22 +128,20 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	// create a folder and puts a public dashboard there
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenant}:public-dashboards`).click();
-	await page.getByLabel('Toggle menu').click();
-	await page.getByTestId('navbarmenu').getByRole('link', { name: 'Dashboards' }).click();
+	await page.getByTestId('data-testid Toggle menu').click();
+	await page.getByRole('link', { name: 'Dashboards' }).click();
 	await page.locator('button').filter({ hasText: 'New' }).click();
-	await page.getByRole('link', { name: 'New Folder' }).click();
+	await page.getByRole('menuitem', { name: 'New folder' }).click();
 	await page.getByLabel('Folder name').fill('Unterordner');
 	await page.getByRole('button', { name: 'Create' }).click();
-	await page.getByTestId('data-testid Call to action button Create Dashboard').click();
-	await page.getByLabel('Save dashboard').click();
-	await page.getByLabel('Save dashboard title field').fill('Unterordner Dashboard');
-	await page.getByLabel('Save dashboard button').click();
-	// due to a bug in grafana it's not possible to create the dashboard with a tag
-	await page.getByLabel('Dashboard settings', { exact: true }).click();
+	await page.getByRole('link', { name: 'Create dashboard' }).click();
+	await page.getByTestId('data-testid Dashboard settings').click();
+	await page.getByPlaceholder('New tag (enter key to add)').click();
 	await page.getByPlaceholder('New tag (enter key to add)').fill('public');
 	await page.getByPlaceholder('New tag (enter key to add)').press('Enter');
-	await page.getByLabel('Dashboard settings aside actions Save button').click();
-	await page.getByLabel('Dashboard settings Save').click();
+	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByLabel('Save dashboard title field').fill('Unterordner Dashboard');
+	await page.getByTestId('data-testid Save dashboard drawer button').click();
 	// observe that the change is reflected
 	await refreshUntil(publicGrafanaPage, () =>
 		publicGrafanaPage.getByText(`${tenant}:public-dashboards`).isVisible()
@@ -148,22 +149,19 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	await publicGrafanaPage.getByText(`${tenant}:public-dashboards`).click();
 
 	// move the dashboard to the base folder
-	await page.getByLabel('Select a folder').click();
-	await page.getByLabel('Select option').getByText('General').click();
-	// grafana doesn't let you save with only the folder changed...
-	await page.getByLabel('Name').fill('Unterordner Dashboard b');
-	await page.getByLabel('Dashboard settings aside actions Save button').click();
-	await page.getByLabel('Dashboard settings Save').click();
+	await page.getByLabel('Select folder').click();
+	await page.getByLabel('Unterordner', { exact: true }).getByText('Unterordner').click();
+	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByTestId('data-testid Save dashboard drawer button').click();
 	// observe that the change is reflected
 	await refreshUntil(publicGrafanaPage, () =>
-		publicGrafanaPage.getByRole('link', { name: 'Unterordner Dashboard b' }).isVisible()
+		publicGrafanaPage.getByRole('link', { name: 'Unterordner Dashboard' }).isVisible()
 	);
 
 	// make the dashboard private
-	await page.getByLabel('Dashboard settings', { exact: true }).click();
 	await page.getByLabel('Remove "public" tag').click();
-	await page.getByLabel('Dashboard settings aside actions Save button').click();
-	await page.getByLabel('Dashboard settings Save').click();
+	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByTestId('data-testid Save dashboard drawer button').click();
 
 	// observe that it's gone from public
 	await refreshUntil(
@@ -205,25 +203,21 @@ test('public-dashboard-sync syncs datasource changes', async ({ page, context })
 	await page.getByLabel('Select options menu').getByText(`${tenant}:admin`).click();
 	await page.getByLabel('New', { exact: true }).click();
 	await page.getByRole('link', { name: 'New dashboard' }).click();
-	await page.getByTestId('data-testid Add panel button').click();
+	await page.getByTestId('data-testid Add button').click();
 	await page.getByTestId('data-testid Add new visualization menu item').click();
-	await page.getByTestId('Select a data source').click();
+	await page.getByTestId('data-testid Select a data source').click();
 	await page.getByRole('button', { name: 'Prometheus' }).click();
-	const metricInput = page.getByLabel('Metric');
-	await metricInput.click();
-	await metricInput.fill('test_metric');
-	await expect(async () => {
-		await page.keyboard.press('Enter');
-		await page.getByRole('button', { name: 'Save' }).click({ timeout: 500 });
-	}).toPass({ intervals: [0] });
-	await page.getByLabel('Save dashboard title field').fill('Test Dashboard');
-	await page.getByLabel('Save dashboard button').click();
-	// due to a bug in grafana it's not possible to create the dashboard with a tag
-	await page.getByLabel('Dashboard settings', { exact: true }).click();
+	await page.getByTestId('data-testid metric select-input').fill('test_metric');
+	await page.getByText('test_metric', { exact: true }).click();
+	await page.getByRole('button', { name: 'Run queries' }).click();
+	await page.getByTestId('data-testid Back to dashboard button').click();
+	await page.getByTestId('data-testid Dashboard settings').click();
+	await page.getByPlaceholder('New tag (enter key to add)').click();
 	await page.getByPlaceholder('New tag (enter key to add)').fill('public');
 	await page.getByPlaceholder('New tag (enter key to add)').press('Enter');
-	await page.getByLabel('Dashboard settings aside actions Save button').click();
-	await page.getByLabel('Dashboard settings Save').click();
+	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByLabel('Save dashboard title field').fill('Test Dashboard');
+	await page.getByTestId('data-testid Save dashboard drawer button').click();
 
 	// navigate to published dashboard
 	await refreshUntil(publicGrafanaPage, () =>
@@ -271,7 +265,9 @@ test('public-dashboard-sync syncs datasource changes', async ({ page, context })
 	);
 
 	// there is data on the public dashboard now
-	await refreshUntil(publicGrafanaPage, () =>
-		publicGrafanaPage.getByRole('button', { name: 'test_metric{' }).isVisible()
+	await refreshUntil(
+		publicGrafanaPage,
+		() => publicGrafanaPage.getByRole('button', { name: '{__name__="test_metric",' }).isVisible(),
+		30
 	);
 });

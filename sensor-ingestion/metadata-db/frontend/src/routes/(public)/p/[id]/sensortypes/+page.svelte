@@ -20,28 +20,34 @@
 	import { error, success } from '$lib/common/toast/toast';
 	import { goto } from '$app/navigation';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const client = getContextClient();
 
-	$: projectId = data.projectId;
+	let projectId = $derived(data.projectId);
 
-	$: sensorQuery = queryStore<GetSensorsQuery, GetSensorsQueryVariables>({
-		client,
-		query: GET_SENSORS,
-		variables: {
-			condition: {
-				project: projectCondition(data.projectId)
+	let sensorQuery = $derived(
+		queryStore<GetSensorsQuery, GetSensorsQueryVariables>({
+			client,
+			query: GET_SENSORS,
+			variables: {
+				condition: {
+					project: projectCondition(data.projectId)
+				}
 			}
-		}
-	});
+		})
+	);
 
-	$: sensors = $sensorQuery.data?.sensors ?? [];
+	let sensors = $derived($sensorQuery.data?.sensors ?? []);
 
-	let importModalOpen: boolean = false;
-	let jsonImport: string;
-	let disableImport: boolean = true;
-	$: {
+	let importModalOpen: boolean = $state(false);
+	let jsonImport: string = $state('');
+	let disableImport: boolean = $state(true);
+	$effect(() => {
 		try {
 			const sensorJson = JSON.parse(jsonImport);
 			if (
@@ -56,7 +62,7 @@
 		} catch {
 			disableImport = true;
 		}
-	}
+	});
 
 	async function importJSONAsSensortype() {
 		try {
@@ -99,27 +105,26 @@
 {#if !$sensorQuery.fetching && sensors}
 	<SensorsOverview {sensors} />
 	{#if projectId != 'all'}
-		<div class="mt-2 flex flex-row">
-			<div class="mr-1 flex w-full flex-col">
-				<Button
-					href={projectUrl(projectId, 'sensortype', 'new')}
-					title={$_('page.sensortypes.newSensortype')}
-				>
-					<PlusIcon />
-					{$_('page.sensorTypes.newSensortype')}
-				</Button>
-			</div>
-			<div class="ml-1 flex w-full flex-col">
-				<Button
-					on:click={() => {
-						importModalOpen = true;
-					}}
-					title={$_('page.sensortypes.newSensortype')}
-				>
-					<ArrowDownTray class="mr-1" />
-					{$_('page.sensorTypes.importSensortype')}
-				</Button>
-			</div>
+		<div class="flex w-full flex-row">
+			<Button
+				href={projectUrl(projectId, 'sensortype', 'new')}
+				title={$_('page.sensortypes.newSensortype')}
+				class="w-full rounded-none rounded-bl-lg"
+			>
+				<PlusIcon />
+				{$_('page.sensorTypes.newSensortype')}
+			</Button>
+			<Button
+				on:click={() => {
+					importModalOpen = true;
+				}}
+				title={$_('page.sensortypes.newSensortype')}
+				class="w-3/6 rounded-none rounded-br-lg"
+				color="blue"
+			>
+				<ArrowDownTray class="mr-1" />
+				{$_('page.sensorTypes.importSensortype')}
+			</Button>
 		</div>
 	{/if}
 {/if}
@@ -128,7 +133,7 @@
 	<div id="import" class="rounded-md">
 		<FloatingLabelTextArea
 			bind:value={jsonImport}
-			rows="30"
+			rows={30}
 			placeholder={$_('component.importExportModal.import.textAreaHelp') +
 				'\n\n' +
 				$_('component.importExportModal.import.example') +

@@ -7,22 +7,21 @@ import { MdbApi, Thing, aquireTokenViaDeviceCode } from './helper/mdb-api';
 import {
 	DATA_HUB_ADMIN_PASSWORD,
 	DATA_HUB_ADMIN_USERNAME,
-	createKeycloakUser,
-	signInAdminKeycloak
+	createTestUserViaApi
 } from './helper/keycloak';
 import { pushMetrics } from 'prometheus-remote-write';
 
 async function expectGrafanaWorking(page: Page): Promise<void> {
-	await page.getByLabel('Toggle menu').click();
-	await page.getByTestId('navbarmenu').getByRole('link', { name: 'Explore', exact: true }).click();
+	await page.getByTestId('data-testid Toggle menu').click();
+	await page.getByRole('link', { name: 'Explore' }).click();
 	await page.getByLabel('Select a data source').click();
-	await page.getByLabel('Select options menu').getByText('Prometheus', { exact: true }).click();
+	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
 	await page.getByLabel('Metric').click();
 	await expect(page.getByText('battery_level', { exact: true })).toBeVisible();
 	await page.getByText('air_pressure', { exact: true }).click();
-	await page.getByLabel('Select label').click();
+	await page.getByTestId('data-testid Select label-input').click();
 	await page.getByText('measureQuality', { exact: true }).click();
-	await page.getByLabel('Select value').click();
+	await page.getByTestId('data-testid Select value-input').click();
 	await expect(page.getByText('bad', { exact: true })).toBeVisible();
 	await page.getByText('good', { exact: true }).click();
 	await page.getByTestId('data-testid RefreshPicker run button').click();
@@ -39,7 +38,7 @@ async function freshLoginFrontend(
 	await page.getByLabel('Username or email').fill(username);
 	await page.getByLabel('Password', { exact: true }).fill(password);
 	await page.getByRole('button', { name: 'Sign In' }).click();
-	await page.goto(`${MDB_FRONTEND}overview`);
+	await expect(page.getByRole('heading', { name: 'Willkommen im MetaData_DB Hub' })).toBeVisible();
 }
 
 async function expectFrontendWorking(page: Page, testPostfix: string): Promise<void> {
@@ -63,12 +62,9 @@ async function expectFrontendWorking(page: Page, testPostfix: string): Promise<v
 
 test('keycloak', async ({ page, context }) => {
 	test.slow();
-	await signInAdminKeycloak(page);
 
 	const testPostfix = getRandomString(6);
 	console.log(`testPostfix: ${testPostfix}`);
-
-	const userPassword = 'asdf';
 
 	const realmAdminToken = await aquireTokenViaDeviceCode(
 		page,
@@ -117,68 +113,26 @@ test('keycloak', async ({ page, context }) => {
 		}
 	);
 
-	await page.goto(`${KEYCLOAK}admin/master/console/`);
-
-	await createKeycloakUser(
-		page,
-		`analyzer-${testPostfix}`,
-		userPassword,
-		[
-			{
-				name: `knuffingen-${testPostfix}`,
-				groups: ['data-analyst']
-			}
-		],
-		false
+	const analyzerUser = await createTestUserViaApi(
+		[`knuffingen-${testPostfix}/data-analyst`],
+		`analyzer-${testPostfix}`
 	);
-
-	await createKeycloakUser(
-		page,
-		`tenant-admin-${testPostfix}`,
-		userPassword,
-		[
-			{
-				name: `knuffingen-${testPostfix}`,
-				groups: ['admin']
-			}
-		],
-		false
+	const tenantAdminUser = await createTestUserViaApi(
+		[`knuffingen-${testPostfix}/admin`],
+		`tenant-admin-${testPostfix}`
 	);
-
-	await createKeycloakUser(
-		page,
-		`limited-${testPostfix}`,
-		userPassword,
-		[
-			{
-				name: `knuffingen-${testPostfix}`,
-				groups: ['limited-group']
-			}
-		],
-		false
+	const limitedUser = await createTestUserViaApi(
+		[`knuffingen-${testPostfix}/limited-group`],
+		`limited-${testPostfix}`
 	);
-
-	await createKeycloakUser(
-		page,
-		`viewer-${testPostfix}`,
-		userPassword,
-		[
-			{
-				name: `knuffingen-${testPostfix}`,
-				groups: ['view-group']
-			}
-		],
-		false
+	const viewerUser = await createTestUserViaApi(
+		[`knuffingen-${testPostfix}/view-group`],
+		`viewer-${testPostfix}`
 	);
 
 	await context.clearCookies();
 
-	const tenantAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		`tenant-admin-${testPostfix}`,
-		userPassword,
-		['data-hub']
-	);
+	const tenantAdminToken = await tenantAdminUser.token();
 
 	const tenantAdminClient = axios.create({
 		httpsAgent: new Agent({ rejectUnauthorized: false }),
@@ -195,9 +149,6 @@ test('keycloak', async ({ page, context }) => {
 			principals: [{ type: 'group', tenant: `knuffingen-${testPostfix}`, group: 'limited-group' }]
 		}
 	);
-
-	// const creds = await tenantAdminClient.get(`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/trainstation/sensor-credentials`);
-	// console.log(creds);
 
 	const sensorCredentials = await tenantAdminClient.put<{ username: string; password: string }>(
 		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/trainstation/sensor-credentials/${getRandomString(4)}`
@@ -259,7 +210,7 @@ test('keycloak', async ({ page, context }) => {
 	// // checking if the users have access to mdb-frontend and/or grafana
 
 	// // tenant-admin should have access to both
-	await freshLoginFrontend(page, context, `tenant-admin-${testPostfix}`, userPassword);
+	await freshLoginFrontend(page, context, tenantAdminUser.username, DATA_HUB_ADMIN_PASSWORD);
 	await expectFrontendWorking(page, testPostfix);
 	await page.goto(GRAFANA);
 	await page.getByLabel('Change organization').click();
@@ -286,7 +237,7 @@ test('keycloak', async ({ page, context }) => {
 
 	// analyzer only has access to one org in grafana but not mdb-frontend
 
-	await freshLoginFrontend(page, context, `analyzer-${testPostfix}`, userPassword);
+	await freshLoginFrontend(page, context, analyzerUser.username, DATA_HUB_ADMIN_PASSWORD);
 	await page.getByRole('link', { name: 'MetaData_DB' }).click();
 	await page.getByRole('link', { name: 'Projekt auswählen' }).click();
 	await expect(
@@ -299,7 +250,7 @@ test('keycloak', async ({ page, context }) => {
 
 	// limited only has mdb access to a project, nothing in grafana
 
-	await freshLoginFrontend(page, context, `limited-${testPostfix}`, userPassword);
+	await freshLoginFrontend(page, context, limitedUser.username, DATA_HUB_ADMIN_PASSWORD);
 	await expectFrontendWorking(page, testPostfix);
 	await page.goto(GRAFANA);
 	await page.waitForLoadState('networkidle');
@@ -307,7 +258,7 @@ test('keycloak', async ({ page, context }) => {
 
 	// viewer can look at grafana dashboards
 
-	await freshLoginFrontend(page, context, `viewer-${testPostfix}`, userPassword);
+	await freshLoginFrontend(page, context, viewerUser.username, DATA_HUB_ADMIN_PASSWORD);
 	await page.goto(GRAFANA);
 	await page.getByLabel('Change organization').click();
 	await expect(page.getByText('Viewer').first()).toBeVisible();
@@ -363,10 +314,10 @@ test('resource-api-cross-tenant', async ({ page }) => {
 		.getByLabel('Select options menu')
 		.getByText(`knuffingen-${testPostfix2}:admin`, { exact: true })
 		.click();
-	await page.getByLabel('Toggle menu').click();
-	await page.getByTestId('navbarmenu').getByRole('link', { name: 'Explore', exact: true }).click();
+	await page.getByTestId('data-testid Toggle menu').click();
+	await page.getByRole('link', { name: 'Explore' }).click();
 	await page.getByLabel('Select a data source').click();
-	await page.getByLabel('Select options menu').getByText('Prometheus', { exact: true }).click();
+	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
 	await expect(page.getByLabel('Metric')).toBeVisible();
 
 	await expect(async () => {

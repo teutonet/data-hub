@@ -1,13 +1,14 @@
 import { fireEvent, render } from '@testing-library/svelte';
 import { get, writable } from 'svelte/store';
 import { globalToastStore, success, type ToastDuration, type ToastOptions } from './toast';
+import { expect, test, describe } from 'vitest';
 import Toast from './Toast.svelte';
 import ToastList from './ToastList.svelte';
 
 function testToast(duration?: ToastDuration, detail?: boolean): ToastOptions {
 	return {
-		message: 'page.overview.invitations',
-		...(detail ? { detail: 'page.overview.invitationsCount' } : {}),
+		message: 'component.thingsImport.success',
+		...(detail ? { detail: 'component.thingsImport.successDetail' } : {}),
 		duration,
 		detailValues: {
 			count: 5
@@ -42,14 +43,14 @@ describe('Toast', () => {
 	test('shows the translated message and detail', () => {
 		const { getByText } = renderToast();
 
-		expect(getByText('Invitations')).toBeInTheDocument();
-		expect(getByText('You have 5 invitations')).toBeInTheDocument();
+		expect(getByText('Import Erfolgreich')).toBeInTheDocument();
+		expect(getByText('Alle 5 Sensoren wurden erfolgreich importiert')).toBeInTheDocument();
 	});
 
 	test('can be shown without detail', () => {
 		const { getByText } = renderToast({ detail: false });
 
-		expect(getByText('Invitations')).toBeInTheDocument();
+		expect(getByText('Import Erfolgreich')).toBeInTheDocument();
 	});
 
 	test('closes/removes itself automatically', () => {
@@ -78,7 +79,7 @@ describe('Toast', () => {
 			duration: 'indefinite'
 		});
 
-		await fireEvent.click(getByText('Close'));
+		await fireEvent.click(getByText('Schließen'));
 		expect(close).toHaveBeenCalledTimes(1);
 	});
 });
@@ -95,21 +96,29 @@ function renderToastList(toasts?: ToastOptions[]) {
 describe('ToastList', () => {
 	test('shows toasts', () => {
 		const { getAllByText } = renderToastList([testToast(), testToast()]);
-		expect(getAllByText('Invitations')).toHaveLength(2);
+		expect(getAllByText('Import Erfolgreich')).toHaveLength(2);
 	});
 
 	test('removes closed toasts from the store', () => {
-		success('page.overview.invitations');
+		const mockAnimations = () => {
+			Element.prototype.animate = vi.fn().mockImplementation(() => ({
+				finished: Promise.resolve(),
+				cancel: vi.fn()
+			}));
+		};
+
+		mockAnimations();
+		success('component.thingsImport.success');
 		const { getByText } = renderToastList();
-		expect(getByText('Invitations')).toBeInTheDocument();
+		expect(getByText('Import Erfolgreich')).toBeInTheDocument();
 
 		vi.runAllTimers();
 		expect(get(globalToastStore)).toHaveLength(0);
 	});
 
 	test('to default to the global toast store', () => {
-		success('page.overview.invitations');
+		success('component.thingsImport.success');
 		const { getByText } = renderToastList();
-		expect(getByText('Invitations')).toBeInTheDocument();
+		expect(getByText('Import Erfolgreich')).toBeInTheDocument();
 	});
 });

@@ -1,10 +1,5 @@
 import test from 'playwright/test';
-import {
-	DATA_HUB_ADMIN_PASSWORD,
-	DATA_HUB_ADMIN_USERNAME,
-	signInAdminKeycloak
-} from './helper/keycloak';
-import { aquireTokenViaDeviceCode } from './helper/mdb-api';
+import { ADMIN_USER } from './helper/keycloak';
 import axios from 'axios';
 import { Agent } from 'https';
 import { KEYCLOAK } from './helper/urls';
@@ -14,19 +9,10 @@ test(
 	{
 		tag: '@delete-tenants'
 	},
-	async ({ page }) => {
-		await signInAdminKeycloak(page);
-
-		const realmAdminToken = await aquireTokenViaDeviceCode(
-			page,
-			DATA_HUB_ADMIN_USERNAME,
-			DATA_HUB_ADMIN_PASSWORD,
-			['data-hub']
-		);
-
+	async () => {
 		const realmAdminClient = axios.create({
 			httpsAgent: new Agent({ rejectUnauthorized: false }),
-			headers: { Authorization: `Bearer ${realmAdminToken}` }
+			headers: { Authorization: `Bearer ${await ADMIN_USER.token()}` }
 		});
 
 		// delete all test tenants

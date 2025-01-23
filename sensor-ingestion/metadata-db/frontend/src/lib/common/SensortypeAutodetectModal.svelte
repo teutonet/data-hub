@@ -33,22 +33,22 @@
 	import { info, success, error } from '$lib/common/toast/toast';
 	import { handleCombinedErrors, performMutation } from './graphql/utils';
 
-	export let sensortype: Sensor;
-	export let project: string;
+	interface Props {
+		sensortype: Sensor;
+		project: string;
+	}
 
-	let modalOpen = false;
+	let { sensortype, project }: Props = $props();
+
+	let modalOpen = $state(false);
 
 	const client = getContextClient();
 
 	let thingsPromise:
 		| Promise<OperationResult<GetThingsQuery, Exact<{ condition: ThingCondition }>>>
-		| undefined = undefined;
+		| undefined = $state(undefined);
 
-	let sensorShape: SensorShape;
-
-	let thingMatches: SensortypeAutodetectionMatch[] | undefined = undefined;
-
-	$: sensorShape = {
+	let sensorShape: SensorShape = $derived({
 		id: sensortype.id,
 		name: sensortype.name,
 		properties: sensortype.sensorProperties.map((prop) => ({
@@ -57,7 +57,9 @@
 			metricName: prop.property?.metricName,
 			measure: prop.property?.measure
 		}))
-	};
+	});
+
+	let thingMatches: SensortypeAutodetectionMatch[] | undefined = $state(undefined);
 
 	async function getThingsAndAttemptAutodetection() {
 		thingsPromise = client
@@ -134,7 +136,7 @@
 			});
 	}
 
-	let group: string[] = [];
+	let group: string[] = $state([]);
 
 	function toggleAllSelected() {
 		if (allSelected) {
@@ -146,7 +148,7 @@
 		}
 	}
 
-	let allSelected = false;
+	let allSelected = $state(false);
 </script>
 
 <Button on:click={() => getThingsAndAttemptAutodetection()} disabled={!!thingsPromise}>

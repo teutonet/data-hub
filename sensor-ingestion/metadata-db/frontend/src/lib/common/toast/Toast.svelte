@@ -4,8 +4,12 @@
 	import CloseIcon from '~icons/heroicons/x-mark';
 	import { _ } from 'svelte-i18n';
 
-	export let close: () => void;
-	export let toast: ToastOptions;
+	interface Props {
+		close: () => void;
+		toast: ToastOptions;
+	}
+
+	let { close, toast }: Props = $props();
 	const delay = { short: 2000, normal: 5000, long: 20000 }[toast.duration ?? 'normal'];
 	const color = styleToColor(toast.style ?? 'info');
 	function styleToColor(style: ToastStyle): string {
@@ -33,7 +37,7 @@
 >
 	<div class="flex p-2">
 		<strong class="me-auto">{$_(toast.message)}</strong>
-		<button type="button" class="btn-close align-self-start flex-shrink-0" on:click={close}>
+		<button type="button" class="btn-close align-self-start flex-shrink-0" onclick={close}>
 			<CloseIcon />
 			<span class="sr-only">{$_('shared.action.close')}</span>
 		</button>

@@ -15,15 +15,19 @@
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	const tenant: string = data.tenant;
 
-	let promise = fetchGroups(tenant, $accessToken);
+	let promise = $state(fetchGroups(tenant, $accessToken));
 
-	let createModalOpen = false;
-	let requestSent = false;
+	let createModalOpen = $state(false);
+	let requestSent = $state(false);
 
-	let newGroupName: string;
+	let newGroupName: string = $state('');
 
 	function createNewGroup() {
 		requestSent = true;
@@ -85,7 +89,7 @@
 <Modal bind:open={createModalOpen} title={$_('page.groupsList.newGroupModalTitle')} outsideclose>
 	<form
 		novalidate
-		on:submit|preventDefault={(event) => handleSubmit(event, createNewGroup)}
+		onsubmit={(event) => handleSubmit(event, createNewGroup)}
 		class="needs-validation"
 	>
 		<div class="flex flex-col gap-4">

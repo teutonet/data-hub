@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { Agent } from 'https';
 import { randomUUID } from 'node:crypto';
 import { KEYCLOAK, MDB_FRONTEND, API } from './urls';
-import { Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 
 export interface Property {
 	name: string;
@@ -307,7 +307,9 @@ export class MdbApi {
 			}
 		);
 	}
-	async remoteWriteVarsLorawan(thing: Thing, variables: Record<string, number | string>) {
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	async remoteWriteVarsLorawan(thing: Thing, variables: Record<string, any>) {
 		const data = {
 			'@type': 'type.googleapis.com/ttn.lorawan.v3.ApplicationUp',
 			end_device_ids: {
@@ -335,7 +337,7 @@ export class MdbApi {
 					: {}
 			}
 		};
-		await this.httpClient.post(`${API}api/v1/sensordata`, JSON.stringify(data), {
+		const response = await this.httpClient.post(`${API}api/v1/sensordata`, JSON.stringify(data), {
 			headers: {
 				'Content-Type': 'application/json'
 			},
@@ -344,5 +346,6 @@ export class MdbApi {
 				password: this.clientSecret
 			}
 		});
+		expect(response.status).toBe(200);
 	}
 }

@@ -16,25 +16,15 @@
 	import PageTitle from '$lib/PageTitle.svelte';
 	import { emptyToNull } from '$lib/stringUtils';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
 
-	let defaultActivate = true;
+	let { data }: Props = $props();
+
+	let defaultActivate = $state(true);
 
 	const client = getContextClient();
-
-	$: projectId = data.projectId;
-
-	$: sensorQuery = queryStore<GetSensorsQuery, GetSensorsQueryVariables>({
-		client,
-		query: GET_SENSORS,
-		variables: {
-			condition: {
-				project: projectId
-			}
-		}
-	});
-
-	$: sensors = $sensorQuery.data?.sensors ?? [];
 
 	interface ThingImport {
 		thingName: string;
@@ -62,11 +52,9 @@
 
 	type Problem = RequiredProblem | SensortypeNotFoundProblem;
 
-	let files: FileList | undefined;
-	let thingsToImport: ThingImport[] | undefined = undefined;
-	let problems: Problem[] | undefined = undefined;
-
-	$: void checkUpload(files);
+	let files: FileList | undefined = $state();
+	let thingsToImport: ThingImport[] | undefined = $state(undefined);
+	let problems: Problem[] | undefined = $state(undefined);
 
 	async function checkUpload(files: FileList | undefined) {
 		thingsToImport = undefined;
@@ -177,6 +165,22 @@
 			}
 		}
 	}
+	let projectId = $derived(data.projectId);
+	let sensorQuery = $derived(
+		queryStore<GetSensorsQuery, GetSensorsQueryVariables>({
+			client,
+			query: GET_SENSORS,
+			variables: {
+				condition: {
+					project: projectId
+				}
+			}
+		})
+	);
+	let sensors = $derived($sensorQuery.data?.sensors ?? []);
+	$effect(() => {
+		void checkUpload(files);
+	});
 </script>
 
 <PageTitle title={$_('component.thingsImport.title')} />

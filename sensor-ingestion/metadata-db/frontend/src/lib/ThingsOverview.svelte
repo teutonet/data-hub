@@ -16,31 +16,16 @@
 	import type { TableHeadItem } from './common/sortingTableUtils';
 	import { caseInsensitiveIncludes } from './stringUtils';
 	import { activeProjectId } from './nav/activeProject';
-	export let things: NonNullable<GetAllThingsQuery['things']>;
+	interface Props {
+		things: NonNullable<GetAllThingsQuery['things']>;
+	}
 
-	$: items = things
-		.map((thing) => {
-			const thingNameOrId = thing.name ?? thing.id;
-			const sensorNameOrId = thing.sensor?.name ?? thing.sensor?.id ?? '-';
+	let { things }: Props = $props();
 
-			return { ...thing, thingNameOrId, sensorNameOrId };
-		})
-		.filter(
-			(item) =>
-				(filteredName ? caseInsensitiveIncludes(item.thingNameOrId, filteredName) : true) &&
-				(filteredProject ? caseInsensitiveIncludes(item.project, filteredProject) : true) &&
-				(filteredSensorType
-					? caseInsensitiveIncludes(item.sensorNameOrId, filteredSensorType)
-					: true) &&
-				(filteredStatus
-					? item.status && caseInsensitiveIncludes(item.status, filteredStatus)
-					: true)
-		);
-
-	let filteredName: string;
-	let filteredProject: string;
-	let filteredSensorType: string;
-	let filteredStatus: string;
+	let filteredName: string = $state('');
+	let filteredProject: string = $state('');
+	let filteredSensorType: string = $state('');
+	let filteredStatus: string = $state('');
 
 	function resetFilters() {
 		filteredName = '';
@@ -76,11 +61,33 @@
 		}
 	];
 
-	$: filtered = !!filteredProject || !!filteredName || !!filteredSensorType || !!filteredStatus;
+	let items = $derived(
+		things
+			.map((thing) => {
+				const thingNameOrId = thing.name ?? thing.id;
+				const sensorNameOrId = thing.sensor?.name ?? thing.sensor?.id ?? '-';
+
+				return { ...thing, thingNameOrId, sensorNameOrId };
+			})
+			.filter(
+				(item) =>
+					(filteredName ? caseInsensitiveIncludes(item.thingNameOrId, filteredName) : true) &&
+					(filteredProject ? caseInsensitiveIncludes(item.project, filteredProject) : true) &&
+					(filteredSensorType
+						? caseInsensitiveIncludes(item.sensorNameOrId, filteredSensorType)
+						: true) &&
+					(filteredStatus
+						? item.status && caseInsensitiveIncludes(item.status, filteredStatus)
+						: true)
+			)
+	);
+	let filtered = $derived(
+		!!filteredProject || !!filteredName || !!filteredSensorType || !!filteredStatus
+	);
 </script>
 
 <SortingTable hoverable {shownKeys} {items} componentLocKey="component.thingsOverview">
-	<svelte:fragment slot="caption">
+	{#snippet caption()}
 		<caption class="caption-top">
 			<Accordion>
 				<AccordionItem>
@@ -135,8 +142,8 @@
 				</AccordionItem>
 			</Accordion>
 		</caption>
-	</svelte:fragment>
-	<svelte:fragment slot="bodyContent" let:item>
+	{/snippet}
+	{#snippet bodyContent(item)}
 		<TableBodyRow
 			on:click={async () => await goto(projectUrl(item.project, 'sensor', encodeURI(item.id)))}
 			class="cursor-pointer"
@@ -154,5 +161,5 @@
 			</TableBodyCell>
 			<TableBodyCell>{item.status}</TableBodyCell>
 		</TableBodyRow>
-	</svelte:fragment>
+	{/snippet}
 </SortingTable>

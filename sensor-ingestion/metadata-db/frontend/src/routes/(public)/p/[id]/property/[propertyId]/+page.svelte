@@ -24,21 +24,11 @@
 	import { goto } from '$app/navigation';
 	import HistoryModal from '$lib/HistoryModal.svelte';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
 
-	$: propertyId = data.propertyId;
-	$: projectId = data.projectId === 'all' ? undefined : data.projectId;
-
-	$: propertyStore = queryStore<GetPropertyByIdQuery, GetPropertyByIdQueryVariables>({
-		client,
-		query: GET_PROPERTY_BY_ID,
-		variables: {
-			id: propertyId
-		},
-		pause: !propertyId
-	});
-
-	$: property = $propertyStore.data?.property;
+	let { data }: Props = $props();
 
 	const client = getContextClient();
 
@@ -88,6 +78,22 @@
 			}
 		});
 	}
+	let propertyId = $derived(data.propertyId);
+	let projectId = $derived(data.projectId === 'all' ? undefined : data.projectId);
+	let propertyStore = $derived(
+		queryStore<GetPropertyByIdQuery, GetPropertyByIdQueryVariables>({
+			client,
+			query: GET_PROPERTY_BY_ID,
+			variables: {
+				id: propertyId
+			},
+			pause: !propertyId
+		})
+	);
+	let property: GetPropertyByIdQuery['property'] | undefined = $state();
+	$effect(() => {
+		property = $propertyStore.data?.property;
+	});
 </script>
 
 <svelte:head>
@@ -98,13 +104,18 @@
 	<Heading tag="h2" class="pb-4">
 		{$_('page.propertyPage.title', { values: { name: property.name } })}
 	</Heading>
-	<Card class="max-w-full">
+	<Card class="max-w-full rounded-none rounded-t-lg">
 		<P>
 			{$_('page.propertyPage.editInfo')}
 		</P>
 		<PropertyEdit id="property-edit" bind:property {submitFunction} {deleteFunction} />
 	</Card>
-	<HistoryModal entityId={property.id} dataKey="propertyChanges" query={GET_PROPERTY_CHANGES} />
+	<HistoryModal
+		entityId={property.id}
+		dataKey="propertyChanges"
+		query={GET_PROPERTY_CHANGES}
+		openButtonClass="rounded-none rounded-b-lg"
+	/>
 {:else}
 	<CardPlaceholder />
 {/if}

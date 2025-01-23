@@ -1,8 +1,8 @@
 {
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
-		"module": "es2020",
-		"lib": ["DOM", "ES2020"],
+		"module": "es2022",
+		"lib": ["DOM", "ES2023"],
 		"target": "es2019",
 
 		"isolatedModules": true,

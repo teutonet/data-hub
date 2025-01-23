@@ -2,13 +2,12 @@ import { test, expect } from '@playwright/test';
 import { getRandomString } from './helper/util';
 import { KEYCLOAK, MDB_FRONTEND } from './helper/urls';
 import {
+	createRealmAdminClient,
 	DATA_HUB_ADMIN_PASSWORD,
 	DATA_HUB_ADMIN_USERNAME,
-	signInAdminKeycloak
+	signInWith
 } from './helper/keycloak';
-import { aquireTokenViaDeviceCode, MdbApi } from './helper/mdb-api';
-import axios from 'axios';
-import { Agent } from 'https';
+import { MdbApi } from './helper/mdb-api';
 
 test('User can export sensortypes', async ({ page, context }) => {
 	if (context.browser().browserType().name() !== 'firefox') {
@@ -34,18 +33,7 @@ test('User can export sensortypes', async ({ page, context }) => {
 		}[];
 	};
 
-	await signInAdminKeycloak(page);
-
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub']
-	);
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
+	const realmAdminClient = await createRealmAdminClient();
 	const testPostfix = getRandomString(6);
 	const tenantName = `knuffingen-${testPostfix}`;
 	await realmAdminClient.put<string[]>(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenantName}/`);
@@ -54,6 +42,7 @@ test('User can export sensortypes', async ({ page, context }) => {
 	);
 
 	await page.goto(`${MDB_FRONTEND}api/tenants/${tenantName}/projects/testproject-${testPostfix}`);
+	await signInWith(page, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
 	await page.getByRole('button', { name: 'Neuen Token anlegen' }).click();
 	await page.getByPlaceholder(' ').fill(`testtoken-${testPostfix}`);
 	await page.getByRole('button', { name: 'Token erzeugen' }).click();
@@ -135,18 +124,7 @@ test('User can export sensortypes', async ({ page, context }) => {
 });
 
 test('User can import sensortypes', async ({ page }) => {
-	await signInAdminKeycloak(page);
-
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub']
-	);
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
+	const realmAdminClient = await createRealmAdminClient();
 	const testPostfix = getRandomString(6);
 	const tenantName = `knuffingen-${testPostfix}`;
 	await realmAdminClient.put<string[]>(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenantName}/`);
@@ -184,6 +162,7 @@ test('User can import sensortypes', async ({ page }) => {
     }`;
 
 	await page.goto(`${MDB_FRONTEND}overview`);
+	await signInWith(page, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
 	await page.getByRole('link', { name: 'Projekt auswählen' }).click();
 	await page
 		.getByRole('tooltip')

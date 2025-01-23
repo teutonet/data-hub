@@ -8,9 +8,9 @@
 	import { Button, Modal, P, Spinner } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
 
-	let createModalOpen = false;
-	let newTenantName = '';
-	let requestSent = false;
+	let createModalOpen = $state(false);
+	let newTenantName = $state('');
+	let requestSent = $state(false);
 
 	const promise = apiFetch<string[]>('data-hub/tenants', $accessToken, true);
 
@@ -62,7 +62,7 @@
 <Modal bind:open={createModalOpen} title={$_('page.tenantsList.newTenantModalTitle')} outsideclose>
 	<form
 		novalidate
-		on:submit|preventDefault={(event) => handleSubmit(event, createNewTenant)}
+		onsubmit={(event) => handleSubmit(event, createNewTenant)}
 		class="needs-validation"
 	>
 		<div class="flex flex-col gap-4">

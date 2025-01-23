@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/sveltekit';
-import { captureConsoleIntegration } from '@sentry/integrations';
 import { getConfig } from '$lib/config';
 import type { HandleClientError } from '@sveltejs/kit';
 
@@ -12,7 +11,7 @@ if (dsn) {
 		dsn,
 
 		integrations: [
-			captureConsoleIntegration({
+			Sentry.captureConsoleIntegration({
 				levels: ['error']
 			})
 		],

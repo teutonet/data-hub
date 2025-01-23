@@ -14,17 +14,23 @@
 	import type { TableHeadItem } from './common/sortingTableUtils';
 	import { caseInsensitiveIncludes } from './stringUtils';
 	import { activeProjectId } from './nav/activeProject';
-	export let sensors: NonNullable<GetAllSensorsQuery['sensors']>;
+	interface Props {
+		sensors: NonNullable<GetAllSensorsQuery['sensors']>;
+	}
 
-	let filteredProject: string;
-	let filteredId: string;
-	let filteredName: string;
+	let { sensors }: Props = $props();
 
-	$: items = sensors.filter(
-		(item) =>
-			(filteredProject ? caseInsensitiveIncludes(item.project, filteredProject) : true) &&
-			(filteredId ? caseInsensitiveIncludes(item.id, filteredId) : true) &&
-			(filteredName ? caseInsensitiveIncludes(item.name, filteredName) : true)
+	let filteredProject: string = $state('');
+	let filteredId: string = $state('');
+	let filteredName: string = $state('');
+
+	let items = $derived(
+		sensors.filter(
+			(item) =>
+				(filteredProject ? caseInsensitiveIncludes(item.project, filteredProject) : true) &&
+				(filteredId ? caseInsensitiveIncludes(item.id, filteredId) : true) &&
+				(filteredName ? caseInsensitiveIncludes(item.name, filteredName) : true)
+		)
 	);
 
 	function resetFilters() {
@@ -55,11 +61,11 @@
 		}
 	];
 
-	$: filtered = !!filteredId || !!filteredName || !!filteredProject;
+	let filtered = $derived(!!filteredId || !!filteredName || !!filteredProject);
 </script>
 
 <SortingTable hoverable {items} {shownKeys} componentLocKey="component.sensorsOverview">
-	<svelte:fragment slot="caption">
+	{#snippet caption()}
 		<caption class="caption-top">
 			<Accordion>
 				<AccordionItem>
@@ -105,8 +111,8 @@
 				</AccordionItem>
 			</Accordion>
 		</caption>
-	</svelte:fragment>
-	<svelte:fragment slot="bodyContent" let:item>
+	{/snippet}
+	{#snippet bodyContent(item)}
 		<TableBodyRow
 			class="cursor-pointer"
 			on:click={async () => await goto(`sensortype/${encodeURI(item.id)}`)}
@@ -117,5 +123,5 @@
 			<TableBodyCell>{item.id}</TableBodyCell>
 			<TableBodyCell>{item.name}</TableBodyCell>
 		</TableBodyRow>
-	</svelte:fragment>
+	{/snippet}
 </SortingTable>

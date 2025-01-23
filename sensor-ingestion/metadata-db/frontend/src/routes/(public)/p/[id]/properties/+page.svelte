@@ -13,31 +13,37 @@
 	import type { PageData } from './$types';
 	import { projectCondition } from '$lib/common/graphql/utils';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const client = getContextClient();
 
-	$: propertyStore = queryStore<GetPropertiesQuery, GetPropertiesQueryVariables>({
-		client,
-		query: GET_PROPERTIES,
-		variables: {
-			condition: {
-				project: projectCondition(data.projectId)
+	let propertyStore = $derived(
+		queryStore<GetPropertiesQuery, GetPropertiesQueryVariables>({
+			client,
+			query: GET_PROPERTIES,
+			variables: {
+				condition: {
+					project: projectCondition(data.projectId)
+				}
+			},
+			context: {
+				additionalTypenames: ['Property']
 			}
-		},
-		context: {
-			additionalTypenames: ['Property']
-		}
-	});
+		})
+	);
 
-	$: properties = $propertyStore.data?.properties ?? [];
+	let properties = $derived($propertyStore.data?.properties ?? []);
 </script>
 
 <PageTitle headingTag="h2" headingClass="pb-4" title={$_('page.propertyList.title')} />
 
 <PropertiesOverview {properties} />
 {#if data.projectId !== 'all'}
-	<Button href="property/new">
+	<Button href="property/new" class="rounded-none rounded-b-lg">
 		<PlusIcon />
 		{$_('page.propertyList.newPropertyButton')}
 	</Button>

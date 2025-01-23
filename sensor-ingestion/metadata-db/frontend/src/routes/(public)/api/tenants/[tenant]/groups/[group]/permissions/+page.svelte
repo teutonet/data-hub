@@ -5,7 +5,11 @@
 	import { accessToken } from '$lib/common/auth';
 	import { fetchPermissions, type GroupResource } from '$lib/nav/fetchUtils';
 
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const tenant: string = data.tenant;
 	const group: string = data.group;
@@ -16,7 +20,7 @@
 		group
 	};
 
-	let promise = fetchPermissions(resource, $accessToken);
+	let promise = $state(fetchPermissions(resource, $accessToken));
 
 	function reload() {
 		promise = fetchPermissions(resource, $accessToken);

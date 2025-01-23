@@ -1,6 +1,6 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:23.5.0-alpine
+FROM ${REGISTRY_MIRROR_LIB}node:23.6.0-alpine
 
 WORKDIR /migrate
 ENTRYPOINT [ "node_modules/.bin/graphile-migrate" ]

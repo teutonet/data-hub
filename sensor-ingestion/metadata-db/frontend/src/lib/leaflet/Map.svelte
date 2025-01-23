@@ -5,15 +5,19 @@
 	import { _ } from 'svelte-i18n';
 	import { replaceComma } from '$lib/stringUtils';
 
-	export let latSensor: string | null;
-	export let lngSensor: string | null;
-	export let sensorName: string;
+	interface Props {
+		latSensor: string | null;
+		lngSensor: string | null;
+		sensorName: string;
+	}
+
+	let { latSensor = $bindable(), lngSensor = $bindable(), sensorName }: Props = $props();
 
 	let map: L.Map;
 	let markerLayers: L.LayerGroup = L.layerGroup();
 	let changeMarker: L.Marker | null = null;
 	let mouseDownCenter: LatLng;
-	let openMap: boolean;
+	let openMap: boolean = $state(false);
 
 	function getMouseDownCenter() {
 		mouseDownCenter = map.getCenter();
@@ -44,7 +48,9 @@
 			changeMarker.addTo(markerLayers).setIcon(createIcon('text-orange-600'));
 		}
 	}
-	$: updateMouseManual(latSensor, lngSensor);
+	$effect(() => {
+		updateMouseManual(latSensor, lngSensor);
+	});
 
 	function createMarker(loc: LatLngExpression) {
 		let marker = L.marker(loc)
@@ -110,16 +116,16 @@
 	}
 </script>
 
-<svelte:window on:resize={resizeMap} />
+<svelte:window onresize={resizeMap} />
 {#if openMap}
 	<div
 		class="map z-10 h-[600px] min-h-[600px] w-[600px] min-w-[600px] rounded-xl"
 		use:mapAction
 		aria-label="Map"
 		role="presentation"
-		on:mousedown={getMouseDownCenter}
-		on:click={mouseClick}
-	/>
+		onmousedown={getMouseDownCenter}
+		onclick={mouseClick}
+	></div>
 {:else}
 	<div
 		class="map z-10 mx-auto flex h-[600px] min-h-[600px] w-[600px] min-w-[600px] items-center justify-center rounded-xl bg-slate-300"

@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	export enum HistoryType {
 		THING,
 		SENSOR,
@@ -57,35 +57,49 @@
 	const UNIVERSAL_EXCLUDED_KEYS = ['id', 'pg_memento_audit_id', 'pgmemento_audit_id'];
 	const KEYS_REQUIRING_NAME = ['sensor_id', 'property_id'];
 
-	export let entityId: Scalars['UUID']['input'];
-	export let excludedKeys: string[] = [];
-	export let dataKey: string;
-	export let query: TypedDocumentNode;
-	export let additionalNames: Record<string, string> | undefined = undefined;
+	interface Props {
+		entityId: Scalars['UUID']['input'];
+		excludedKeys?: string[];
+		dataKey: string;
+		query: TypedDocumentNode;
+		additionalNames?: Record<string, string> | undefined;
+		openButtonClass: string | undefined;
+	}
 
-	let filteredName: string | undefined = undefined;
-	let filteredDateFrom: string | undefined = undefined;
-	let filteredDateTo: string | undefined = undefined;
-	let filteredAttribute: string | undefined = undefined;
-
-	let modalOpen = false;
-	$: uselessKeys = UNIVERSAL_EXCLUDED_KEYS.concat(excludedKeys);
-
-	$: historyStore = queryStore<
-		ThingChangesQuery | SensorChangesQuery | SensorPropertyChangesQuery | PropertyChangesQuery,
-		| ThingChangesQueryVariables
-		| SensorChangesQueryVariables
-		| SensorPropertyChangesQueryVariables
-		| PropertyChangesQueryVariables
-	>({
-		client: client,
+	let {
+		entityId,
+		excludedKeys = [],
+		dataKey,
 		query,
-		variables: { id: entityId },
-		context: {
-			additionalTypenames: ['Property', 'Thing', 'ThingOffset', 'Sensor', 'SensorProperty']
-		},
-		pause: !modalOpen
-	});
+		additionalNames = undefined,
+		openButtonClass = undefined
+	}: Props = $props();
+
+	let filteredName: string | undefined = $state(undefined);
+	let filteredDateFrom: string | undefined = $state(undefined);
+	let filteredDateTo: string | undefined = $state(undefined);
+	let filteredAttribute: string | undefined = $state(undefined);
+
+	let modalOpen = $state(false);
+	let uselessKeys = $derived(UNIVERSAL_EXCLUDED_KEYS.concat(excludedKeys));
+
+	let historyStore = $derived(
+		queryStore<
+			ThingChangesQuery | SensorChangesQuery | SensorPropertyChangesQuery | PropertyChangesQuery,
+			| ThingChangesQueryVariables
+			| SensorChangesQueryVariables
+			| SensorPropertyChangesQueryVariables
+			| PropertyChangesQueryVariables
+		>({
+			client: client,
+			query,
+			variables: { id: entityId },
+			context: {
+				additionalTypenames: ['Property', 'Thing', 'ThingOffset', 'Sensor', 'SensorProperty']
+			},
+			pause: !modalOpen
+		})
+	);
 
 	type ProcessedChange = AuditEvent & {
 		table: string;
@@ -187,30 +201,33 @@
 		);
 	}
 
-	$: formatDatetime = (rawDate: string | null | undefined): string => {
+	let formatDatetime = $derived((rawDate: string | null | undefined): string => {
 		if (!rawDate) {
 			return '';
 		} else {
 			let asDate = new Date(rawDate);
 			return `${$date(asDate, { format: 'medium' })} ${$time(asDate)}`;
 		}
-	};
+	});
 
-	$: formatDate = (rawDate: string | null | undefined): string => {
+	let formatDate = $derived((rawDate: string | null | undefined): string => {
 		if (!rawDate) {
 			return '';
 		} else {
 			let asDate = new Date(rawDate);
 			return $date(asDate, { format: 'medium' });
 		}
-	};
+	});
 
 	function formatUser(userJson: string | null | undefined): string {
+		if (!userJson) {
+			return '-';
+		}
 		interface SessionInfo {
 			preferred_username?: string;
 			api_user?: string;
 		}
-		const sessionInfo: SessionInfo = JSON.parse(userJson || '');
+		const sessionInfo: SessionInfo = JSON.parse(userJson);
 		if (sessionInfo.preferred_username) {
 			return sessionInfo.preferred_username;
 		} else if (sessionInfo.api_user) {
@@ -220,19 +237,19 @@
 		}
 	}
 
-	$: changes =
+	let changes = $derived(
 		$historyStore.data && dataKey
 			? $historyStore.data[dataKey]
 					?.flatMap((c: AuditEvent): ProcessedChange[] => {
 						if (c) {
-							const before = addNameKeys(filterOutUselessKeys(JSON.parse(c?.valuesBefore ?? '{}')));
-							const after = addNameKeys(filterOutUselessKeys(JSON.parse(c?.valuesAfter ?? '{}')));
+							const before = addNameKeys(filterOutUselessKeys(JSON.parse(c.valuesBefore ?? '{}')));
+							const after = addNameKeys(filterOutUselessKeys(JSON.parse(c.valuesAfter ?? '{}')));
 							const changesTable = zipChanges(before, after);
 							return [
 								{
 									...c,
 									table: getTableName(c.eventKey ?? ''),
-									displayName: formatUser(c?.sessionInfo),
+									displayName: formatUser(c.sessionInfo),
 									parsedValuesBefore: before,
 									parsedValuesAfter: after,
 									changesTable
@@ -248,7 +265,8 @@
 							Object.keys(c.parsedValuesBefore).length > 0
 						);
 					})
-			: [];
+			: []
+	);
 
 	function attributeFilter(change: ProcessedChange, keyOrString: string) {
 		const hasKey = change.changesTable.find(([key, _]) => {
@@ -264,19 +282,28 @@
 		return !!hasKey;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-	$: filteredName,
-		filteredAttribute,
-		filteredDateFrom,
-		filteredDateTo,
-		(paginationParams.offset = 0);
+	// run(() => {
+	// 	filteredName,
+	// 		filteredAttribute,
+	// 		filteredDateFrom,
+	// 		filteredDateTo,
+	// 		(paginationParams.offset = 0);
+	// });
 
-	let filteredItems: ProcessedChange[];
-	$: filteredItems = changes.filter(
-		(change: ProcessedChange) =>
-			(filteredName ? caseInsensitiveIncludes(change.displayName, filteredName) : true) &&
-			(filteredAttribute ? attributeFilter(change, filteredAttribute) : true) &&
-			filterDateFromTo(change.stmtDate, filteredDateFrom, filteredDateTo)
+	$effect(() => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+		filteredName || filteredAttribute || filteredDateFrom || filteredDateTo;
+
+		paginationParams.offset = 0;
+	});
+
+	let filteredItems: ProcessedChange[] = $derived(
+		changes.filter(
+			(change: ProcessedChange) =>
+				(filteredName ? caseInsensitiveIncludes(change.displayName, filteredName) : true) &&
+				(filteredAttribute ? attributeFilter(change, filteredAttribute) : true) &&
+				filterDateFromTo(change.stmtDate, filteredDateFrom, filteredDateTo)
+		)
 	);
 
 	const shownKeys: TableHeadItem[] = [
@@ -307,14 +334,15 @@
 		}
 	];
 
-	let paginationParams: PaginationOptions = {
+	let paginationParams: PaginationOptions = $state({
 		first: 25,
 		offset: 0
-	};
+	});
 </script>
 
 <Button
 	color="alternative"
+	class={openButtonClass}
 	on:click={() => {
 		modalOpen = true;
 	}}
@@ -334,7 +362,7 @@
 		sortKey="stmtDate"
 		bind:paginationParams
 	>
-		<svelte:fragment slot="caption">
+		{#snippet caption()}
 			<caption class="caption-top">
 				<Accordion>
 					<AccordionItem>
@@ -412,8 +440,8 @@
 					</AccordionItem>
 				</Accordion>
 			</caption>
-		</svelte:fragment>
-		<svelte:fragment slot="bodyContent" let:item>
+		{/snippet}
+		{#snippet bodyContent(item)}
 			<TableBody
 				tableBodyClass="border-b last:border-b-0 hover:bg-gray-100 hover:dark:bg-slate-700"
 			>
@@ -449,6 +477,6 @@
 					</TableBodyRow>
 				{/each}
 			</TableBody>
-		</svelte:fragment>
+		{/snippet}
 	</SortingTable>
 </Modal>

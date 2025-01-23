@@ -1,5 +1,7 @@
 import { Page } from 'playwright';
 import { KEYCLOAK } from './urls';
+import { getRandomString } from './util';
+import axios, { AxiosInstance } from 'axios';
 
 export const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD;
 export const DATA_HUB_ADMIN_USERNAME = `data-hub-admin`;
@@ -85,4 +87,71 @@ export async function signInAdminKeycloak(page: Page) {
 	await page.getByLabel('Username or email').fill('user');
 	await page.getByLabel('Password', { exact: true }).fill(KEYCLOAK_ADMIN_PASSWORD);
 	await page.getByRole('button', { name: 'Sign In' }).click();
+}
+
+class KeycloakUser {
+	constructor(
+		public username: string,
+		public id: string | null = null
+	) {}
+
+	async token(): Promise<string> {
+		const result = await axios.postForm<{ access_token: string }>(
+			`${KEYCLOAK}realms/udh/protocol/openid-connect/token`,
+			{
+				grant_type: 'password',
+				password: DATA_HUB_ADMIN_PASSWORD,
+				username: this.username
+			},
+			{
+				auth: {
+					username: 'integration-test',
+					password: DATA_HUB_ADMIN_PASSWORD
+				}
+			}
+		);
+		return result.data.access_token;
+	}
+}
+
+/** groups are in the form `tenant/group`
+ * */
+export async function createTestUserViaApi(groups: string[], username: string | null = null) {
+	const adminHeader = { Authorization: `Bearer ${await ADMIN_USER.token()}` };
+	const email = `${username ?? getRandomString(6)}@example.com`;
+	const response = await axios.post(
+		`${KEYCLOAK}admin/realms/udh/users`,
+		{
+			email: email,
+			emailVerified: true,
+			username: email,
+			firstName: 'first',
+			lastName: 'last',
+			groups: groups,
+			enabled: true
+		},
+		{
+			maxRedirects: 0,
+			headers: adminHeader
+		}
+	);
+	const userId = (response.headers['location'] as string).split('/').at(-1);
+	await axios.put(
+		`${KEYCLOAK}admin/realms/udh/users/${userId}/reset-password`,
+		{
+			temporary: false,
+			type: 'password',
+			value: DATA_HUB_ADMIN_PASSWORD
+		},
+		{ headers: adminHeader }
+	);
+	return new KeycloakUser(email, userId);
+}
+
+export const ADMIN_USER = new KeycloakUser(DATA_HUB_ADMIN_USERNAME);
+
+export async function createRealmAdminClient(): Promise<AxiosInstance> {
+	return axios.create({
+		headers: { Authorization: `Bearer ${await ADMIN_USER.token()}` }
+	});
 }
