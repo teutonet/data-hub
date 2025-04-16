@@ -68,7 +68,7 @@
 		<Spinner />
 	{:then value}
 		{#if Array.isArray(value)}
-			{#each value as project}
+			{#each value as project (project)}
 				<div class="flex flex-row gap-2">
 					<Button class="grow" href={`projects/${project}`}>
 						{project}

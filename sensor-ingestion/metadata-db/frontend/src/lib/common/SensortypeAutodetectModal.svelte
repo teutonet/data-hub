@@ -203,7 +203,7 @@
 				</TableHeadCell>
 			</TableHead>
 			<TableBody>
-				{#each thingMatches as match}
+				{#each thingMatches as match (match.id)}
 					<TableBodyRow>
 						<TableBodyCell>
 							<Checkbox
@@ -224,7 +224,7 @@
 							{match.deveui ?? '-'}
 						</TableBodyCell>
 						<TableBodyCell>
-							{#each Object.entries(match.labels) as [labelKey, labelValue]}
+							{#each Object.entries(match.labels) as [labelKey, labelValue] (labelKey)}
 								<P>
 									{labelKey}: {labelValue}
 								</P>
@@ -233,7 +233,7 @@
 							{/each}
 						</TableBodyCell>
 						<TableBodyCell>
-							{#each Object.entries(match.metrics) as [metricsKey, metricsValue]}
+							{#each Object.entries(match.metrics) as [metricsKey, metricsValue] (metricsKey)}
 								<P>
 									{metricsKey}: {metricsValue}
 								</P>
@@ -242,7 +242,7 @@
 							{/each}
 						</TableBodyCell>
 						<TableBodyCell>
-							{#each match.unusedKeys as unusedKey}
+							{#each match.unusedKeys as unusedKey (unusedKey)}
 								<P>
 									{unusedKey}
 								</P>
@@ -251,7 +251,7 @@
 							{/each}
 						</TableBodyCell>
 						<TableBodyCell>
-							{#each match.missingKeys as missingKey}
+							{#each match.missingKeys as missingKey (missingKey)}
 								<P>
 									{missingKey}
 								</P>

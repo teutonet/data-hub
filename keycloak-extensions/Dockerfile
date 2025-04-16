@@ -12,7 +12,7 @@ RUN mvn package ; rm -r target/
 COPY theme /project/
 RUN mvn package && cp target/*.jar /target
 
-FROM gradle:8.12-alpine AS kotlin-build
+FROM gradle:8.13-alpine AS kotlin-build
 WORKDIR /home/gradle/src
 COPY --chown=gradle:gradle udh-sync/*.kts ./
 RUN gradle --write-verification-metadata sha256 help -i

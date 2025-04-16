@@ -4,22 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.95"
-axum = "0.8.1"
-bytes = "1.9.0"
-chrono = "0.4.39"
+anyhow = "1.0.97"
+axum = "0.8.3"
+bytes = "1.10.1"
+chrono = "0.4.40"
 deadpool-postgres = "0.14.1"
 geohash = "0.13.1"
-geojson = "0.24.1"
+geojson = "0.24.2"
 mime = "0.3.17"
 prometheus-http-query = { version = "0.8.3", default-features = false }
-promql-parser = "0.4.3"
-reqwest = { version = "0.12.12", default-features = false }
-rustls = { version = "0.23.21", default-features = false, features = ["ring"] }
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.135"
-tokio = { version = "1.43.0", features = ["rt", "macros", "signal"] }
-tokio-postgres = "0.7.12"
+promql-parser = "0.5.0"
+reqwest = { version = "0.12.15", default-features = false }
+rustls = { version = "0.23.25", default-features = false, features = ["ring"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+tokio = { version = "1.44.2", features = ["rt", "macros", "signal"] }
+tokio-postgres = "0.7.13"
 tokio-postgres-rustls = "0.13.0"
 tower-http = { version = "0.6.2", features = ["compression-br", "compression-deflate", "compression-gzip", "compression-zstd", "cors", "trace"] }
 tracing = "0.1.41"

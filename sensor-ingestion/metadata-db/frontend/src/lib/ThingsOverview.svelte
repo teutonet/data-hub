@@ -16,6 +16,9 @@
 	import type { TableHeadItem } from './common/sortingTableUtils';
 	import { caseInsensitiveIncludes } from './stringUtils';
 	import { activeProjectId } from './nav/activeProject';
+	import SensorMassCopyModal from './SensorMassCopyModal.svelte';
+	import { projectAccess } from './common/auth';
+
 	interface Props {
 		things: NonNullable<GetAllThingsQuery['things']>;
 	}
@@ -61,29 +64,34 @@
 		}
 	];
 
-	let items = $derived(
-		things
-			.map((thing) => {
-				const thingNameOrId = thing.name ?? thing.id;
-				const sensorNameOrId = thing.sensor?.name ?? thing.sensor?.id ?? '-';
+	let formattedThings = $derived(
+		things.map((thing) => {
+			const thingNameOrId = thing.name ?? thing.id;
+			const sensorNameOrId = thing.sensor?.name ?? thing.sensor?.id ?? '-';
 
-				return { ...thing, thingNameOrId, sensorNameOrId };
-			})
-			.filter(
-				(item) =>
-					(filteredName ? caseInsensitiveIncludes(item.thingNameOrId, filteredName) : true) &&
-					(filteredProject ? caseInsensitiveIncludes(item.project, filteredProject) : true) &&
-					(filteredSensorType
-						? caseInsensitiveIncludes(item.sensorNameOrId, filteredSensorType)
-						: true) &&
-					(filteredStatus
-						? item.status && caseInsensitiveIncludes(item.status, filteredStatus)
-						: true)
-			)
+			return { ...thing, thingNameOrId, sensorNameOrId };
+		})
 	);
+
+	let items = $derived(
+		formattedThings.filter(
+			(item) =>
+				(filteredName ? caseInsensitiveIncludes(item.thingNameOrId, filteredName) : true) &&
+				(filteredProject ? caseInsensitiveIncludes(item.project, filteredProject) : true) &&
+				(filteredSensorType
+					? caseInsensitiveIncludes(item.sensorNameOrId, filteredSensorType)
+					: true) &&
+				(filteredStatus
+					? item.status && caseInsensitiveIncludes(item.status, filteredStatus)
+					: true)
+		)
+	);
+
 	let filtered = $derived(
 		!!filteredProject || !!filteredName || !!filteredSensorType || !!filteredStatus
 	);
+
+	let thingArr = $derived(filtered ? items : formattedThings);
 </script>
 
 <SortingTable hoverable {shownKeys} {items} componentLocKey="component.thingsOverview">
@@ -135,6 +143,10 @@
 						</FloatingLabelInput>
 					</div>
 					<div class="mt-2 flex w-full justify-end gap-2">
+						{#if $projectAccess.length > 1}
+							<SensorMassCopyModal things={thingArr} />
+						{/if}
+
 						<Button on:click={() => resetFilters()}>
 							{$_('component.thingsOverview.resetFilters')}
 						</Button>

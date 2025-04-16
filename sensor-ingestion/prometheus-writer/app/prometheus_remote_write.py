@@ -55,6 +55,8 @@ query Properties($deveui: String!) {
             offsetValue
         }
         customLabels
+        latestError
+        errorTimestamp
     }
 }
 """
@@ -117,6 +119,22 @@ mutation createPayload($thingId: UUID!, $payload: JSON!, $lastValues: JSON!) {
         thingLivedatum {
             lastValues
         }
+    }
+}
+"""
+
+SAVE_ERROR_MUTATION = """
+mutation saveWriterError($thingId: UUID!, $error: String!, $timestamp: Datetime!) {
+    updateThing(input: {patch: {latestError: $error, errorTimestamp: $timestamp}, id: $thingId}) {
+        clientMutationId
+    }
+}
+"""
+
+DELETE_ERROR_MUTATION = """
+mutation deleteWriterError($thingId: UUID!) {
+    updateThing(input: {patch: {latestError : null, errorTimestamp: null}, id: $thingId}) {
+        clientMutationId
     }
 }
 """
@@ -207,7 +225,6 @@ def write(msg, project):
 
 first_request = True
 
-
 @app.route("/api/v1/write", methods=["POST"])
 @openapi
 def message_received():
@@ -236,16 +253,18 @@ def message_received():
 
         if mdb_response.status_code == 200:
             logging.debug("mdb response: %s", mdb_response)
+
+        # something is wrong with the token, tell the client
         elif mdb_response.status_code in [401, 403]:
             logging.warning("authentication problem in mdb request: %s %s %s",
                             mdb_response, mdb_response.text,
                             authorization_header)
-            # something is wrong with the token, tell the client
             abort(mdb_response.status_code, "Check your token")
         else:
             logging.error("unexpected response from mdb: %s %s", mdb_response,
                         mdb_response.text)
             abort(500)
+            
         return mdb_response.json()
 
     things = do_graphql(GET_THING_WITH_PROPERTIES_QUERY, {"deveui": deveui})["data"]["things"]
@@ -305,7 +324,6 @@ def message_received():
 
     do_graphql(CREATE_PAYLOAD_MUTATION if thing_livedatum is None else UPDATE_PAYLOAD_MUTATION, {"thingId": thing["id"], "payload": json.dumps(request_payload), "lastValues": json.dumps(updated_last_values)})
 
-
     if thing["status"] != "activated":
         logging.debug("got data for thing with deveui %s that is not yet activated", deveui)
     else:
@@ -315,12 +333,25 @@ def message_received():
             for custom_label_raw in custom_labels_arr:
                 label_key, label_value = custom_label_raw.split(":", 1)
                 custom_labels[label_key] = label_value
-        for sample in create_samples(request_payload, source_path, thing, last_values,
-                                    ooo_window=thing["sensor"]["outOfOrderSeconds"], custom_labels=custom_labels):
-            write(**sample)
+        try:
+            for sample in create_samples(request_payload, source_path, thing, last_values,
+                                        ooo_window=thing["sensor"]["outOfOrderSeconds"], custom_labels=custom_labels):
+                write(**sample)
+            # erase latest error from thing if an error was saved
+            if(thing["latestError"] != None):
+                delete_response = do_graphql(DELETE_ERROR_MUTATION, {"thingId": thing["id"]})
+                if(delete_response["data"]["updateThing"]):
+                    logging.info("Error from %s was erased!", thing["name"])
+                else:
+                    logging.error("There was an error erasing a thing error: %s %s %s",
+                                thing["name"], delete_response, delete_response.text)
+        except Exception as err:
+            import sys
+            logging.error(f"An error occured: request_payload={request_payload}, thing={thing}", exc_info=sys.exc_info())
+            do_graphql(SAVE_ERROR_MUTATION, {"thingId": thing["id"], "error": f"{err}", "timestamp": f"{datetime.now()}"})
+            abort(400, err)
 
     return "SUCCESS", 200
-
 
 def legal_timestamp(ts, now, ooo_window):
     return min(max(now - ooo_window * 1000, ts), now)

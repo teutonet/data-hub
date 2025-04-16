@@ -1,0 +1,46 @@
+{{- if not .Values.mimir.externalS3.enabled -}}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "minio") }}
+spec:
+  interval: 1h0m0s
+  url: https://charts.min.io/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "minio") }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "minio") }}
+  chart:
+    spec:
+      chart: minio
+      version: 5.4.0
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ include "data-hub.name" (dict "context" . "name" "minio") }}
+  interval: 1h0m0s
+  timeout: 5m
+  values:
+    mode: standalone
+    rootUser: admin
+    buckets:
+      - name: mimir-tsdb
+        policy: none
+        purge: false
+      - name: mimir-ruler
+        policy: none
+        purge: false
+    persistence:
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    rootPassword: supersecret
+    # Changed the mc config path to '/tmp' from '/etc' as '/etc' is only writable by root and OpenShift will not permit this.
+    configPathmc: "/tmp/minio/mc/"
+{{- end -}}

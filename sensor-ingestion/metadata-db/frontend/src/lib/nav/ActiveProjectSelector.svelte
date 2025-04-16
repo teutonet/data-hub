@@ -19,6 +19,10 @@
 		}
 		autoselectProject = $projectAccess.length === 0;
 	});
+
+	const dropdownContainerClass = 'min-w-50 searchDropdown divide-y z-[99]';
+	const dropdownClass =
+		'py-0 z-50 !transform-none !left-0 !top-12 min-w-full searchDropdown overflow-y-auto max-h-80';
 </script>
 
 <div class="py-[0.15rem]">
@@ -37,14 +41,14 @@
 	</div>
 </div>
 
-<Dropdown>
+<Dropdown containerClass={dropdownContainerClass} class={dropdownClass}>
 	<DropdownItem href={projectUrl('all', 'overview')} data-sveltekit-preload-data="tap">
 		{$_('component.nav.allProjects')}
 	</DropdownItem>
 	{#if $projectAccess.length}
 		<DropdownDivider />
 	{/if}
-	{#each $projectAccess as project, i}
+	{#each $projectAccess as project, i (project)}
 		<DropdownItem href={projectUrl(project, 'overview')} data-sveltekit-preload-data="tap">
 			{project}
 		</DropdownItem>

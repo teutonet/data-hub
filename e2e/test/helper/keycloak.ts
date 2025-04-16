@@ -1,7 +1,7 @@
 import { Page } from 'playwright';
-import { KEYCLOAK } from './urls';
+import { KEYCLOAK, RESOURCE_API } from './urls';
 import { getRandomString } from './util';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 
 export const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD;
 export const DATA_HUB_ADMIN_USERNAME = `data-hub-admin`;
@@ -154,4 +154,56 @@ export async function createRealmAdminClient(): Promise<AxiosInstance> {
 	return axios.create({
 		headers: { Authorization: `Bearer ${await ADMIN_USER.token()}` }
 	});
+}
+
+let setupClient: AxiosInstance;
+
+export async function withSetupClient<T>(f: (client: AxiosInstance) => Promise<T>) {
+	if (!setupClient) {
+		setupClient = await createRealmAdminClient();
+		return await f(setupClient);
+	}
+
+	try {
+		return await f(setupClient);
+	} catch (e) {
+		if (e instanceof AxiosError && e.status === 401) {
+			setupClient = await createRealmAdminClient();
+			return await f(setupClient);
+		} else throw e;
+	}
+}
+
+export async function createResources(paths: string[]) {
+	const created = new Set();
+
+	for (const path of paths) {
+		const elements = path.split('/');
+		let url = RESOURCE_API.replace(/\/$/, '');
+		while (elements.length > 0) {
+			url += `/${elements.shift()}/${elements.shift()}`;
+			const create = async () => await setupClient.put(url);
+
+			if (!created.has(url)) {
+				await withSetupClient(create);
+				created.add(url);
+			}
+		}
+	}
+}
+
+export async function createResourceToken(
+	tenantName: string,
+	projectName: string,
+	tokenName: string
+) {
+	const url =
+		RESOURCE_API.replace(/\/$/, '') +
+		`/tenants/${tenantName}/projects/${projectName}/sensor-credentials/${tokenName}`;
+	const create = async () => await setupClient.put(url);
+
+	const response = await withSetupClient(create);
+	const { username, password } = response.data as { username: string; password: string };
+
+	return { username, password };
 }

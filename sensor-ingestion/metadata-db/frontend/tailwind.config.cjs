@@ -1,32 +1,31 @@
+const plugin = require('tailwindcss/plugin');
+
 const config = {
 	content: [
 		'./src/**/*.{html,js,svelte,ts}',
 		'./node_modules/flowbite-svelte/**/*.{html,js,svelte,ts}'
 	],
 
-	plugins: [require('flowbite/plugin')],
+	plugins: [
+		require('flowbite/plugin'),
 
-	darkMode: 'class',
+		//workaround for flowbite-svelte still using tailwind 2 *facepalm
+		// this basically adds back the missing class bg-opacity
+		plugin(function ({ theme, matchUtilities }) {
+			const opacities = theme('opacity'); // Get the opacity theme values from Tailwind
 
-	theme: {
-		extend: {
-			colors: {
-				// flowbite-svelte
-				primary: {
-					50: '#FFF5F2',
-					100: '#FFF1EE',
-					200: '#FFE4DE',
-					300: '#FFD5CC',
-					400: '#FFBCAD',
-					500: '#FE795D',
-					600: '#EF562F',
-					700: '#EB4F27',
-					800: '#CC4522',
-					900: '#A5371B'
-				}
-			}
-		}
-	}
+			matchUtilities(
+				{
+					'bg-opacity': (value) => ({
+						backgroundColor: `rgba(0, 0, 0, ${value})` // Create the background color opacity utility
+					})
+				},
+				{ values: opacities, type: 'value' } // Apply the values from the opacity theme
+			);
+		})
+	],
+
+	darkMode: 'selector'
 };
 
 module.exports = config;

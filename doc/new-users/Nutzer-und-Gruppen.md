@@ -104,7 +104,7 @@ Nutzer, die Sie den in der Berechtigung spezifizierten Gruppen hinzufügen, erha
 
 Um einen Nutzer zu erstellen und ihrem Tenant hinzuzufügen, folgen Sie diesen Schritten:
 
-1. Melden Sie sich im Keycloak mit einem Administrator-Konto an ([Link](https://login.data-hub.teuto.net/realms/udh)).
+1. Melden Sie sich im Keycloak mit einem Administrator-Konto an ([Link](https://login.data-hub.teuto.net/admin/udh/console/)).
 
 2. Navigieren Sie zur Liste der Benutzer ("Users").
 

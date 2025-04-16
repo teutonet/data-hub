@@ -62,7 +62,7 @@
 	<Spinner />
 {:then groups}
 	<div class="flex flex-col gap-2">
-		{#each groups as group}
+		{#each groups as group (group)}
 			<div class="flex flex-row gap-2">
 				<Button class="grow" href={`groups/${group}`}>
 					{group}

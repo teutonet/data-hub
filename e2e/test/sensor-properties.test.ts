@@ -1,12 +1,14 @@
 import test, { expect } from 'playwright/test';
 import { aquireTokenViaDeviceCode, MdbApi } from './helper/mdb-api';
-import { DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD } from './helper/keycloak';
-import { signInAdminKeycloak } from './helper/keycloak';
+import {
+	DATA_HUB_ADMIN_USERNAME,
+	DATA_HUB_ADMIN_PASSWORD,
+	signInAdminKeycloak
+} from './helper/keycloak';
 import { Agent } from 'https';
 import axios from 'axios';
-import { GRAFANA, KEYCLOAK } from './helper/urls';
+import { GRAFANA, KEYCLOAK, MDB_FRONTEND } from './helper/urls';
 import { getRandomString } from './helper/util';
-import { MDB_FRONTEND } from './helper/urls';
 test(
 	'technical_ prefix cant be used',
 	{
@@ -34,7 +36,7 @@ test(
 		);
 
 		await page.goto(MDB_FRONTEND + 'overview');
-		await page.getByRole('link', { name: 'Projekt auswählen' }).click();
+		await page.getByText('Projekt auswählen').click();
 		await page
 			.getByRole('tooltip')
 			.getByRole('link', { name: `knuffingen-${testPostfix}.testproject-${testPostfix}` })
@@ -132,7 +134,10 @@ test('label names are escaped', async ({ page }) => {
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`knuffingen-${testPostfix}:admin`).click();
 	await page.getByTestId('data-testid Toggle menu').click();
-	await page.getByRole('link', { name: 'Explore' }).click();
+	await page
+		.getByTestId('data-testid navigation mega-menu')
+		.getByRole('link', { name: 'Explore' })
+		.click();
 
 	await page.getByLabel('Select a data source').click();
 	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();

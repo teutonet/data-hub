@@ -1,13 +1,12 @@
 import test, { Page, expect } from 'playwright/test';
 import { GRAFANA, GRAFANA_PUBLIC, KEYCLOAK } from './helper/urls';
-import axios from 'axios';
-import { Agent } from 'https';
-import { getRandomString } from './helper/util';
-import { aquireTokenViaDeviceCode, MdbApi } from './helper/mdb-api';
+import { checkAndDismissGrafanaAlert, getRandomString } from './helper/util';
+import { MdbApi } from './helper/mdb-api';
 import {
+	createRealmAdminClient,
+	createTestUserViaApi,
 	DATA_HUB_ADMIN_PASSWORD,
-	DATA_HUB_ADMIN_USERNAME,
-	signInAdminKeycloak
+	signInWith
 } from './helper/keycloak';
 
 async function refreshUntil(
@@ -28,22 +27,10 @@ async function refreshUntil(
 }
 
 test('public-dashboard-sync create', async ({ page, context }) => {
-	await signInAdminKeycloak(page);
-
 	const tenant = `knuffingen-${getRandomString(6)}`;
 	console.log(`tenant sync create: ${tenant}`);
 
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub']
-	);
-
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
+	const realmAdminClient = await createRealmAdminClient();
 
 	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenant}`);
 
@@ -55,6 +42,7 @@ test('public-dashboard-sync create', async ({ page, context }) => {
 	);
 
 	await page.goto(GRAFANA);
+	await signInNewUser(page, [`${tenant}/admin`]);
 
 	const publicGrafanaPage = await context.newPage();
 	await publicGrafanaPage.goto(`${GRAFANA_PUBLIC}dashboards`);
@@ -62,18 +50,23 @@ test('public-dashboard-sync create', async ({ page, context }) => {
 	// t1/g1 creates a private dashboard
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenant}:primary-group`).click();
-	await page.getByLabel('New', { exact: true }).click();
-	await page.getByRole('link', { name: 'New dashboard' }).click();
+	await page.waitForLoadState();
+	let orgId = Number.parseInt(new URL(page.url()).searchParams.get('orgId'));
+	await page.goto(`${GRAFANA}dashboard/new?orgId=${orgId}&from=now-6h&to=now&timezone=browser`);
 	await page.getByTestId('data-testid Add button').click();
 	await page.getByTestId('data-testid Add new visualization menu item').click();
 	await page.getByRole('button', { name: 'Save' }).click();
 	await page.getByLabel('Save dashboard title field').fill('Test Private Dashboard 1');
 	await page.getByTestId('data-testid Save dashboard drawer button').click();
+	await checkAndDismissGrafanaAlert('Dashboard saved', page, true, false, true);
+	await page.goto(GRAFANA);
+	await page.waitForLoadState();
 	// t1/g2 creates a public dashboard
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenant}:secondary-group`).click();
-	await page.getByLabel('New', { exact: true }).click();
-	await page.getByRole('link', { name: 'New dashboard' }).click();
+	await page.waitForLoadState();
+	orgId = Number.parseInt(new URL(page.url()).searchParams.get('orgId'));
+	await page.goto(`${GRAFANA}dashboard/new?orgId=${orgId}&from=now-6h&to=now&timezone=browser`);
 	await page.getByTestId('data-testid Add button').click();
 	await page.getByTestId('data-testid Add new visualization menu item').click();
 	await page.getByTestId('data-testid Back to dashboard button').click();
@@ -96,23 +89,16 @@ test('public-dashboard-sync create', async ({ page, context }) => {
 	await expect(publicGrafanaPage.getByText(`${tenant}:primary-group`)).not.toBeVisible();
 });
 
-test('public-dashboard-sync folder', async ({ page, context }) => {
-	await signInAdminKeycloak(page);
+async function signInNewUser(page: Page, groups: string[]) {
+	const user = await createTestUserViaApi(groups);
+	await signInWith(page, user.username, DATA_HUB_ADMIN_PASSWORD);
+}
 
+test('public-dashboard-sync folder', async ({ page, context }) => {
 	const tenant = `knuffingen-${getRandomString(6)}`;
 	console.log(`tenant folder sync: ${tenant}`);
 
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub']
-	);
-
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
+	const realmAdminClient = await createRealmAdminClient();
 
 	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenant}`);
 
@@ -121,6 +107,7 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	);
 
 	await page.goto(GRAFANA);
+	await signInNewUser(page, [`${tenant}/admin`]);
 
 	const publicGrafanaPage = await context.newPage();
 	await publicGrafanaPage.goto(`${GRAFANA_PUBLIC}dashboards`);
@@ -129,7 +116,10 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenant}:public-dashboards`).click();
 	await page.getByTestId('data-testid Toggle menu').click();
-	await page.getByRole('link', { name: 'Dashboards' }).click();
+	await page
+		.getByTestId('data-testid navigation mega-menu')
+		.getByRole('link', { name: 'Dashboards' })
+		.click();
 	await page.locator('button').filter({ hasText: 'New' }).click();
 	await page.getByRole('menuitem', { name: 'New folder' }).click();
 	await page.getByLabel('Folder name').fill('Unterordner');
@@ -142,6 +132,7 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	await page.getByTestId('data-testid Save dashboard button').click();
 	await page.getByLabel('Save dashboard title field').fill('Unterordner Dashboard');
 	await page.getByTestId('data-testid Save dashboard drawer button').click();
+	await checkAndDismissGrafanaAlert('Dashboard saved', page, true, false, true);
 	// observe that the change is reflected
 	await refreshUntil(publicGrafanaPage, () =>
 		publicGrafanaPage.getByText(`${tenant}:public-dashboards`).isVisible()
@@ -171,22 +162,10 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 });
 
 test('public-dashboard-sync syncs datasource changes', async ({ page, context }) => {
-	await signInAdminKeycloak(page);
-
 	const tenant = `knuffingen-${getRandomString(6)}`;
 	console.log(`tenant sync create: ${tenant}`);
 
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub']
-	);
-
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
+	const realmAdminClient = await createRealmAdminClient();
 
 	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenant}`);
 	await realmAdminClient.put(
@@ -194,13 +173,12 @@ test('public-dashboard-sync syncs datasource changes', async ({ page, context })
 	);
 
 	await page.goto(GRAFANA);
+	await signInNewUser(page, [`${tenant}/admin`]);
 
 	const publicGrafanaPage = await context.newPage();
 	await publicGrafanaPage.goto(`${GRAFANA_PUBLIC}dashboards`);
 
 	// create a dashboard without data
-	await page.getByLabel('Change organization').click();
-	await page.getByLabel('Select options menu').getByText(`${tenant}:admin`).click();
 	await page.getByLabel('New', { exact: true }).click();
 	await page.getByRole('link', { name: 'New dashboard' }).click();
 	await page.getByTestId('data-testid Add button').click();

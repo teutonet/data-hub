@@ -71,7 +71,7 @@ test('User can export sensortypes', async ({ page, context }) => {
 	]);
 
 	await page.goto(`${MDB_FRONTEND}overview`);
-	await page.getByRole('link', { name: 'Projekt auswählen' }).click();
+	await page.getByText('Projekt auswählen').click();
 	await page
 		.getByRole('tooltip')
 		.getByRole('link', { name: `${tenantName}.testproject-${testPostfix}` })
@@ -163,7 +163,7 @@ test('User can import sensortypes', async ({ page }) => {
 
 	await page.goto(`${MDB_FRONTEND}overview`);
 	await signInWith(page, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
-	await page.getByRole('link', { name: 'Projekt auswählen' }).click();
+	await page.getByText('Projekt auswählen').click();
 	await page
 		.getByRole('tooltip')
 		.getByRole('link', { name: `${tenantName}.testproject2-${testPostfix}` })

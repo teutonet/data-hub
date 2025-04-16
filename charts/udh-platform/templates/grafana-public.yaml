@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: grafana
-      version: 8.8.2 # renovate: datasource=helm depName=grafana versioning=helm registryUrl=https://grafana.github.io/helm-charts
+      version: 8.8.5 # renovate: datasource=helm depName=grafana versioning=helm registryUrl=https://grafana.github.io/helm-charts
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository

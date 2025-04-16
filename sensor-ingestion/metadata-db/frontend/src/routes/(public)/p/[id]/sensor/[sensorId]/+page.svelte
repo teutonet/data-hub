@@ -9,6 +9,7 @@
 	} from '$lib/common/graphql/queries';
 	import type { PageData } from './$types';
 	import { Button, Alert, Heading, P } from 'flowbite-svelte';
+	import HeroiconsExclamationCircle20Solid from '~icons/heroicons/exclamation-circle-20-solid';
 	import { handleCombinedErrors, performMutation } from '$lib/common/graphql/utils';
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
 	import type {
@@ -29,6 +30,7 @@
 	import ThingOffsetList from '$lib/ThingOffsetList.svelte';
 	import { emptyToNull, replaceComma } from '$lib/stringUtils';
 	import HistoryModal from '$lib/HistoryModal.svelte';
+	import { formatDatetime } from '$lib/nav/dateUtils';
 	interface Props {
 		data: PageData;
 	}
@@ -153,6 +155,13 @@
 			{#if thing && thing.status === 'created'}
 				<Alert class="my-4 w-full max-w-full">
 					{$_('sensorView.newlyCreatedAlert')}
+				</Alert>
+			{/if}
+			{#if thing && thing.latestError !== null}
+				<Alert class="my-4 flex w-full max-w-full items-center border" color="red">
+					<HeroiconsExclamationCircle20Solid class="-ml-1  -mr-2" font-size="20" />
+					{$_('component.thingsError.alert')}
+					{thing.latestError} ({$formatDatetime(thing.errorTimestamp)})
 				</Alert>
 			{/if}
 		{/snippet}

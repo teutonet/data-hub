@@ -28,16 +28,16 @@
 	let { resource, permissions, reload }: Props = $props();
 </script>
 
-{#each permissions as permission}
+{#each permissions as permission (permission.name)}
 	<div class="mb-2 flex flex-row gap-2">
 		<Card class="max-w-[100vw]" on:click={() => goto(`permissions/${permission.name}`)}>
 			<Heading tag="h3">{permission.name}</Heading>
 			{$_('component.permissions.groups')}
-			{#each permission.principals.map( (principal) => (principal.type == 'tenant' ? null : principal.group) ) as group}
+			{#each permission.principals.map( (principal) => (principal.type == 'tenant' ? null : principal.group) ) as group (group)}
 				<Badge>{group}</Badge>
 			{/each}
 			{$_('component.permissions.scopes')}
-			{#each permission.scopes as scope}
+			{#each permission.scopes as scope (scope)}
 				<Badge>{scope}</Badge>
 			{/each}
 		</Card>

@@ -282,16 +282,7 @@
 		return !!hasKey;
 	}
 
-	// run(() => {
-	// 	filteredName,
-	// 		filteredAttribute,
-	// 		filteredDateFrom,
-	// 		filteredDateTo,
-	// 		(paginationParams.offset = 0);
-	// });
-
 	$effect(() => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 		filteredName || filteredAttribute || filteredDateFrom || filteredDateTo;
 
 		paginationParams.offset = 0;
@@ -445,7 +436,7 @@
 			<TableBody
 				tableBodyClass="border-b last:border-b-0 hover:bg-gray-100 hover:dark:bg-slate-700"
 			>
-				{#each item.changesTable as [key, [before, after]], index}
+				{#each item.changesTable as [key, [before, after]], index (key)}
 					<TableBodyRow
 						class="bg-transparent hover:bg-transparent dark:bg-transparent hover:dark:bg-transparent"
 					>

@@ -204,7 +204,7 @@
 {#if problems}
 	<Heading tag="h2">{$_('component.thingsImport.problems')}</Heading>
 	<List>
-		{#each problems as problem}
+		{#each problems as problem (problem.row)}
 			<Li>
 				{#if problem.kind === 'required'}
 					{$_('component.thingsImport.importError.required', {

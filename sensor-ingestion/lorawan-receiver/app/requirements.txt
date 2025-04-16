@@ -3,4 +3,4 @@ requests==2.32.3
 waitress==3.0.2
 requests-oauthlib==2.0.0
 oauthlib[signedtoken]==3.2.2
-openapi-core==0.19.4
+openapi-core==0.19.5

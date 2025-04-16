@@ -61,7 +61,7 @@
 </script>
 
 <Heading tag="h1">{$_('component.sensorFind.pleaseSelect')}</Heading>
-{#each sensorMatches as sensorMatch}
+{#each sensorMatches as sensorMatch (sensorMatch.id)}
 	<Card>
 		<Heading tag="h4">
 			{sensorMatch.name}
@@ -82,14 +82,14 @@
 		{#if labelEntries.length}
 			<Heading tag="h5">{$_('component.sensorFind.labels')}</Heading>
 			<List>
-				{#each labelEntries as [key, value]}
+				{#each labelEntries as [key, value] (key)}
 					<Li>{key}: {value}</Li>
 				{/each}
 			</List>
 		{/if}
 		<Heading tag="h5">{$_('component.sensorFind.metrics')}</Heading>
 		<List>
-			{#each Object.entries(sensorMatch.metrics) as [key, value]}
+			{#each Object.entries(sensorMatch.metrics) as [key, value] (key)}
 				<Li>{key}: {value}</Li>
 			{/each}
 		</List>

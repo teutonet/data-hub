@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Navbar, NavBrand, NavHamburger, NavUl, NavLi, DarkMode } from 'flowbite-svelte';
+	import { Navbar, NavBrand, NavHamburger, NavUl, NavLi, DarkMode, Badge } from 'flowbite-svelte';
 	import Link from './Link.svelte';
 	import UserDropdown from '../common/user/UserDropdown.svelte';
 
@@ -8,6 +8,28 @@
 	import { projectUrl } from '$lib/common/url';
 	import ActiveProjectSelector from './ActiveProjectSelector.svelte';
 	import { isAuthenticated } from '$lib/common/auth';
+	import { getContextClient, queryStore } from '@urql/svelte';
+	import type {
+		GetThingsLatestErrorsQuery,
+		GetThingsLatestErrorsQueryVariables
+	} from '$lib/common/generated/types';
+	import { GET_THINGS_ERRORS } from '$lib/common/graphql/queries';
+
+	const client = getContextClient();
+	let allThingsErrorsStore = $derived(
+		queryStore<GetThingsLatestErrorsQuery, GetThingsLatestErrorsQueryVariables>({
+			client: client,
+			query: GET_THINGS_ERRORS,
+			variables: {
+				condition: {
+					project: $activeProjectId == 'all' ? undefined : $activeProjectId,
+					hasError: true
+				}
+			}
+		})
+	);
+
+	const allThingsErrorCount = $derived($allThingsErrorsStore.data?.things?.length ?? 0);
 </script>
 
 <Navbar
@@ -40,7 +62,7 @@
 	<NavHamburger />
 	<div class="flex">
 		<NavUl
-			ulClass="flex flex-col mt-4 md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:text-sm md:font-medium pe-4"
+			ulClass="flex flex-col mt-4 md:flex-row md:space-x-4 rtl:space-x-reverse md:mt-0 md:text-sm md:font-medium pe-4"
 		>
 			{#if $isAuthenticated}
 				<NavLi>
@@ -74,6 +96,24 @@
 					textKey={$_('component.nav.sensortypes')}
 					disabled={!$activeProjectId}
 				/>
+			</NavLi>
+			<NavLi>
+				<div class="flex">
+					<Link
+						href={$activeProjectId
+							? projectUrl($activeProjectId, 'sensorerrors')
+							: projectUrl('all', 'sensorerrors')}
+						disabled={allThingsErrorCount == 0}
+						preload="tap"
+					>
+						{$_('component.nav.sensorerrors')}
+						{#if allThingsErrorCount > 0}
+							<Badge rounded class="ml-1 h-6 w-6 bg-red-600 font-semibold text-white"
+								>{allThingsErrorCount}</Badge
+							>
+						{/if}
+					</Link>
+				</div>
 			</NavLi>
 			<NavLi>
 				<Link

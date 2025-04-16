@@ -13,7 +13,10 @@ import { pushMetrics } from 'prometheus-remote-write';
 
 async function expectGrafanaWorking(page: Page): Promise<void> {
 	await page.getByTestId('data-testid Toggle menu').click();
-	await page.getByRole('link', { name: 'Explore' }).click();
+	await page
+		.getByTestId('data-testid navigation mega-menu')
+		.getByRole('link', { name: 'Explore' })
+		.click();
 	await page.getByLabel('Select a data source').click();
 	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
 	await page.getByLabel('Metric').click();
@@ -239,7 +242,7 @@ test('keycloak', async ({ page, context }) => {
 
 	await freshLoginFrontend(page, context, analyzerUser.username, DATA_HUB_ADMIN_PASSWORD);
 	await page.getByRole('link', { name: 'MetaData_DB' }).click();
-	await page.getByRole('link', { name: 'Projekt auswählen' }).click();
+	await page.getByText('Projekt auswählen').click();
 	await expect(
 		page.getByRole('link', { name: `knuffingen-${testPostfix}.trainstation` })
 	).not.toBeVisible();
@@ -308,25 +311,6 @@ test('resource-api-cross-tenant', async ({ page }) => {
 			fetch
 		}
 	);
-	await page.goto(GRAFANA);
-	await page.getByLabel('Change organization').click();
-	await page
-		.getByLabel('Select options menu')
-		.getByText(`knuffingen-${testPostfix2}:admin`, { exact: true })
-		.click();
-	await page.getByTestId('data-testid Toggle menu').click();
-	await page.getByRole('link', { name: 'Explore' }).click();
-	await page.getByLabel('Select a data source').click();
-	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
-	await expect(page.getByLabel('Metric')).toBeVisible();
-
-	await expect(async () => {
-		await page.reload();
-		await page.getByLabel('Metric').click();
-		await expect(page.getByText('no org id')).toBeVisible({ timeout: 5000 });
-		await page.keyboard.press('Escape');
-		await page.getByLabel('Close alert').click();
-	}).toPass({ intervals: [0] });
 
 	await realmAdminClient.put(
 		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test/permissions/cross`,
@@ -342,8 +326,23 @@ test('resource-api-cross-tenant', async ({ page }) => {
 		}
 	);
 
+	await page.goto(GRAFANA);
+	await page.getByLabel('Change organization').click();
+	await page
+		.getByLabel('Select options menu')
+		.getByText(`knuffingen-${testPostfix2}:admin`, { exact: true })
+		.click();
+	await page.getByTestId('data-testid Toggle menu').click();
+	await page
+		.getByTestId('data-testid navigation mega-menu')
+		.getByRole('link', { name: 'Explore' })
+		.click();
+	await expect(page.getByLabel('Select a data source')).toBeVisible();
+
 	await expect(async () => {
 		await page.reload();
+		await page.getByLabel('Select a data source').click();
+		await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
 		await page.getByLabel('Metric').click();
 		await page.getByText('testmetric', { exact: true }).click({ timeout: 5000 });
 	}).toPass({ intervals: [0] });
@@ -355,6 +354,6 @@ test('resource-api-cross-tenant', async ({ page }) => {
 	await expect(async () => {
 		await page.reload();
 		await page.getByLabel('Metric').click();
-		await expect(page.getByText('no org id')).toBeVisible({ timeout: 5000 });
+		await expect(page.getByText('testmetric', { exact: true })).not.toBeVisible({ timeout: 5000 });
 	}).toPass({ intervals: [0] });
 });

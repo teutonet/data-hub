@@ -1,9 +1,9 @@
 import test, { expect, Page } from 'playwright/test';
 import { DATA_HUB_ADMIN_PASSWORD, DATA_HUB_ADMIN_USERNAME } from './helper/keycloak';
-import { getRandomString } from './helper/util';
+import { getRandomString, loginCreateProjectAndToken } from './helper/util';
 import { MdbApi, Thing } from './helper/mdb-api';
 import { randomUUID } from 'crypto';
-import { EXPORT, GRAFANA, MDB_FRONTEND } from './helper/urls';
+import { EXPORT, GRAFANA } from './helper/urls';
 import axios from 'axios';
 import { Agent } from 'https';
 
@@ -24,26 +24,15 @@ test('auto-create', async ({ page, context }) => {
 
 	const tenantName = `knuffingen-${testPostfix}`;
 
-	await page.goto(`${MDB_FRONTEND}api/tenants`);
-	await page.getByLabel('Username or email').fill(DATA_HUB_ADMIN_USERNAME);
-	await page.getByLabel('Password', { exact: true }).fill(DATA_HUB_ADMIN_PASSWORD);
-	await page.getByRole('button', { name: 'Sign In' }).click();
-	await page.getByRole('button', { name: 'Neuen Tenant anlegen' }).click();
-	await page.getByPlaceholder(' ').fill(tenantName);
-	await page.getByRole('button', { name: 'Erstellen', exact: true }).click();
-	// TODO: this produces race conditions in keycloak otherwise
-	await page.waitForTimeout(1000);
-	await page.getByRole('button', { name: 'Projekte' }).click();
-	await page.getByRole('button', { name: 'Neues Projekt anlegen' }).click();
-	await page.getByPlaceholder(' ').fill('trainstation');
-	await page.getByRole('button', { name: 'Erstellen', exact: true }).click();
-	await page.waitForTimeout(1000);
-	await page.getByRole('button', { name: 'Neuen Token anlegen' }).click();
-	await page.getByPlaceholder(' ').fill('test');
-	await page.getByRole('dialog').getByRole('button', { name: 'Token erzeugen' }).click();
-	const tokenUsername = await page.getByLabel('Username').inputValue();
-	const tokenPassword = await page.getByLabel('Passwort').inputValue();
-	await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
+	const { username, password } = await loginCreateProjectAndToken(
+		page,
+		tenantName,
+		'trainstation',
+		'test'
+	);
+
+	const tokenUsername = username;
+	const tokenPassword = password;
 
 	// workaround, the token should get refreshed automatically to contain the new project
 	await page.reload();
@@ -198,7 +187,10 @@ test('auto-create', async ({ page, context }) => {
 	await page.getByLabel('Change organization').click();
 	await page.getByLabel('Select options menu').getByText(`${tenantName}:admin`).click();
 	await page.getByTestId('data-testid Toggle menu').click();
-	await page.getByRole('link', { name: 'Explore' }).click();
+	await page
+		.getByTestId('data-testid navigation mega-menu')
+		.getByRole('link', { name: 'Explore' })
+		.click();
 
 	await page.getByLabel('Select a data source').click();
 	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();

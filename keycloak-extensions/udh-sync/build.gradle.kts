@@ -1,8 +1,8 @@
 plugins {
-    kotlin("jvm") version "2.1.0"
-    kotlin("plugin.serialization") version "2.1.0"
+    kotlin("jvm") version "2.1.20"
+    kotlin("plugin.serialization") version "2.1.20"
 }
-val keycloakVersion = "26.0.7"
+val keycloakVersion = "26.1.4"
 
 repositories {
     mavenCentral()
@@ -16,8 +16,8 @@ dependencies {
     compileOnly("org.keycloak:keycloak-server-spi:$keycloakVersion")
     compileOnly("org.keycloak:keycloak-server-spi-private:$keycloakVersion")
     compileOnly("org.keycloak:keycloak-model-jpa:$keycloakVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
-    implementation("io.github.reactivecircus.cache4k:cache4k:0.13.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("io.github.reactivecircus.cache4k:cache4k:0.14.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }
 

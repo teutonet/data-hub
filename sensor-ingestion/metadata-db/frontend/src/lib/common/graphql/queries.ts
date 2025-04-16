@@ -72,6 +72,8 @@ export const GET_ALL_THINGS = gql`
 				id
 			}
 			customLabels
+			latestError
+			errorTimestamp
 		}
 	}
 `;
@@ -108,6 +110,8 @@ export const GET_THING_BY_ID = gql`
 			thingLivedatum {
 				payload
 			}
+			latestError
+			errorTimestamp
 		}
 	}
 `;
@@ -188,6 +192,8 @@ export const THING_FRAGMENT = gql`
 		thingLivedatum {
 			payload
 		}
+		latestError
+		errorTimestamp
 	}
 `;
 
@@ -550,6 +556,26 @@ export const GET_SENSOR_AND_SENSOR_PROPERTIES = gql`
 				writeDelta
 				alias
 			}
+		}
+	}
+`;
+
+export const SENSOR_MASS_COPY = gql`
+	mutation sensorMassCopy($input: SensorMassCopyInput!) {
+		sensorMassCopy(input: $input) {
+			count
+		}
+	}
+`;
+
+export const GET_THINGS_ERRORS = gql`
+	query getThingsLatestErrors($condition: ThingCondition!) {
+		things(condition: $condition) {
+			latestError
+			errorTimestamp
+			id
+			name
+			project
 		}
 	}
 `;

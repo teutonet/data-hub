@@ -11,14 +11,14 @@
 		"npm": "^10.0.0"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "19.6.1",
-		"@commitlint/config-conventional": "19.6.0",
+		"@commitlint/cli": "19.8.0",
+		"@commitlint/config-conventional": "19.8.0",
 		"husky": "9.1.7",
-		"lint-staged": "15.3.0",
-		"prettier": "3.4.2",
+		"lint-staged": "15.5.0",
+		"prettier": "3.5.3",
 		"prettier-plugin-svelte": "3.3.3",
-		"prettier-plugin-tailwindcss": "0.6.9",
-		"svelte": "5.17.3"
+		"prettier-plugin-tailwindcss": "0.6.11",
+		"svelte": "5.25.7"
 	},
 	"lint-staged": {
 		"*.{cjs,json,css,scss,htm,html,md,yml,yaml}": "node_modules/.bin/prettier --write"

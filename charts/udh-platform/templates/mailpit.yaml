@@ -25,7 +25,7 @@ spec:
         kind: HelmRepository
         name: {{ printf "%s-mailpit" (include "common.names.fullname" .) | quote}}
         namespace: {{ .Release.Namespace }}
-      version: 0.21.0 # renovate: datasource=helm depName=mailpit versioning=helm registryUrl=https://jouve.github.io/charts/
+      version: 0.23.1 # renovate: datasource=helm depName=mailpit versioning=helm registryUrl=https://jouve.github.io/charts/
   interval: 10m
   values:
     {{ with .Values.mailpit }}

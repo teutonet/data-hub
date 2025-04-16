@@ -12,7 +12,6 @@
 	let { children }: Props = $props();
 </script>
 
-<Nav />
 <Auth
 	settings={{
 		authority: getConfig('OIDC_AUTHORITY'),
@@ -26,6 +25,7 @@
 />
 {#if $isAuthenticated}
 	<GraphQL>
+		<Nav />
 		<div class="flex flex-col justify-center p-40 pb-10">
 			{@render children?.()}
 		</div>

@@ -10,3 +10,4 @@ export const API = makeUrl('api');
 export const PROMETHEUS = makeUrl('prometheus');
 export const KEYCLOAK = makeUrl('login');
 export const EXPORT = makeUrl('export');
+export const RESOURCE_API = `${KEYCLOAK}realms/udh/data-hub/`;

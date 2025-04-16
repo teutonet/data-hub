@@ -23,7 +23,7 @@
   
   More docs for the table component contained here can be found [here](https://flowbite-svelte.com/docs/components/table) 
 -->
-<script lang="ts" generics="T extends Object">
+<script lang="ts" generics="T extends object">
 	import { Table, TableHead, TableHeadCell, TableBody, ButtonGroup, Button } from 'flowbite-svelte';
 	import type { PaginationOptions, TableHeadItem } from './sortingTableUtils';
 	import { _ } from 'svelte-i18n';
@@ -33,11 +33,9 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		// eslint-disable-next-line no-undef
 		items: T[];
 		shownKeys: TableHeadItem[];
 		componentLocKey: string;
-		// eslint-disable-next-line no-undef
 		itemCompareFunction?: ((a: T, b: T) => number) | undefined;
 		sortKey?: string | null;
 		sortDirection?: 1 | -1;
@@ -94,7 +92,6 @@
 		footer
 	}: Props = $props();
 
-	// eslint-disable-next-line no-undef
 	let sortedItems: T[] = $state(items);
 
 	function setSorting(key: string | null) {
@@ -106,13 +103,7 @@
 		}
 	}
 
-	function sortItems(
-		// eslint-disable-next-line no-undef
-		items: T[],
-		sortKey: string | null,
-		sortDirection: 1 | -1
-		// eslint-disable-next-line no-undef
-	): T[] {
+	function sortItems(items: T[], sortKey: string | null, sortDirection: 1 | -1): T[] {
 		if (sortKey == null || items.length === 0 || !Object.keys(items[0]).includes(sortKey)) {
 			return items;
 		}
@@ -158,7 +149,6 @@
 		sortedItems = sortItems(items, sortKey, sortDirection);
 	});
 
-	// eslint-disable-next-line no-undef
 	let finalItems: T[] = $derived(
 		usePgPagination
 			? sortedItems
@@ -185,6 +175,7 @@
 		{@render caption?.()}
 	{/if}
 	<TableHead theadClass={headClass}>
+		<!-- eslint-disable-next-line svelte/require-each-key -->
 		{#each shownKeys as { name, key, sortable, cellClasses }}
 			<TableHeadCell
 				on:click={() => {
@@ -216,12 +207,12 @@
 	{#if finalItems.length}
 		{#if useTableBody}
 			<TableBody>
-				{#each finalItems as item, index}
+				{#each finalItems as item, index (item)}
 					{@render bodyContent?.(item, index)}
 				{/each}
 			</TableBody>
 		{:else}
-			{#each finalItems as item, index}
+			{#each finalItems as item, index (item)}
 				{@render bodyContent?.(item, index)}
 			{/each}
 		{/if}

@@ -20,7 +20,7 @@ global:
       registry: "docker.io"
       pullPolicy: Always
       repository: "babashka/babashka"
-      tag: 1.12.196
+      tag: 1.12.197
       digest: ""
   sslInsecureSkipVerify: false
   ingress:
@@ -63,7 +63,7 @@ mailpit:
   image:
     registry: docker.io
     repository: axllent/mailpit
-    tag: v1.21.8
+    tag: v1.24.0
   readinessProbe:
     initialDelaySeconds: 0
     periodSeconds: 1
@@ -142,9 +142,10 @@ grafana:
       cpu: 20m
       memory: 256Mi
     limits:
-      memory: 256Mi
+      memory: 1Gi
   plugins:
     - volkovlabs-echarts-panel
+    - marcusolsson-dynamictext-panel
 
 grafanaOauth2Proxy:
   resources:
@@ -166,6 +167,7 @@ grafanaPublic:
       memory: 256Mi
   plugins:
     - volkovlabs-echarts-panel
+    - marcusolsson-dynamictext-panel
   datasources:
     {}
 
@@ -221,8 +223,17 @@ jupyterhub:
         memory: 1024Mi
 
 mimir:
-  minimal: false
+  externalS3:
+    enabled: false
+    endpoint: ""
+    accessKeyId: ""
+    secretAccessKey: ""
+    insecure: false
+    rulerBucket: "mimir-ruler"
+    blocksBucket: "mimir-tsdb"
   config:
+    minio:
+      enabled: false
     mimir:
       structuredConfig:
         tenant_federation:
@@ -230,6 +241,30 @@ mimir:
         limits:
           # Enable TSDB block upload
           compactor_block_upload_enabled: true
+        alertmanager_storage:
+          backend: s3
+          s3:
+            endpoint: ${S3_ENDPOINT}
+            bucket_name: ${S3_ALERTMANAGER_BUCKET}
+            access_key_id: ${S3_ACCESS_KEY_ID}
+            secret_access_key: ${S3_SECRET_ACCESS_KEY}
+            insecure: ${S3_INSECURE}
+        blocks_storage:
+          backend: s3
+          s3:
+            endpoint: ${S3_ENDPOINT}
+            bucket_name: ${S3_BLOCKS_BUCKET}
+            access_key_id: ${S3_ACCESS_KEY_ID}
+            secret_access_key: ${S3_SECRET_ACCESS_KEY}
+            insecure: ${S3_INSECURE}
+        ruler_storage:
+          backend: s3
+          s3:
+            endpoint: ${S3_ENDPOINT}
+            bucket_name: ${S3_RULER_BUCKET}
+            access_key_id: ${S3_ACCESS_KEY_ID}
+            secret_access_key: ${S3_SECRET_ACCESS_KEY}
+            insecure: ${S3_INSECURE}
 
 fakeCa:
   enabled: false

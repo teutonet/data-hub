@@ -125,6 +125,7 @@
 			"sensortypes": "Sensortypen",
 			"createSensor": "Sensor erstellen",
 			"properties": "Eigenschaften",
+			"sensorerrors": "Sensorfehler",
 			"allProjects": "Alle Projekte",
 			"projectApi": "Projektressource in API",
 			"projectApiDesc": "Erstellen und Rotieren von Sensor Credentials etc."
@@ -183,7 +184,27 @@
 			"nameFilterHeader": "Name",
 			"sensorTypeFilterHeader": "Sensortyp",
 			"statusFilterHeader": "Status",
-			"resetFilters": "Filter zurücksetzen"
+			"resetFilters": "Filter zurücksetzen",
+			"copyFiltered": "Nur gefilterte Sensoren"
+		},
+		"sensorMassCopyModal": {
+			"bulkCopyButton": "In anderes Projekt kopieren",
+			"findSensortypeToggle": "Sensortyp in Zielprojekt suchen und setzen",
+			"findSensortypeExplainer": "Wenn im Zielprojekt bereits die Sensortypen der zu kopierenden Sensoren mit demselben Namen vorhanden sind, kann versucht werden, den kopierten Sensoren nach Erstellung den richtigen Sensortyp zuzuweisen. Standardmäßig bleibt der Sensortyp leer und der Status wird auf 'created' gesetzt.",
+			"overwriteValuesToggle": "Bereits existierende Sensoren in Zielprojekt überschreiben",
+			"overwriteValuesExplainer": "Wenn im Zielprojekt bereits Sensoren mit denselben deveuis existieren, können diese überschrieben werden. Andernfalls werden Sensoren nicht kopiert, wenn im Zielprojekt bereits ein Sensor mit derselben deveui existiert.",
+			"statusInput": "Status für neu angelegte Sensoren ('created' wenn leer)",
+			"projectSelector": "Zielprojekt",
+			"toggleAllSensors": "Alle auswählen",
+			"copySensorsNow": "Ausgewählte Sensoren jetzt ins Zielprojekt kopieren",
+			"modalTitle": "Sensoren in anderes Projekt kopieren",
+			"thingsHeading": "Zu kopierende Sensoren",
+			"copySuccess": "Sensoren erfolgreich kopiert!",
+			"copySuccessDetail": "Es wurden {count} Sensoren erfolgreich ins Projekt {project} kopiert.",
+			"generalCopyError": "Fehler beim Kopieren der Sensoren",
+			"noCustomStatus": "Kann ohne Sensortyp keinen Status außer 'created' setzen",
+			"numberChosen": "{count} ausgewählt",
+			"projectMissing": "Bitte wählen Sie ein Zielprojekt aus!"
 		},
 		"thingsImport": {
 			"title": "Sensoren CSV Import",
@@ -201,6 +222,15 @@
 				"required": "Zeile {row}: Spalte \"{property}\" darf nicht leer sein",
 				"sensortypeNotFound": "Zeile {row}: Sensortyp \"{sensorType}\" wurde nicht gefunden"
 			}
+		},
+		"thingsError": {
+			"modalTitle": "Folgende Fehler an den Sensoren sind während der Inaktivität aufgetreten",
+			"fixNotice": "Fehlermeldungen werden nach (einer) erfolgreichen Payload(s) wieder gelöscht",
+			"click": "Sie können auf eine Fehlermeldung klicken um den Sensor zu öffnen",
+			"alert": "Es ist ein Fehler aufgetreten:",
+			"empty": "Es sind bisher keine (neuen) Fehler aufgetreten",
+			"overviewAlert": "Es {count, plural, one {ist in einem Sensor ein} other {sind in einigen Sensoren}} Fehler aufgetreten",
+			"hyperlink": "Klicken sie hier um sie anzuzeigen"
 		},
 		"propertiesOverview": {
 			"project": "Projekt",
@@ -515,6 +545,9 @@
 		"propertyPage": {
 			"title": "Eigenschaft {name} bearbeiten",
 			"editInfo": "Durch das Ändern des Metriknamens oder das Löschen der Eigenschaft werden sämtliche eingerichteten Offsets die von der Eigenschaft mit diesem Metriknamen abhängen gelöscht"
+		},
+		"sensorErrorsPage": {
+			"title": "Aufgetretene Sensorfehler"
 		}
 	}
 }

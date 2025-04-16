@@ -42,7 +42,7 @@
 {:then value}
 	{#if Array.isArray(value)}
 		<div class="flex flex-col gap-2">
-			{#each value as tenant}
+			{#each value as tenant (tenant)}
 				<Button href={`tenants/${tenant}`}>
 					{tenant}
 				</Button>

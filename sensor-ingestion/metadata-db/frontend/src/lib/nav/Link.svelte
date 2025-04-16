@@ -8,15 +8,25 @@
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { Tooltip } from 'flowbite-svelte';
+	import type { Snippet } from 'svelte';
 
 	interface Props {
 		href: string;
-		textKey: string;
+		textKey?: string | undefined;
 		disabled?: boolean;
 		tooltipKey?: string | undefined;
+		children?: Snippet;
+		preload?: 'off' | 'tap' | 'hover' | undefined;
 	}
 
-	let { href, textKey, disabled = false, tooltipKey = undefined }: Props = $props();
+	let {
+		href,
+		textKey = undefined,
+		disabled = false,
+		tooltipKey = undefined,
+		children,
+		preload = 'hover'
+	}: Props = $props();
 
 	let active = $derived(trimTrailingSlash(href) === trimTrailingSlash(page.url.pathname));
 
@@ -34,10 +44,15 @@
 			class={disabled ? disabledClass : active ? activeClass : normalClass}
 			aria-disabled={disabled}
 			href={disabled ? undefined : trimTrailingSlash(href)}
+			data-sveltekit-preload-data={preload}
 		>
-			<span>
-				{$_(textKey)}
-			</span>
+			{#if children}
+				{@render children()}
+			{:else}
+				<span>
+					{$_(`${textKey}`)}
+				</span>
+			{/if}
 		</a>
 	</li>
 	{#if tooltipKey}

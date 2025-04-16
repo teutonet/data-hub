@@ -1,6 +1,6 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}python:3.13.1-alpine as builder
+FROM ${REGISTRY_MIRROR_LIB}python:3.13.2-alpine as builder
 
 # RUN apk add gcc g++ musl-dev snappy-dev
 
@@ -16,7 +16,7 @@ RUN pip3 install --upgrade pip
 RUN source .venv/bin/activate && pip3 install -r requirements.txt
 
 
-FROM ${REGISTRY_MIRROR_LIB}python:3.13.1-alpine
+FROM ${REGISTRY_MIRROR_LIB}python:3.13.2-alpine
 
 RUN apk add --no-cache snappy
 

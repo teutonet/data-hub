@@ -29,7 +29,7 @@
 			{$_('shared.breadcrumbs.home')}
 		</BreadcrumbItem>
 	{/if}
-	{#each breadcrumbs as crumb}
+	{#each breadcrumbs as crumb (crumb.link)}
 		<BreadcrumbItem href={crumb.link}>
 			{$_(crumb.text, { values: crumb.values })}
 		</BreadcrumbItem>

@@ -139,7 +139,7 @@
 {:then credentials}
 	<Table class="mt-4">
 		<TableBody>
-			{#each credentials as token}
+			{#each credentials as token (token)}
 				<TableBodyRow>
 					<TableBodyCell>{token}</TableBodyCell>
 					<TableBodyCell class="flex justify-end gap-2">
@@ -173,7 +173,7 @@
 	<Label for="usernameDisplay" class="text-gray-900 dark:text-gray-100">
 		{$_('page.projectOverview.apiTokenModal.usernameDisplay')}
 	</Label>
-	<ButtonGroup divClass="w-full inline-flex rounded-lg shadow-sm">
+	<ButtonGroup divClass="w-full inline-flex rounded-lg shadow-xs">
 		<Input bind:value={credentials.username} id="usernameDisplay" disabled class="max-w-full" />
 		<Button on:click={() => copy('username')} color="primary">
 			<span class="flex flex-row gap-2">
@@ -185,7 +185,7 @@
 	<Label for="passwordDisplay" class="text-gray-900 dark:text-gray-100">
 		{$_('page.projectOverview.apiTokenModal.passwordDisplay')}
 	</Label>
-	<ButtonGroup divClass="w-full inline-flex rounded-lg shadow-sm">
+	<ButtonGroup divClass="w-full inline-flex rounded-lg shadow-xs">
 		<Input bind:value={credentials.password} id="passwordDisplay" disabled class="max-w-full" />
 		<Button on:click={() => copy('password')} color="primary">
 			<span class="flex flex-row gap-2">
@@ -197,7 +197,7 @@
 	<Label for="baseUrlDisplay" class="text-gray-900 dark:text-gray-100">
 		{$_('page.projectOverview.apiTokenModal.endpointLabel')}
 	</Label>
-	<ButtonGroup divClass="w-full inline-flex rounded-lg shadow-sm">
+	<ButtonGroup divClass="w-full inline-flex rounded-lg shadow-xs">
 		<Input value={getConfig('API_BASE_URL')} id="baseUrlDisplay" disabled class="max-w-full" />
 		<Button on:click={() => copy('baseUrl')} color="primary">
 			<span class="flex flex-row gap-2">
