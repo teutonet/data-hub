@@ -156,7 +156,7 @@ spec:
         {{- include "sensor-ingestion.secretValue" (dict "name" .name "secret" (dig .name "apiKey" (dict) .Values.AsMap) "context" .) | nindent 8 }}
       {{- end }}
       {{- if .Values.fakeCa.name }}
-      - name: TRUST_LOCAL_CA_PATH
+      - name: {{ .caPathEnv | default "REQUESTS_CA_BUNDLE" | quote }}
         value: /tls/ca.crt
       {{- end }}
       {{- include (printf "sensor-ingestion.%s.env" .name) . | trim | nindent 6 }}

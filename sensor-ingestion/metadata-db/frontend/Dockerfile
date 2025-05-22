@@ -14,7 +14,9 @@ COPY static/ static/
 
 COPY src/ src/
 
-RUN npm run build
+ARG IMAGE_BUILD_VERSION="0.0.0"
+
+RUN VITE_BUILD_VERSION=$IMAGE_BUILD_VERSION npm run build
 
 FROM ${REGISTRY_MIRROR}joseluisq/static-web-server:2.36.1
 

@@ -68,6 +68,37 @@ test_message_regiopole = {
     }
 }
 
+test_message_spie = {
+    "data": [
+        {
+            "name": "battery",
+            "time": 1747738075382,
+            "value": {
+                "value": 6.2,
+                "baseType": "NUMBER"
+            }
+        },
+        {
+            "name": "humidity",
+            "time": 1747738075382,
+            "value": {
+                "value": 50,
+                "baseType": "NUMBER"
+            }
+        },
+        {
+            "name": "temperature",
+            "time": 1747738075382,
+            "value": {
+                "value": 123,
+                "baseType": "NUMBER"
+            }
+        }
+    ],
+    "entityName": "TestThing2NHO",
+    "eventTime": 1747738075382
+}
+
 
 class TestLorawanReceiver(unittest.TestCase):
 
@@ -111,3 +142,12 @@ class TestLorawanReceiver(unittest.TestCase):
              "setLocation": {"latitude": 1.23,
                              "longitude": 4.56}},
             convert_regiopole(test_message_regiopole))
+
+    def test_convert_message_spie(self):
+        self.assertDictEqual(
+            {'resultTime': '2025-05-20T10:47:55Z',
+             'sourcePath': {'deveui': 'testthing2nho',
+                            'devid': 'testthing2nho',
+                            'appid': 'atb'},
+             'variables': {'battery': 6.2, 'humidity': 50, 'temperature': 123}},
+            convert_v3(test_message_spie))

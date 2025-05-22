@@ -52,16 +52,20 @@
 				cacheExchange,
 				errorExchange({
 					onError(errors, req) {
-						Sentry.captureMessage('GraphQL error', {
-							level: 'error',
-							extra: {
-								networkError: errors.networkError,
-								graphQLErrors: errors.graphQLErrors.map(
-									(e) => `${e.message}, path: ${e.path?.join(',')}`
-								),
-								requestVariables: JSON.stringify(req.variables)
+						const extra = {
+							networkError: errors.networkError,
+							graphQLErrors: errors.graphQLErrors.map(
+								(e) => `${e.message}, path: ${e.path?.join(',')}`
+							),
+							requestVariables: JSON.stringify(req.variables)
+						};
+						Sentry.captureMessage(
+							`GraphQL error ${extra.networkError || extra.graphQLErrors.join(', ')}`,
+							{
+								level: 'error',
+								extra
 							}
-						});
+						);
 						// we never expect errors on queries so handle all of them here
 						if (req.kind === 'query' || req.kind === 'subscription') {
 							handleCombinedErrors(errors, { showToasts: true });

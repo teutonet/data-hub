@@ -113,7 +113,7 @@ test.describe('sensor mass copy', () => {
 			await page.getByRole('link', { name: `${tenantNameB}.busterminal` }).click();
 			await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 			await page.waitForLoadState();
-			expect((await page.getByText('created').all()).length).toBe(5);
+			await expect(page.getByText('created')).toHaveCount(5);
 			await expect(page.getByText(sensorTypeAName)).not.toBeVisible();
 		});
 
@@ -162,7 +162,7 @@ test.describe('sensor mass copy', () => {
 		await page.getByRole('link', { name: projectName }).click();
 		await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 		await page.waitForLoadState();
-		expect((await page.getByText('activated').all()).length).toBe(5);
+		await expect(page.getByText('activated')).toHaveCount(5);
 		await expect(page.getByText(sensorTypeAName).first()).toBeVisible();
 	});
 });

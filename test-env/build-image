@@ -12,11 +12,15 @@ $KUBECTL port-forward -n kube-system svc/registry 32000:80 1>/dev/null &
 PID_PORT_FORWARD=$!
 trap "kill $PID_PORT_FORWARD" EXIT
 
+IMAGE_BUILD_VERSION=`git describe --tags --abbrev=0`
+IMAGE_BUILD_SHA=`git rev-parse --short HEAD`
+
 build_image () {
   context=$1
+	shift
   image=$REGISTRY/$context:$TAG
 
-  tar chC $context --exclude-vcs{,-ignores} . | docker build -t $image --quiet -
+  tar chC $context --exclude-vcs{,-ignores} . | docker build -t $image --build-arg IMAGE_BUILD_VERSION="$IMAGE_BUILD_VERSION" --build-arg IMAGE_BUILD_SHA="$IMAGE_BUILD_SHA" "$@" -
 
   docker push "$image"
 }
@@ -37,7 +41,7 @@ build_images () {
 		then
 			(cd "$context" && ./quick-build.sh)
 		else
-				build_image "$context" &
+				build_image "$context" --quiet &
 		fi
 		done
 	fi

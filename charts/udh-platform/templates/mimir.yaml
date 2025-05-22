@@ -36,7 +36,7 @@ spec:
   chart:
     spec:
       chart: mimir-distributed
-      version: 5.6.0 # renovate: datasource=helm depName=mimir-distributed versioning=helm registryUrl=https://grafana.github.io/helm-charts
+      version: 5.7.0 # renovate: datasource=helm depName=mimir-distributed versioning=helm registryUrl=https://grafana.github.io/helm-charts
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository

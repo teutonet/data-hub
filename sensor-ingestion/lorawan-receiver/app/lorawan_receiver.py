@@ -9,16 +9,13 @@ from requests_oauthlib import OAuth2Session
 from oauthlib.oauth2 import BackendApplicationClient, OAuth2Error
 from openapi_core.contrib.flask.decorators import FlaskOpenAPIViewDecorator
 from jsonschema_path import SchemaPath
+from datetime import datetime, timezone
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper())
 
 app = Flask(__name__)
 openapi = FlaskOpenAPIViewDecorator.from_spec(
     SchemaPath.from_file_path("lorawanReceiver.yaml"))
-
-ca_verify: bool | str = True
-if local_ca_path := os.getenv("TRUST_LOCAL_CA_PATH"):
-    ca_verify = local_ca_path
 
 @app.route("/livez")
 def livez():
@@ -30,7 +27,7 @@ def readyz():
     def ready(base_url, path):
         try:
             if requests.get(urljoin(base_url, path), timeout=2,
-                            allow_redirects=False, verify=ca_verify).ok:
+                            allow_redirects=False).ok:
                 return True
         except requests.exceptions.RequestException:
             pass
@@ -97,6 +94,27 @@ def convert_v3(message):
 def convert_default(message):
     return convert_v3(message)
 
+def convert_spie(message):
+    dev_eui = message["entityName"].lower()
+    app_id = "atb"
+    dev_id = message["entityName"].lower()
+    result_time = message["eventTime"]
+    msg_items = {
+        data["name"]: data["value"]["value"]
+        for data in message["data"]
+    }
+    result = {
+        "resultTime": datetime.fromtimestamp(
+            result_time/1000, timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"),
+        "sourcePath": {
+            "deveui": dev_eui,
+            "devid": dev_id,
+            "appid": app_id,
+        },
+        "variables": msg_items,
+    }
+    return result
 
 def convert_element(message):
     app_id = message["app_id"].lower()
@@ -159,6 +177,8 @@ first_request = True
            defaults={"convert": convert_v3}, methods=["POST"])
 @app.route("/api/v1/sensordata/element",
            defaults={"convert": convert_element}, methods=["POST"])
+@app.route("/api/v1/sensordata/spie",
+           defaults={"convert": convert_spie}, methods=["POST"])
 @app.route("/api/v1/sensordata/regiopole",
            defaults={"convert": convert_regiopole}, methods=["POST"])
 
@@ -170,12 +190,11 @@ def sensor_data(convert):
         first_request = False
 
     oauth2_session = OAuth2Session(client=BackendApplicationClient(None))
-    oauth2_session.verify = ca_verify
     try:
         oauth2_session.fetch_token(
             token_url,
             auth=lambda r: r,  # prevents OAuth2Session from overriding header
-            headers={"Authorization": request.headers.get("Authorization")}, verify=ca_verify)
+            headers={"Authorization": request.headers.get("Authorization")})
         logging.debug("token: %s", oauth2_session.token)
     except OAuth2Error:
         abort(401)

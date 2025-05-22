@@ -63,7 +63,7 @@ mailpit:
   image:
     registry: docker.io
     repository: axllent/mailpit
-    tag: v1.24.0
+    tag: v1.24.1
   readinessProbe:
     initialDelaySeconds: 0
     periodSeconds: 1

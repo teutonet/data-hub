@@ -124,7 +124,7 @@ export const apiFetch = async <T>(
 	baseUrl = getConfig('OIDC_AUTHORITY')
 ) => {
 	const response = await apiFetchResponse(path, accessToken, method, body, baseUrl);
-	const data: object = (await response.json()) as unknown as object;
+	const data: object = await response.json();
 	let isMalformed = false;
 	if (checkArray && !Array.isArray(data)) {
 		isMalformed = true;

@@ -149,12 +149,6 @@ app = Flask(__name__)
 openapi = FlaskOpenAPIViewDecorator.from_spec(
     SchemaPath.from_file_path("write.yaml"))
 
-ca_verify: bool | str = True
-if local_ca_path := os.getenv("TRUST_LOCAL_CA_PATH"):
-    ca_verify = local_ca_path
-
-print(ca_verify)
-
 @app.route("/livez")
 def livez():
     return "I am alive."
@@ -165,7 +159,7 @@ def readyz():
     def ready(base_url, path):
         try:
             if requests.get(urljoin(base_url, path), timeout=4,
-                            allow_redirects=False, verify=ca_verify).ok:
+                            allow_redirects=False).ok:
                 return True
         except requests.exceptions.RequestException:
             pass
@@ -215,7 +209,7 @@ def write(msg, project):
     logging.debug("write headers: %s", headers)
     try:
         response = requests.post(prometheus_url, headers=headers,
-                                 data=compressed, verify=ca_verify)
+                                 data=compressed)
         if not response.ok:
             logging.error("error posting to prometheus: %s %s %s", response,
                           response.text, msg)
