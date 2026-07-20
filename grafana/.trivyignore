@@ -1,0 +1,5 @@
+# false positive https://github.com/madler/zlib/issues/1142#issuecomment-3729902129
+CVE-2026-22184
+
+# not applicable: https://github.com/grafana/grafana/pull/123181#issue-4305852297
+CVE-2026-33816

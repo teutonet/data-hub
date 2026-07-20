@@ -3,8 +3,8 @@
 		"next": "Weiter",
 		"previous": "Zurück",
 		"keycloakAPI": {
-			"resourceNameInvalid": "Name darf nur Zahlen und Kleinbuchstaben enthalten, dazwischen können Bindestriche verwendet werden.",
-			"requestErros": {
+			"resourceNameInvalid": "Name darf nur Zahlen und Kleinbuchstaben enthalten, dazwischen können Bindestriche verwendet werden. Die maximale Länge beträgt 36 Zeichen.",
+			"requestErrors": {
 				"unauthorized": "Fehler bei der Authentifizierung",
 				"forbidden": "Sie haben keine Berechtigung diese Aktion auszuführen",
 				"conflict": "Es existiert bereits eine Resource mit dem selben Namen"
@@ -33,7 +33,10 @@
 			"delete": "Löschen",
 			"copy": "Kopieren",
 			"export": "Exportieren",
-			"import": "Importieren"
+			"import": "Importieren",
+			"edit": "Bearbeiten",
+			"search": "Suchen",
+			"clearSearch": "Suche leeren"
 		},
 		"breadcrumbs": {
 			"home": "Startseite",
@@ -43,6 +46,8 @@
 			"project": "Projekt {project}",
 			"groups": "Gruppen",
 			"group": "Gruppe {group}",
+			"viz-groups": "Visualisierungsgruppen",
+			"vizGroup": "Visualisierungsgruppe {vizGroup}",
 			"permissions": "Berechtigungen",
 			"permission": "Berechtigung {permission}",
 			"newPermission": "Neue Berechtigung"
@@ -90,16 +95,23 @@
 				"write_delta": "Delta-Werte",
 				"sensorName": "Sensortyp-Name",
 				"propertyName": "Eigenschafts-Name",
-				"alias": "Alias"
+				"alias": "Alias",
+				"has_error": "Fehler aufgetreten",
+				"altitude": "Höhengrad"
 			}
 		},
 		"permissions": {
 			"name": "Name",
 			"groups": "Gruppe/n",
+			"allGroups": "Alle",
+			"vizGroups": "Visualisierungsgruppe/n",
 			"scopes": "Scope/s",
 			"create": "Neue Berechtigung anlegen",
+			"missingPermissions": "Sie besitzen nicht die benötigten Berechtigungen.",
 			"list": {
 				"noExistingPermissions": "Keine existierenden Berechtigungen",
+				"allGroups": "Alle Gruppen",
+				"allVizGroups": "Alle Visualisierungsgruppen",
 				"deleteModal": {
 					"title": "Berechtigung wirklich löschen?",
 					"body": "Wollen sie diese Berechtigung wirklich löschen? Diese Aktion ist nicht reversibel."
@@ -114,19 +126,23 @@
 			}
 		},
 		"activeProjectSelector": {
-			"select": "Projekt auswählen",
-			"projectName": "Projekt: {name}"
+			"projectName": "Projekt: {name}",
+			"globalMode": "Sie befinden sich im Globalen-Modus. Sie sehen alle Ressourcen, auf die Sie Zugriff haben.",
+			"projectMode": "Sie befinden sich im Projekt-Modus. Sie sehen nur die Ressourcen des ausgewählten Projekts."
 		},
 		"nav": {
-			"brand": "MetaData_DB",
+			"brand": "DataHub",
 			"newSensors": "Neue Sensoren",
 			"overview": "Übersicht",
+			"sensorOverview": "Übersicht",
 			"sensors": "Sensoren",
+			"sensoradministration": "Sensorverwaltung",
 			"sensortypes": "Sensortypen",
 			"createSensor": "Sensor erstellen",
-			"properties": "Eigenschaften",
+			"properties": "Sensoreigenschaften",
 			"sensorerrors": "Sensorfehler",
 			"allProjects": "Alle Projekte",
+			"projectOverview": "Projektübersicht",
 			"projectApi": "Projektressource in API",
 			"projectApiDesc": "Erstellen und Rotieren von Sensor Credentials etc."
 		},
@@ -138,13 +154,25 @@
 			"logout": "Logout",
 			"login": "Login"
 		},
+		"overview": {
+			"sensorOverview": "Übersicht und Verwaltung aller Sensoren im Projekt",
+			"s3Explorer": "Verwalten und Durchsuchen von S3 Buckets",
+			"grafana": "Erstellen Sie mithilfe von Grafana Dashboards und Visualisierungen der Daten",
+			"jupyterhub": "Greifen Sie über die Plattform-Python-Umgebung auf Daten zu",
+			"keycloak": "Verwalten sie Ihre Nutzer und dessen Gruppenzuweisungen",
+			"authApi": "Verwalten Sie Mandanten, Projekte, Gruppen und Berechtigungen",
+			"mdbGraphiql": "Erkunden Sie die GraphQL-API visuell mithilfe von GraphiQL",
+			"docs": "Hier finden Sie weitere Informationen im Bezug auf die Plattform",
+			"allProjects": "Hier sehen Sie alle Projekte auf die Sie Zugriff haben"
+		},
 		"projectOverview": {
 			"description": {
 				"newSensors": "Übersicht über neu angelegte Sensoren, die bereit sind konfiguriert zu werden.",
 				"properties": "Liste an Sensoreigenschaften, die dem Projekt bekannt sind.",
 				"sensors": "Liste aller dem Projekt bekannten, verfügbaren Sensoren.",
 				"sensorTypes": "Liste aller dem Projekt bekannten, verfügbaren Sensortypen.",
-				"createSensor": "Erstellen sie einen neuen Sensor (DevEUI benötigt),"
+				"sensorErrors": "Liste aller dem Projekt bekannten Sensorfehler.",
+				"createSensor": "Erstellen sie einen neuen Sensor (DevEUI benötigt)."
 			}
 		},
 		"sensorsOverview": {
@@ -245,10 +273,6 @@
 			"metricNameFilterHeader": "Metrikname",
 			"resetFilters": "Filter zurücksetzen"
 		},
-		"welcomeBanner": {
-			"heading": "Willkommen im MetaData_DB Hub",
-			"description": "Hier können Sie ihre Sensordaten einsehen, Gruppen verwalten"
-		},
 		"sensorEdit": {
 			"id": "Sensortyp-ID",
 			"name": "Sensorname",
@@ -322,6 +346,13 @@
 				"notAValidJsonFormat": "Das ist keine Valide JSON-Datei",
 				"validJsonFormat": "Alles in Ordnung!"
 			}
+		},
+		"displayNameModal": {
+			"title": "Anzeigename ändern",
+			"displayName": "Anzeigename",
+			"resourceName": "Ressourcenname",
+			"newDisplayName": "Neuer Anzeigename",
+			"description": "Das Ändern des Anzeigenamens beeinflusst nicht die URL der Ressoure."
 		}
 	},
 	"sensorTypeAutodetect": {
@@ -360,7 +391,7 @@
 	},
 	"sensorView": {
 		"offsetsHeading": "Offsets",
-		"newlyCreatedAlert": "Dieser Sensor wurde soeben hinzugefügt, Bitte überprüfen Sie die Konfiguration des Gerätes",
+		"newlyCreatedAlert": "Dieser Sensor wurde soeben hinzugefügt. Bitte überprüfen Sie die Konfiguration des Gerätes",
 		"editOrDeleteWarning": "Wenn der Typ des Sensors geändert wird, werden alle konfigurierten Offsets gelöscht",
 		"information": "Informationen",
 		"general": "Allgemeine Informationen",
@@ -382,7 +413,8 @@
 			"description": "Beschreibung",
 			"latitude": "Breitengrad (latitude)",
 			"longitude": "Längengrad (longitude)",
-			"altitude": "Höhengrad (altitude)"
+			"altitude": "Höhengrad (altitude)",
+			"copy": "Kopieren"
 		},
 		"thing": {
 			"id": "Id",
@@ -418,30 +450,35 @@
 	},
 	"page": {
 		"hub": {
-			"welcome": "Willkommen im Data HUB",
+			"welcome": "Willkommen im DataHub",
 			"navigation": "Navigation:",
 			"links": {
-				"keycloak": "Keycloak",
-				"grafana": "Grafana Dashboard",
-				"jupyterhub": "Jupyterhub",
-				"mdb": "MDB",
-				"mdbGraphiql": "MDB-Graphiql",
-				"authApi": "Auth API"
+				"keycloak": "Nutzerverwaltung",
+				"grafana": "Daten-Visualisierung",
+				"jupyterhub": "Python-Notebooks",
+				"mdbGraphiql": "API-Explorer",
+				"docs": "Dokumentation",
+				"authApi": "Berechtigungsverwaltung"
 			}
 		},
 		"apiRoot": {
 			"title": "Auth API",
 			"tenantsLink": "Tenants"
 		},
+		"resourceTabMenu": {
+			"dangerZone": "Danger Zone",
+			"overview": "Übersicht",
+			"scopes": "Scope/s",
+			"tenantPermissions": "Tenant-Berechtigungen"
+		},
 		"tenantPage": {
-			"projectsButton": "Projekte",
-			"groupsButton": "Gruppen",
 			"permissionListTitle": "Tenant Berechtigungen"
 		},
 		"groupsList": {
 			"title": "Gruppen",
-			"noGroups": "Keine Gruppen gefunden",
-			"newGroupButton": "Neue Gruppe anlegen",
+			"groupPageOverview": "Gruppenübersicht: ",
+			"empty": "Keine Gruppen gefunden",
+			"newTooltip": "Neue Gruppe anlegen",
 			"newGroupModalTitle": "Neue Gruppe",
 			"newGroupExplanation": "Geben Sie den Namen für die neue Gruppe an",
 			"newGroupNameInputLabel": "Gruppenname",
@@ -451,10 +488,30 @@
 			},
 			"permissionListTitle": "Gruppenberechtigungen"
 		},
-		"projectList": {
+		"viz-groupsList": {
+			"title": "Visualisierungsgruppen",
+			"vizGroupPageOverview": "Visualisierungsgruppenübersicht: ",
+			"grafanaOrgName": "Grafana-Org-Id",
+			"empty": "Keine Visualisierungsgruppen gefunden",
+			"newTooltip": "Neue Visualisierungsgruppe anlegen",
+			"newVizGroupModalTitle": "Neue Visualisierungsgruppe",
+			"newVizGroupExplanation": "Geben Sie den Namen für die neue Visualisierungsgruppe an",
+			"newVizGroupNameInputLabel": "Visualisierungsgruppenname",
+			"deleteModal": {
+				"title": "Visualisierungsgruppe wirklich löschen?",
+				"body": "Wollen sie diese Visualisierungsgruppe wirklich löschen? Diese Aktion ist nicht reversibel."
+			},
+			"permissionListTitle": "Visualisierungsgruppenberechtigungen"
+		},
+		"projectsList": {
 			"title": "Projekte",
-			"noProjects": "Keine Projekte gefunden",
+			"projectPageOverview": "Projektübersicht: ",
+			"bucketName": "S3-Bucket-Name",
+			"empty": "Keine Projekte gefunden",
+			"newTooltip": "Neues Projekt anlegen",
+			"tokens": "Tokens",
 			"newTokenButton": "Neuen Token anlegen",
+			"newOWMCollectorButton": "+ Kollektor",
 			"newProjectButton": "Neues Projekt anlegen",
 			"newProjectModalTitle": "Neues Projekt",
 			"newProjectExplanation": "Geben Sie den Namen für das neue Projekt an",
@@ -467,19 +524,33 @@
 		},
 		"tenantsList": {
 			"title": "Tenants",
+			"tenantPageOverview": "Tenantübersicht: ",
 			"noTenants": "Keine Tenants gefunden",
-			"newTenantButton": "Neuen Tenant anlegen",
+			"newTenantTooltip": "Neuen Tenant anlegen",
 			"newTenantModalTitle": "Neuer Tenant",
 			"newTenantExplanation": "Geben Sie den Namen für den neuen Tenant an",
-			"newTenantNameInputLabel": "Tenantname"
+			"newTenantNameInputLabel": "Tenantname",
+			"scopesOnThisResource": "Sie haben folgende Scopes auf dieser Ressource:",
+			"noScopesOnThisResource": "Sie haben keine Scopes auf dieser Ressource.",
+			"noResourceCreationPermission": "Sie haben keine Berechtigungen zum Erstellen von Ressourcen.",
+			"resourceURL": "URL der Ressource"
 		},
 		"projectOverview": {
 			"title": "Übersicht",
 			"newCredential": "Neu erstellen",
 			"credentialSelector": "Token auswählen",
-			"deleteModal": {
+			"tokens": "Tokens",
+			"betaFeatureNotice": "Achtung: Diese Funktion ist ein Beta-Feature, es können zukünftig Änderungen an diesem Feature auftreten",
+			"owmCollectors": "OpenWeatherMap-Kollektoren",
+			"currentWeatherApi": "Current-Weather-API",
+			"entries": "{number, plural, one {1 Eintrag} other {{number} Einträge}}",
+			"deleteModalToken": {
 				"title": "Token wirklich löschen?",
 				"body": "Wollen sie diesen Token wirklich löschen? Diese Aktion ist nicht reversibel."
+			},
+			"deleteModalCollector": {
+				"title": "Kollektor wirklich löschen?",
+				"body": "Wollen sie diesen Kollektor wirklich löschen? Diese Aktion ist nicht reversibel."
 			},
 			"apiTokenModal": {
 				"buttonText": "API-Token erneuern",
@@ -499,6 +570,18 @@
 			"rotateTokenConfirmationModal": {
 				"title": "API-Token wirklich erneuern?",
 				"body": "Durch das Erneuern des Tokens wird das aktuelle Token widerrufen, alle Webhooks, verbundene Endpunkte und Kollektoren, die das aktuelle Token verwenden, müssen daraufhin aktualisiert werden!"
+			},
+			"owmCollectorModal": {
+				"title": "Neuen OpenWeatherMap-Kollektor anlegen",
+				"noCollectors": "Keine Kollektoren vorhanden",
+				"action": "Aktion",
+				"name": "Kollektorname",
+				"token": "Token",
+				"tokenNotice": "Der hinterlegte Token kann nach dem Speichern nicht wieder eingesehen werden!",
+				"latitude": "Breitengrad",
+				"longitude": "Längengrad",
+				"interval": "Abfrage Interval (in Sekunden)",
+				"buttonCreate": "OpenWeatherMap-Kollektor erstellen"
 			}
 		},
 		"newThings": {
@@ -508,7 +591,7 @@
 			"title": "Alle Sensoren"
 		},
 		"overview": {
-			"welcome": "Willkommen im MetaData_DB Hub",
+			"welcome": "Willkommen im DataHub",
 			"projectNotFound": "Projekt nicht gefunden",
 			"goToOverview": "Zurück zur Übersicht",
 			"explanation": {
@@ -548,6 +631,72 @@
 		},
 		"sensorErrorsPage": {
 			"title": "Aufgetretene Sensorfehler"
+		},
+		"s3-explorer": {
+			"title": "S3-Explorer",
+			"fileName": "Name",
+			"filePath": "Dateipfad",
+			"fileBody": "Inhalt",
+			"newFileName": "Neuer Name",
+			"fileType": "Typ",
+			"fileSize": "Größe",
+			"lastModified": "Letzte Änderung",
+			"files": "{count, plural, one {1 Datei} other {{count} Dateien}}",
+			"selectFile": "Datei auswählen",
+			"selectAllFiles": "Alle Dateien auswählen",
+			"bucket": "Bucket",
+			"noBucketSelected": "Kein Bucket ausgewählt",
+			"options": "Optionen",
+			"upload": "Hochladen",
+			"download": "Herunterladen",
+			"refresh": "Aktualisieren",
+			"filesPerPage": "Dateien pro Seite: ",
+			"showAllFiles": "Alle",
+			"fileAlreadyExists": "Es existiert bereits eine Datei mit diesem Namen.",
+			"downloadFailed": "Herunterladen fehlgeschlagen",
+			"invalidFileName": "Ungültiger Dateiname",
+			"public": "Öffentlich",
+			"publicTooltip": "Öffentliche Dateien sind von allen Nutzern einsehbar. Darunter fallen auch nicht authentifizierte Nutzer.",
+			"private": "Privat",
+			"privateTooltip": "Private Dateien können nur von Mitgliedern dieses Projekts eingesehen werden.",
+			"creationModal": {
+				"title": "Neue Datei erstellen"
+			},
+			"uploadModal": {
+				"title": "Datei(en) hochladen",
+				"selectedFiles": "Ausgewählte Datei(en):",
+				"removeFile": "Datei entfernen",
+				"fileuploadLabel": "Hochzuladende Dateien"
+			},
+			"deleteModal": {
+				"title": "{file} wirklich löschen?",
+				"body": "Wollen Sie diese {count, plural, one {Datei} other {Dateien}} wirklich löschen? Diese Aktion ist nicht reversibel."
+			},
+			"overwriteModal": {
+				"title": "Es existiert bereits eine Datei mit diesem Namen.",
+				"body": "Folgende Dateien werden überschrieben:"
+			},
+			"renameModal": {
+				"title": "Datei umbenennen"
+			},
+			"metadataModal": {
+				"title": "Metadaten",
+				"set": "Metadaten setzen",
+				"edit": "Metadaten bearbeiten",
+				"delete": "Metadaten löschen",
+				"confirmChanges": "Änderungen speichern",
+				"discardChanges": "Änderungen verwerfen",
+				"key": "Schlüssel",
+				"value": "Wert",
+				"editKey": "Schlüssel bearbeiten",
+				"editValue": "Wert bearbeiten",
+				"keyExists": "Es existiert bereits ein Schlüssel mit diesem Namen.",
+				"invalidKey": "Ungültiger Schlüssel.",
+				"invalidValue": "Der Wert muss aus 1-8000 ASCII-Zeichen bestehen. Am Anfang und am Ende sind keine Leerzeichen erlaubt."
+			},
+			"noWritePermissionWarning": "Sie können keine oder nur einige Dateien umbenennen oder löschen, da Ihnen die entsprechenden Berechtigungen fehlen",
+			"noBucketWriteWarning": "Sie haben nur lesenden Zugriff auf den Bucket",
+			"noBucketAccessWarning": "Sie haben keinen Zugriff auf den Bucket, da Ihnen die entsprechenden Berechtigungen fehlen"
 		}
 	}
 }

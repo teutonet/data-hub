@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContextClient, queryStore } from '@urql/svelte';
-	import { Card, CardPlaceholder, Heading, P } from 'flowbite-svelte';
+	import { Alert, Card, CardPlaceholder, Heading } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
 	import PropertyEdit from '$lib/PropertyEdit.svelte';
 	import type {
@@ -104,18 +104,19 @@
 	<Heading tag="h2" class="pb-4">
 		{$_('page.propertyPage.title', { values: { name: property.name } })}
 	</Heading>
-	<Card class="max-w-full rounded-none rounded-t-lg">
-		<P>
-			{$_('page.propertyPage.editInfo')}
-		</P>
-		<PropertyEdit id="property-edit" bind:property {submitFunction} {deleteFunction} />
-	</Card>
-	<HistoryModal
-		entityId={property.id}
-		dataKey="propertyChanges"
-		query={GET_PROPERTY_CHANGES}
-		openButtonClass="rounded-none rounded-b-lg"
-	/>
+	<div class="max-w-[80rem]">
+		<Card class="max-w-full rounded-none rounded-t-lg">
+			<Alert class="mb-4">
+				{$_('page.propertyPage.editInfo')}
+			</Alert>
+			<PropertyEdit id="property-edit" bind:property {submitFunction} {deleteFunction} />
+		</Card>
+		<HistoryModal
+			entityId={property.id}
+			query={GET_PROPERTY_CHANGES}
+			openButtonClass="rounded-none rounded-b-lg w-full"
+		/>
+	</div>
 {:else}
 	<CardPlaceholder />
 {/if}

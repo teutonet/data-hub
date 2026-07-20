@@ -1,3 +1,4 @@
+<!-- svelte-ignore state_referenced_locally -->
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import type { ToastOptions, ToastStyle } from './toast';
@@ -10,7 +11,6 @@
 	}
 
 	let { close, toast }: Props = $props();
-	const delay = { short: 2000, normal: 5000, long: 20000 }[toast.duration ?? 'normal'];
 	const color = styleToColor(toast.style ?? 'info');
 	function styleToColor(style: ToastStyle): string {
 		switch (style) {
@@ -25,7 +25,10 @@
 		}
 	}
 
-	if (toast.duration !== 'indefinite') setTimeout(close, delay);
+	if (toast.duration !== 'indefinite') {
+		const delay = { short: 2000, normal: 5000, long: 20000 }[toast.duration ?? 'normal'];
+		setTimeout(close, delay);
+	}
 </script>
 
 <div

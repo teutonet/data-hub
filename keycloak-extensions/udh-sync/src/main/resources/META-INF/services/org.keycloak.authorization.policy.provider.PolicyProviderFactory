@@ -1,2 +1,3 @@
 net.teuto.udh.DatahubPolicyProviderFactory
+net.teuto.udh.DatahubGroupPolicyProviderFactory
 net.teuto.udh.DatahubResourcePolicyProviderFactory

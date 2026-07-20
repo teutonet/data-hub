@@ -3,7 +3,29 @@
 set -eu -o pipefail
 
 
-npx lint-staged
+pnpx lint-staged
 
+# don't require ktlint to be installed
+if command -v ktlint &> /dev/null
+then
+    cd keycloak-extensions/udh-sync
+    # format first, then add all committed kt files
+    ktlint --format src build.gradle.kts settings.gradle.kts
+    # field separator to the new line
+    IFS=$'\n'
 
+    for line in $(git status -s)
+    do
+        # if added or modified
+        if [[ $line == A* || $line == M* ]]
+        then
+            # check file extension
+            if [[ $line == *.kt ]]
+            then
+                # add changes
+                git add $(pwd)/${line:3}
+            fi
+        fi
+    done
+fi
 

@@ -5,4 +5,5 @@ metadata:
   name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
 spec:
   interval: 1h0m0s
-  url: https://grafana.github.io/helm-charts
+  url: oci://ghcr.io/grafana-community/helm-charts
+  type: oci

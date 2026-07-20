@@ -16,10 +16,9 @@
 	import type {
 		AssignSensortypeToNewDevicesMutation,
 		AssignSensortypeToNewDevicesMutationVariables,
-		Exact,
+		GetSensorByIdQuery,
 		GetThingsQuery,
 		GetThingsQueryVariables,
-		Sensor,
 		ThingCondition
 	} from '$lib/common/generated/types';
 	import { getContextClient, type OperationResult } from '@urql/svelte';
@@ -34,7 +33,7 @@
 	import { handleCombinedErrors, performMutation } from './graphql/utils';
 
 	interface Props {
-		sensortype: Sensor;
+		sensortype: NonNullable<GetSensorByIdQuery['sensor']>;
 		project: string;
 	}
 
@@ -45,8 +44,8 @@
 	const client = getContextClient();
 
 	let thingsPromise:
-		| Promise<OperationResult<GetThingsQuery, Exact<{ condition: ThingCondition }>>>
-		| undefined = $state(undefined);
+		Promise<OperationResult<GetThingsQuery, { condition: ThingCondition }>> | undefined =
+		$state(undefined);
 
 	let sensorShape: SensorShape = $derived({
 		id: sensortype.id,

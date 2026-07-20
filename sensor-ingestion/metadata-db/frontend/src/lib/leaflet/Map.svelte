@@ -1,31 +1,40 @@
 <script lang="ts">
 	import L, { LatLng, type LatLngExpression } from 'leaflet';
-	import { createIcon } from './utils';
+	import { createIcon, mousePosStore } from './utils';
 	import { Button } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
 	import { replaceComma } from '$lib/stringUtils';
+	import MapContextMenu from './MapContextMenu.svelte';
 
 	interface Props {
-		latSensor: string | null;
-		lngSensor: string | null;
+		latSensor: string | null | undefined;
+		lngSensor: string | null | undefined;
 		sensorName: string;
 	}
 
 	let { latSensor = $bindable(), lngSensor = $bindable(), sensorName }: Props = $props();
 
 	let map: L.Map;
+	let mapDiv: HTMLDivElement | undefined = $state(undefined);
 	let markerLayers: L.LayerGroup = L.layerGroup();
 	let changeMarker: L.Marker | null = null;
 	let mouseDownCenter: LatLng;
 	let openMap: boolean = $state(false);
 
-	function getMouseDownCenter() {
+	let mousePos: LatLng;
+
+	function mouseDown(e: MouseEvent) {
 		mouseDownCenter = map.getCenter();
+
+		if (e.button === 2) {
+			mousePos = map.mouseEventToLatLng(e);
+			mousePosStore.set([mousePos.lat, mousePos.lng]);
+		}
 	}
 
 	function getLatLngExpression(
-		latSensor: string | null,
-		lngSensor: string | null
+		latSensor: string | null | undefined,
+		lngSensor: string | null | undefined
 	): LatLngExpression | undefined {
 		if (latSensor && lngSensor) {
 			const latSensorNum = parseFloat(replaceComma(latSensor));
@@ -37,7 +46,10 @@
 		return undefined;
 	}
 
-	function updateMouseManual(latSensor: string | null, lngSensor: string | null) {
+	function updateMouseManual(
+		latSensor: string | null | undefined,
+		lngSensor: string | null | undefined
+	) {
 		if (changeMarker) {
 			changeMarker.remove();
 			changeMarker = null;
@@ -60,7 +72,16 @@
 		return marker;
 	}
 	function createMap(container: HTMLDivElement) {
-		map = L.map(container, { preferCanvas: true });
+		map = L.map(container, {
+			preferCanvas: true,
+			maxBoundsViscosity: 1.0,
+			minZoom: 2,
+			maxZoom: 19,
+			maxBounds: [
+				[-90, -180],
+				[90, 180]
+			]
+		});
 
 		const initialView = getLatLngExpression(latSensor, lngSensor);
 		if (initialView) {
@@ -101,9 +122,10 @@
 	function clickZoom(e: any) {
 		map?.setView(e.target?.getLatLng(), 5);
 	}
+
 	function mouseClick(e: MouseEvent) {
 		let center = map.getCenter();
-		let mousePos = map.mouseEventToLatLng(e);
+		mousePos = map.mouseEventToLatLng(e);
 		if (center.lat === mouseDownCenter.lat && center.lng === mouseDownCenter.lng) {
 			if (changeMarker) {
 				changeMarker.remove();
@@ -119,11 +141,12 @@
 <svelte:window onresize={resizeMap} />
 {#if openMap}
 	<div
+		bind:this={mapDiv}
 		class="map z-10 h-[600px] min-h-[600px] w-[600px] min-w-[600px] rounded-xl"
 		use:mapAction
 		aria-label="Map"
 		role="presentation"
-		onmousedown={getMouseDownCenter}
+		onmousedown={mouseDown}
 		onclick={mouseClick}
 	></div>
 {:else}
@@ -135,3 +158,5 @@
 		</div>
 	</div>
 {/if}
+
+<MapContextMenu {mapDiv} />

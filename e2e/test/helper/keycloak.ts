@@ -2,6 +2,7 @@ import { Page } from 'playwright';
 import { KEYCLOAK, RESOURCE_API } from './urls';
 import { getRandomString } from './util';
 import axios, { AxiosError, AxiosInstance } from 'axios';
+import { expect } from 'playwright/test';
 
 export const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD;
 export const DATA_HUB_ADMIN_USERNAME = `data-hub-admin`;
@@ -19,8 +20,12 @@ export async function createKeycloakUser(
 	joinTenants: Tenant[],
 	realmAdmin: boolean
 ): Promise<void> {
-	await page.getByTestId('realmSelector').click();
-	await page.getByRole('menuitem', { name: 'udh' }).click();
+	const currentRealm = await page.getByTestId('currentRealm').textContent();
+	if (currentRealm != 'udh') {
+		await page.getByRole('link', { name: 'Manage Realms' }).click();
+		await page.getByRole('link', { name: 'udh' }).click();
+		await expect(page.getByTestId('currentRealm')).toHaveText('udh');
+	}
 	await page.getByRole('link', { name: 'Users' }).click();
 	await page.getByTestId('add-user').click();
 
@@ -31,16 +36,14 @@ export async function createKeycloakUser(
 	// set email to be verified
 	await page.locator('label').filter({ hasText: 'OnOff' }).locator('span').first().click();
 	// set language to english
-	await page.getByLabel('toggle', { exact: true }).click();
+	await page.getByRole('button', { name: 'Select a locale' }).click();
 	await page.getByRole('option', { name: 'English' }).click();
 
 	if (joinTenants.length > 0) {
 		await page.getByTestId('join-groups-button').click();
 		for (const tenant of joinTenants) {
-			await page.getByPlaceholder('Search group').fill(tenant.name);
-			await page.getByRole('button', { name: 'Search' }).click();
 			await page.getByTestId(`${tenant.name}-check`).check();
-			await page.getByTestId(tenant.name).getByLabel('Select').click();
+			await page.getByText(tenant.name).click();
 			for (const project of tenant.groups) {
 				await page.getByTestId(`${project}-check`).check();
 			}
@@ -89,9 +92,10 @@ export async function signInAdminKeycloak(page: Page) {
 	await page.getByRole('button', { name: 'Sign In' }).click();
 }
 
-class KeycloakUser {
+export class KeycloakUser {
 	constructor(
 		public username: string,
+		public email: string,
 		public id: string | null = null
 	) {}
 
@@ -110,7 +114,9 @@ class KeycloakUser {
 				}
 			}
 		);
-		return result.data.access_token;
+
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		return result?.data?.access_token;
 	}
 }
 
@@ -145,12 +151,44 @@ export async function createTestUserViaApi(groups: string[], username: string | 
 		},
 		{ headers: adminHeader }
 	);
-	return new KeycloakUser(email, userId);
+	return new KeycloakUser(email, email, userId);
 }
 
-export const ADMIN_USER = new KeycloakUser(DATA_HUB_ADMIN_USERNAME);
+export async function getUserAttributes(userId: string): Promise<Record<string, string>> {
+	const adminHeader = {
+		Authorization: `Bearer ${await ADMIN_USER.token()}`,
+		Accepts: 'application/json'
+	};
+	const result = await axios.get<Record<string, string>>(
+		`${KEYCLOAK}realms/udh/data-hub/_get_user_attributes/${userId}`,
+		{ headers: adminHeader }
+	);
+	delete result.data.email;
+	delete result.data.firstName;
+	delete result.data.lastName;
+	delete result.data.username;
+	return result.data;
+}
 
-export async function createRealmAdminClient(): Promise<AxiosInstance> {
+export async function updateUserAttributes(
+	userId: string,
+	attributes: Record<string, string | null>
+): Promise<Record<string, string>> {
+	const adminHeader = {
+		Authorization: `Bearer ${await ADMIN_USER.token()}`,
+		Accepts: 'application/json'
+	};
+	const result = await axios.put<Record<string, string>>(
+		`${KEYCLOAK}realms/udh/data-hub/_update_user_attributes/${userId}`,
+		attributes,
+		{ headers: adminHeader }
+	);
+	return result.data;
+}
+
+export const ADMIN_USER = new KeycloakUser(DATA_HUB_ADMIN_USERNAME, 'data-hub-admin@example.com');
+
+async function createRealmAdminClient(): Promise<AxiosInstance> {
 	return axios.create({
 		headers: { Authorization: `Bearer ${await ADMIN_USER.token()}` }
 	});
@@ -197,13 +235,13 @@ export async function createResourceToken(
 	projectName: string,
 	tokenName: string
 ) {
-	const url =
-		RESOURCE_API.replace(/\/$/, '') +
-		`/tenants/${tenantName}/projects/${projectName}/sensor-credentials/${tokenName}`;
-	const create = async () => await setupClient.put(url);
-
-	const response = await withSetupClient(create);
-	const { username, password } = response.data as { username: string; password: string };
+	const {
+		data: { username, password }
+	} = await withSetupClient((client) =>
+		client.put<{ username: string; password: string }>(
+			`${RESOURCE_API}tenants/${tenantName}/projects/${projectName}/sensor-credentials/${tokenName}`
+		)
+	);
 
 	return { username, password };
 }

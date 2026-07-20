@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import GraphQL from '$lib/common/graphql/GraphQL.svelte';
+	import Nav from '$lib/nav/Nav.svelte';
 	import Auth from '$lib/common/auth/Auth.svelte';
 	import { getConfig } from '$lib/config';
-	import GraphQL from '$lib/common/graphql/GraphQL.svelte';
+	import { _ } from 'svelte-i18n';
+	import DataHubSidebar from '$lib/nav/DataHubSidebar.svelte';
+	import type { Snippet } from 'svelte';
 	import { isAuthenticated } from '$lib/common/auth';
-	import Nav from '$lib/nav/Nav.svelte';
+	import UserProjectPermissions from '$lib/permissions/UserProjectPermissions.svelte';
 	interface Props {
-		children?: import('svelte').Snippet;
+		children: Snippet;
 	}
-
 	let { children }: Props = $props();
 </script>
 
@@ -25,9 +28,11 @@
 />
 {#if $isAuthenticated}
 	<GraphQL>
-		<Nav />
-		<div class="flex flex-col justify-center p-40 pb-10">
-			{@render children?.()}
-		</div>
+		<UserProjectPermissions>
+			<Nav />
+			<DataHubSidebar>
+				{@render children()}
+			</DataHubSidebar>
+		</UserProjectPermissions>
 	</GraphQL>
 {/if}

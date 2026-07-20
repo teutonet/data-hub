@@ -26,22 +26,23 @@ spec:
             name: http
         env:
           - name: DB_HOST
-            value: {{ printf "%s-postgres" (include "common.names.fullname" .) }}
+            value: {{ include "data-hub.postgres.hostRO" .}}
           - name: DB_NAME
             value: mdb
           - name: DB_USERNAME
             valueFrom:
               secretKeyRef:
-                # TODO: use dedicated user with less permissions
-                name: {{ printf "postgres.%s-postgres.credentials.postgresql.acid.zalan.do" (include "common.names.fullname" .) | quote }}
+                name: {{ printf "%s-mdb-geojson-reader-postgres-credentials" (include "common.names.fullname"  .) }}
                 key: username
           - name: DB_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: {{ printf "postgres.%s-postgres.credentials.postgresql.acid.zalan.do" (include "common.names.fullname" .) | quote }}
+                name: {{ printf "%s-mdb-geojson-reader-postgres-credentials" (include "common.names.fullname"  .) }}
                 key: password
           - name: PROMETHEUS_HOST
             value: {{ printf "http://%s/prometheus" (include "data-hub.name" (dict "context" . "name" "mimir-nginx")) }}
+          - name: PGSSLROOTCERT
+            value: /tls/ca.crt
         resources: {{- toYaml .Values.geojsonExport.resources | nindent 10 }}
         livenessProbe:
           periodSeconds: 2
@@ -53,6 +54,10 @@ spec:
           httpGet:
             path: /readyz
             port: http
+        volumeMounts:
+          {{- include "data-hub.postgres.caMount" . | nindent 10 }}
+      volumes:
+        {{- include "data-hub.postgres.caVolume" . | nindent 8 }}
 
 ---
 {{- $serviceName := printf "%s-%s" (include "common.names.fullname" .) $name -}}

@@ -33,6 +33,10 @@ paths:
           description: Successful operation
         '401':
           description: Unauthorized
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden
       security:
         - BasicAuth: []
   /sensordata: *v3
@@ -56,6 +60,36 @@ paths:
           description: Successful operation
         '401':
           description: Unauthorized
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden
+      security:
+        - BasicAuth: []
+  /sensordata/spie:
+    post:
+      summary: Add sensor data Spie (ATB)
+      description: |
+        Process LoRaWAN sensor data and forward it to the configured targets
+        using the credentials provided through Basic authentication.
+        Please use this via the v3 path.
+      tags: [sensordata]
+      requestBody:
+        description: Sensor data to add
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensordataSpie'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden
       security:
         - BasicAuth: []
   /sensordata/regiopole:
@@ -77,6 +111,10 @@ paths:
           description: Successful operation
         '401':
           description: Unauthorized
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden
       security:
         - BasicAuth: []
 components:
@@ -183,6 +221,44 @@ components:
         - hardware_serial
         - payload_fields
         - metadata
+    SensordataSpie:
+      type: object
+      properties:
+        entityName:
+          type: string
+        eventTime:
+          type: number
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              time:
+                type: number
+              value:
+                oneOf:
+                  - type: string
+                  - type: number
+                  - type: object
+                    properties:
+                      value:
+                        oneOf:
+                          - type: string
+                          - type: number
+                      baseType:
+                        type: string
+                    required:
+                      - value
+            required:
+              - name
+              - time
+              - value
+      required:
+        - entityName
+        - eventTime
+        - data
     SensordataRegiopole:
       type: object
       properties:

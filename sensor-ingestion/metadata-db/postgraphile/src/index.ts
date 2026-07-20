@@ -1,21 +1,32 @@
 import express from 'express';
 import helmet from 'helmet';
-import { postgraphile, withPostGraphileContext } from 'postgraphile';
-import { graphql, GraphQLSchema } from 'graphql';
-import getPostgraphileConfig from './options';
+import { makeSchema, postgraphile } from 'postgraphile';
+import { grafserv } from 'postgraphile/grafserv/express/v4';
+import preset from './options';
 import { auth } from 'express-oauth2-jwt-bearer';
-import { Pool } from 'pg';
+import { GraphQLSchema } from 'graphql';
+import { grafast } from 'postgraphile/grafast';
 
 const isDevLocal = !!process.env.DEV_LOCAL;
 
 console.log(isDevLocal ? 'starting DEVELOPMENT server!' : 'starting production server');
 
 const app = express();
-app.use(helmet());
 
-const { connectionString, schema, options } = getPostgraphileConfig(isDevLocal);
-const pool = new Pool({ connectionString });
-const middleware = postgraphile(pool, schema, options);
+// ruru/graphiql would be blocked without this
+app.use(
+	helmet({
+		contentSecurityPolicy: {
+			directives: {
+				'script-src': ["'self'", "'unsafe-inline'"],
+				'style-src': ["'self'", "'unsafe-inline'"]
+			}
+		}
+	})
+);
+
+const pgl = postgraphile(preset);
+const serv = pgl.createServ(grafserv);
 
 if (!isDevLocal) {
 	app.use(
@@ -31,21 +42,25 @@ app.get('/livez', (_req, res) => {
 	res.send('I am alive.');
 });
 
-async function executeTestQuery(pgPool: any, schema: GraphQLSchema) {
-	let result = await withPostGraphileContext(
-		{ pgPool, pgSettings: { 'jwt.claims.projects': '[]' } },
-		async (context) =>
-			await graphql(schema, 'query { things { deveui } }', null, { ...context }, {}, null)
-	);
-	return result.data?.things?.length === 0;
+async function executeTestQuery(schema: GraphQLSchema) {
+	const { resolvedPreset } = await makeSchema(preset);
+
+	const result = await grafast({
+		schema,
+		source: 'query { things { deveui } }',
+		resolvedPreset,
+		requestContext: {}
+	});
+
+	return (result as any).data?.things?.length === 0;
 }
+
 app.get('/readyz', async (_req, resp) => {
 	const ready = await Promise.race([
 		new Promise((resolve) => setTimeout(() => resolve(false), 1000)),
-		middleware
-			.getGraphQLSchema()
-			.then((schema) => executeTestQuery(pool, schema))
-			.catch((e) => {
+		Promise.resolve(pgl.getSchema())
+			.then((schema: GraphQLSchema) => executeTestQuery(schema))
+			.catch((e: any) => {
 				console.log(e);
 				return false;
 			})
@@ -57,9 +72,9 @@ app.get('/readyz', async (_req, resp) => {
 	}
 });
 
-app.use(middleware);
-
 const server = app.listen(5000, isDevLocal ? 'localhost' : '0.0.0.0');
+
+serv.addTo(app, server);
 
 const terminator = require('lil-http-terminator')({ server });
 

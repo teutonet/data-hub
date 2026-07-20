@@ -117,6 +117,30 @@
         },
         "storage": {
           "type": "string"
+        },
+        "singleNode": {
+          "type": "boolean"
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "type": "object"
+            }
+          }
+        },
+        "operator": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "reuseClusterFromNamespace": {
+          "type": "string"
         }
       }
     },

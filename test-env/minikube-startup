@@ -4,9 +4,9 @@ source "$(dirname "$BASH_SOURCE")/.common"
 
 cd "$REPO"
 
-: ${MINIKUBE_RESOURCE_CPU:=4}
-: ${MINIKUBE_RESOURCE_RAM:=8192}
-: ${KUBERNETES_VERSION:=v1.30.2}
+: ${MINIKUBE_RESOURCE_CPU:=6}
+: ${MINIKUBE_RESOURCE_RAM:=16384}
+: ${KUBERNETES_VERSION:=$DEFAULT_KUBERNETES_VERSION}
 : ${TELEPRESENCE:=1}
 
 error () {
@@ -73,16 +73,16 @@ fi
 if $minikube_started || [ ${MINIKUBE_SETUP:-0} -eq 1 ]
 then
   echo "enabling ingress controller"
-  minikube addons enable ingress
+  minikube addons enable ingress --images="IngressController=registry.k8s.io/ingress-nginx/controller:v1.13.2"
 
   # snippet annotations are disabled by default
-  $KUBECTL -n ingress-nginx get configmaps ingress-nginx-controller -ojson | jq '.data["allow-snippet-annotations"] = "true"' | $KUBECTL apply -f -
+  $KUBECTL -n ingress-nginx get configmaps ingress-nginx-controller -ojson | jq '.data["allow-snippet-annotations"] = "true" | .data["annotations-risk-level"] = "Critical"' | $KUBECTL apply -f -
 
   echo "enabling metrics-server"
   minikube addons enable metrics-server
 
   echo "enabling minikube registry"
-  minikube addons enable registry
+  minikube addons enable registry --images="KubeRegistryProxy=registry.k8s.io/minikube/kube-registry-proxy:v0.0.11"
    # Using Cilium as a CNI somehow breaks running the docker registry on localhost:5000 (only on some machines), this is hopefully fixing it 
   $KUBECTL -n kube-system patch svc registry --type json --patch '[{"op":"replace","path":"/spec/type","value":"NodePort"},{"op":"add","path":"/spec/ports/0/nodePort","value":32000}]'
   $KUBECTL -n ingress-nginx patch svc ingress-nginx-controller -p "{\"spec\":{\"externalIPs\":[\"$(minikube ip)\"]}}"
@@ -90,9 +90,33 @@ then
   echo "enabling cert-manager"
   helm upgrade cert-manager --version "$CERT_MANAGER_VERSION" --install --create-namespace -n cert-manager cert-manager --repo https://charts.jetstack.io --set installCRDs=true --wait
 
-  echo "enabling postgres operator"
-  helm upgrade postgres-operator --version "$POSTGRES_OPERATOR_VERSION" --install --create-namespace -n postgres postgres-operator --repo https://opensource.zalando.com/postgres-operator/charts/postgres-operator/ --wait
+  echo "enabling cnpg operator"
+  helm upgrade cnpg --version "$CNPG_VERSION" --install  --create-namespace -n cnpg-system cloudnative-pg --repo https://cloudnative-pg.github.io/charts --wait
 
+  echo "install podmonitor crd"
+  $KUBECTL apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/refs/heads/main/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
+
+  echo "create loop device nodes in minikube"
+  minikube ssh </dev/null '
+  for i in {0..63}
+  do
+    sudo mknod /dev/loop$i b 7 $i || true
+  done'
+
+  echo "removing problematic device nodes in minikube"
+  minikube ssh </dev/null 'sudo rm /dev/dm-* || true'
+
+  echo "install CSI hostpath plugin and dependencies"
+  hostpath_repo="$(mktemp -d)"
+  git clone --depth 1 -b "$HOSTPATH_VERSION" https://github.com/kubernetes-csi/csi-driver-host-path "$hostpath_repo"
+  SNAPSHOTTER_BRANCH="$SNAPSHOTTER_VERSION" eval "$(grep -o 'kubectl apply .*{SNAPSHOTTER_.*' "$hostpath_repo/docs/deploy-1.17-and-later.md" | sed 's/kubectl/$KUBECTL -n kube-system/')"
+  sed -i 's/kubectl/$KUBECTL -n default/g' "$hostpath_repo"/deploy/kubernetes-latest/deploy.sh
+  KUBECTL="$KUBECTL" "$hostpath_repo"/deploy/kubernetes-latest/deploy.sh
+  $KUBECTL apply -f <(sed 's/metadata:/&\n  annotations:\n    storageclass.kubernetes.io\/is-default-class: "true"/' "$hostpath_repo/examples/csi-storageclass.yaml")
+  rm -rf "$hostpath_repo"
+
+  echo "enabling rook-ceph"
+  helm upgrade rook --version "$ROOK_CEPH_VERSION" --install --create-namespace -n rook-ceph rook-ceph --repo https://charts.rook.io/release --wait --set csi.enableRbdDriver=false  --set csi.enableCephfsDriver=false --set allowLoopDevices=true
 
   echo "install flux"
   $KUBECTL apply -f https://github.com/fluxcd/flux2/releases/download/$FLUX_VERSION/install.yaml

@@ -1,19 +1,22 @@
 <script lang="ts">
 	import {
 		API_NAME_REGEX,
-		apiFetchResponse,
 		handleSubmit,
-		toResourceUrl,
-		type GroupResource,
 		type ResourceType,
 		type UdhPrincipal
 	} from '$lib/nav/fetchUtils';
-	import { accessToken } from '$lib/common/auth';
 	import { Button, Label, MultiSelect, Spinner } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
-	import { error, success, warning } from '$lib/common/toast/toast';
+	import { error, warning } from '$lib/common/toast/toast';
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import {
+		createGroupPermission,
+		createProjectPermission,
+		createTenantPermission,
+		createVizGroupPermission
+	} from '$lib/common/graphql/ressource-api-utils';
+	import { getResourceApiClient } from '$lib/common/graphql/utils';
 
 	interface Props {
 		resource: ResourceType;
@@ -21,6 +24,7 @@
 		isNew: boolean;
 		permissionObject: { principals: UdhPrincipal[]; scopes: string[] };
 		selectableGroups: string[];
+		selectableVizGroups: string[];
 		selectableScopes: string[];
 	}
 
@@ -30,20 +34,36 @@
 		isNew,
 		permissionObject,
 		selectableGroups,
+		selectableVizGroups,
 		selectableScopes
 	}: Props = $props();
 
-	let newPermissionObject: { groups: string[]; scopes: string[] } = $state({
-		// replace incoming null with 'all' option
-		groups: permissionObject.principals.some((principal) => principal.type == 'tenant')
-			? ['all']
-			: permissionObject.principals.map((principal) => (principal as GroupResource).group),
-		scopes: permissionObject.scopes
+	const gqlClient = getResourceApiClient();
+
+	let newPermissionObject: { groups: string[]; scopes: string[]; vizGroups: string[] } = $state({
+		groups: [],
+		scopes: [],
+		vizGroups: []
 	});
 
-	if (isNew) {
-		permission = '';
-	}
+	onMount(() => {
+		if (isNew) {
+			permission = '';
+		}
+
+		newPermissionObject = {
+			// replace incoming null with '*' option
+			groups: permissionObject.principals.some((principal) => principal.type == 'tenant')
+				? ['*']
+				: permissionObject.principals
+						.map((principal) => (principal.type === 'group' ? principal.group : ''))
+						.filter((group) => group !== ''),
+			vizGroups: permissionObject.principals
+				.map((principal) => (principal.type === 'vizGroup' ? principal.vizGroup : ''))
+				.filter((vizGroup) => vizGroup !== ''),
+			scopes: permissionObject.scopes.slice()
+		};
+	});
 
 	let requestSent = $state(false);
 
@@ -58,7 +78,10 @@
 		}
 
 		// Todo replace with ValidatedFormField
-		if (newPermissionObject.groups.length === 0) {
+		if (
+			(newPermissionObject.groups.length === 0 && !(newPermissionObject.vizGroups.length > 0)) ||
+			(newPermissionObject.vizGroups.length === 0 && !(newPermissionObject.groups.length > 0))
+		) {
 			error('component.permissions.edit.groupsMustBeSpecified');
 			return;
 		}
@@ -71,38 +94,77 @@
 
 		requestSent = true;
 
-		void apiFetchResponse(
-			`${toResourceUrl(resource)}/permissions/${permission}`,
-			$accessToken,
-			'PUT',
-			{
-				scopes: newPermissionObject.scopes,
-				principals: newPermissionObject.groups.includes('all')
-					? [{ type: 'tenant', tenant: resource.tenant }]
-					: newPermissionObject.groups.map((group) => ({
-							type: 'group',
-							tenant: resource.tenant,
-							group: group
-						}))
-			}
-		)
-			.then(async () => {
-				success('shared.message.savedSuccessfully');
-				await goto(`.`);
-			})
-			.finally(() => {
-				requestSent = false;
-			});
+		const groupPrincipals = newPermissionObject.groups.includes('*')
+			? []
+			: newPermissionObject.groups.map((group) => ({
+					tenant: resource.tenant,
+					group: group
+				}));
+
+		const vizGroupPrincipals = newPermissionObject.vizGroups.map((vizGroup) => ({
+			tenant: resource.tenant,
+			vizGroup: vizGroup
+		}));
+
+		const tenantPrincipal = newPermissionObject.groups.includes('*')
+			? [{ tenant: resource.tenant }]
+			: null;
+
+		const permissionInputObject = {
+			name: permission,
+			scopes: newPermissionObject.scopes,
+			tenantPrincipals: tenantPrincipal,
+			groupPrincipals: groupPrincipals,
+			vizGroupPrincipals: vizGroupPrincipals
+		};
+
+		switch (resource.type) {
+			case 'tenant':
+				createTenantPermission(gqlClient, resource.tenant, permissionInputObject).finally(() => {
+					requestSent = false;
+				});
+				break;
+			case 'group':
+				createGroupPermission(
+					gqlClient,
+					resource.tenant,
+					resource.resourceName,
+					permissionInputObject
+				).finally(() => {
+					requestSent = false;
+				});
+				break;
+			case 'vizGroup':
+				createVizGroupPermission(
+					gqlClient,
+					resource.tenant,
+					resource.resourceName,
+					permissionInputObject
+				).finally(() => {
+					requestSent = false;
+				});
+				break;
+			case 'project':
+				createProjectPermission(
+					gqlClient,
+					resource.tenant,
+					resource.resourceName,
+					permissionInputObject
+				).finally(() => {
+					requestSent = false;
+				});
+				break;
+		}
 	}
 
 	$effect(() => {
-		// remove other selected options if contains 'all'
-		if (newPermissionObject.groups.includes('all') && newPermissionObject.groups.length > 1) {
+		// remove other selected options if contains '*'
+		if (newPermissionObject.groups.includes('*') && newPermissionObject.groups.length > 1) {
 			warning(
 				'component.permissions.edit.otherOptionsThenAllUnselectedWarningMessage',
 				'component.permissions.edit.otherOptionsThenAllUnselectedWarningMessageDetails'
 			);
-			newPermissionObject.groups = ['all'];
+			newPermissionObject.groups = ['*'];
 		}
 	});
 </script>
@@ -127,10 +189,21 @@
 		<!-- TODO enable required after refactor to ValidatedFormField -->
 		<MultiSelect
 			id="groups"
-			items={[{ value: 'all', name: 'Alle' }].concat(mapForSelect(selectableGroups))}
+			items={[{ value: '*', name: 'Alle' }].concat(mapForSelect(selectableGroups))}
 			bind:value={newPermissionObject.groups}
 			size="lg"
 		/>
+
+		{#if selectableVizGroups.length > 0}
+			<Label for="vizGroups">{$_('component.permissions.vizGroups')}</Label>
+			<!-- TODO enable required after refactor to ValidatedFormField -->
+			<MultiSelect
+				id="vizGroups"
+				items={mapForSelect(selectableVizGroups)}
+				bind:value={newPermissionObject.vizGroups}
+				size="lg"
+			/>
+		{/if}
 
 		<Label for="scopes">{$_('component.permissions.scopes')}</Label>
 		<!-- TODO enable required after refactor to ValidatedFormField -->
@@ -141,7 +214,7 @@
 			size="lg"
 		/>
 
-		<Button type="submit" disabled={requestSent}>
+		<Button type="submit" disabled={requestSent} color="green">
 			<div class="flex flex-row gap-2">
 				{$_(isNew ? 'shared.action.create' : 'shared.action.save')}
 				{#if requestSent}

@@ -12,6 +12,7 @@ export interface ErrorMessage {
 
 export const isAuthenticated = writable<boolean>(false);
 export const accessToken = writable<string>('');
+export const idToken = writable<string>('');
 export const errorMessage = writable<ErrorMessage | null>(null);
 export const profile = writable<ExtendedTokenClaims | null>(null);
 export const projectAccess = derived(

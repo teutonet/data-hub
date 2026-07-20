@@ -1,16 +1,16 @@
 {
 	"compilerOptions": {
 		"target": "es2022",
-		"module": "commonjs",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"rootDir": "./src",
 		"outDir": "./build",
 		"strict": true,
 		"esModuleInterop": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
-		"baseUrl": "./",
-		"paths": {
-			"test/*": ["test/*"]
-		}
+		"resolveJsonModule": true,
+		"skipLibCheck": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["src/**/*.test.ts"]

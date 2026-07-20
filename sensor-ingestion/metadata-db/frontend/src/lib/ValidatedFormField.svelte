@@ -153,16 +153,16 @@
 	{/if}
 
 	{#if invalid}
-		<Helper class="invalid-feedback ml-2 mt-2" color="red">
+		<Helper class="invalid-feedback mt-2 ml-2" color="red">
 			{message}
 		</Helper>
 	{:else if customErrorText}
-		<Helper class="invalid-feedback ml-2 mt-2" color="red">
+		<Helper class="invalid-feedback mt-2 ml-2" color="red">
 			{customErrorText}
 		</Helper>
 	{:else if valueNearMax && lengthWarning}
 		<Helper
-			class="helpertext peer-focus:text-primary-600 peer-focus:dark:text-primary-500 ml-2 mt-2 text-gray-500 dark:text-gray-400"
+			class="helpertext peer-focus:text-primary-600 peer-focus:dark:text-primary-500 mt-2 ml-2 text-gray-500 dark:text-gray-400"
 		>
 			{$_('shared.maxLength', {
 				values: { value: rest.maxlength - value.length }
@@ -170,7 +170,7 @@
 		</Helper>
 	{:else if helperText}
 		<Helper
-			class="helpertext peer-focus:text-primary-600 peer-focus:dark:text-primary-500 ml-2 mt-2 text-gray-500 dark:text-gray-400"
+			class="helpertext peer-focus:text-primary-600 peer-focus:dark:text-primary-500 mt-2 ml-2 text-gray-500 dark:text-gray-400"
 			color="gray"
 		>
 			{helperText}

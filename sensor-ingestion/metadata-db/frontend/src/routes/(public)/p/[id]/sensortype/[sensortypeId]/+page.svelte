@@ -5,7 +5,6 @@
 	import type {
 		GetSensorByIdQuery,
 		GetSensorByIdQueryVariables,
-		Sensor,
 		SensorPatch,
 		UpdateSensorByIdMutation,
 		UpdateSensorByIdMutationVariables,
@@ -13,7 +12,6 @@
 		GetPropertiesQueryVariables,
 		CreatePropertyMutation,
 		CreatePropertyMutationVariables,
-		Scalars,
 		EditSensorPropertyMutation,
 		EditSensorPropertyMutationVariables,
 		CreateSensorPropertyMutation,
@@ -63,9 +61,9 @@
 		})
 	);
 
-	let sensor: Sensor | undefined = $state();
+	let sensor: GetSensorByIdQuery['sensor'] | undefined = $state();
 	$effect(() => {
-		sensor = $sensorStore.data?.sensor as unknown as Sensor;
+		sensor = $sensorStore.data?.sensor;
 	});
 
 	let projectId = $derived(data.projectId);
@@ -155,16 +153,12 @@
 			} else {
 				success('shared.message.savedSuccessfully');
 				propertyStore.reexecute({ requestPolicy: 'network-only' });
-				return result.data?.createProperty?.property?.id as Scalars['UUID']['output'];
+				return result.data?.createProperty?.property?.id;
 			}
 		});
 	}
 
-	async function editSensorPropFunction(
-		propertyId: Scalars['UUID']['input'],
-		writeDelta: boolean,
-		alias?: string
-	) {
+	async function editSensorPropFunction(propertyId: string, writeDelta: boolean, alias?: string) {
 		await performMutation<EditSensorPropertyMutation, EditSensorPropertyMutationVariables>(
 			client,
 			EDIT_SENSOR_PROPERTY,
@@ -186,11 +180,7 @@
 		});
 	}
 
-	async function createSensorPropFunction(
-		propertyId: Scalars['UUID']['input'],
-		writeDelta: boolean,
-		alias?: string
-	) {
+	async function createSensorPropFunction(propertyId: string, writeDelta: boolean, alias?: string) {
 		await performMutation<CreateSensorPropertyMutation, CreateSensorPropertyMutationVariables>(
 			client,
 			CREATE_SENSOR_PROPERTY,
@@ -213,7 +203,7 @@
 		});
 	}
 
-	async function deleteSensorPropFunction(propertyId: Scalars['UUID']['input']) {
+	async function deleteSensorPropFunction(propertyId: string) {
 		await performMutation<DeleteSensorPropertyMutation, DeleteSensorPropertyMutationVariables>(
 			client,
 			DELETE_SENSOR_PROPERTY,
@@ -280,7 +270,6 @@
 	</Card>
 	<HistoryModal
 		entityId={sensor.id}
-		dataKey="sensorChanges"
 		query={GET_SENSOR_CHANGES}
 		additionalNames={propertyNames}
 		excludedKeys={['sensor_id']}

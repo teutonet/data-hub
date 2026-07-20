@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const fullTests = {
 	dependencies: process.env.CI ? ['setup'] : [],
-	grepInvert: /@delete-tenants/
+	grepInvert: /@delete-tenants|@viz-group-migration/
 };
 
 export default defineConfig({
@@ -10,17 +10,27 @@ export default defineConfig({
 		// start list with default project for playwright-vscode
 		{
 			name: 'chromium',
-			use: { ...devices['Desktop Chrome'], channel: 'chromium' },
+			use: {
+				...devices['Desktop Chrome'],
+				channel: 'chromium',
+				viewport: { width: 1920, height: 1080 }
+			},
+
 			...fullTests
 		},
 		{
 			name: 'firefox',
-			use: { ...devices['Desktop Firefox'] },
+			use: { ...devices['Desktop Firefox'], viewport: { width: 1920, height: 1080 } },
 			...fullTests
 		},
 		{
 			name: 'setup',
 			grep: /@delete-tenants/
+		},
+		{
+			name: 'viz-group-migration',
+			grep: /@viz-group-migration/,
+			dependencies: ['firefox', 'chromium']
 		}
 	],
 	use: {

@@ -8,8 +8,7 @@
 		GetPropertiesQueryVariables,
 		CreatePropertyMutation,
 		CreatePropertyMutationVariables,
-		PropertyInputRecordInput,
-		Scalars
+		PropertyInputRecordInput
 	} from '$lib/common/generated/types';
 	import {
 		CREATE_PROPERTY,
@@ -32,13 +31,15 @@
 
 	const client = getContextClient();
 
-	if (data.projectId === 'all') {
-		goto('../sensortypes').catch((e) => {
-			console.error(e.message);
-		});
-	}
+	$effect(() => {
+		if (data.projectId === 'all') {
+			goto('../sensortypes').catch((e) => {
+				console.error(e.message);
+			});
+		}
+	});
 
-	let sensor = $state({
+	let sensor = $derived({
 		project: data.projectId,
 		description: '',
 		outOfOrderSeconds: 0,
@@ -63,7 +64,7 @@
 		)
 	);
 
-	async function submitFunction(properties: PropertyInputRecordInput[]) {
+	async function submitFunction(properties?: PropertyInputRecordInput[]) {
 		await performMutation<CreateSensorWithPropsMutation, CreateSensorWithPropsMutationVariables>(
 			client,
 			CREATE_SENSOR_WITH_PROPERTIES,
@@ -127,7 +128,7 @@
 				if (properties?.length === 0) {
 					propertyStore.reexecute({ requestPolicy: 'network-only' });
 				}
-				return result.data?.createProperty?.property?.id as Scalars['UUID']['output'];
+				return result.data?.createProperty?.property?.id;
 			}
 		});
 	}

@@ -1,0 +1,14 @@
+{{- if and .Values.objectStorage.enabled .Values.objectStorage.reuseClusterFromNamespace -}}
+{{- $name := "objectstore" -}}
+---
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStore
+metadata:
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  name: {{ printf "ns-%s" .Release.Namespace | quote }}
+  namespace: {{ .Values.objectStorage.reuseClusterFromNamespace | quote }}
+spec: {{- include "udh.objectstore.spec" . | nindent 2 }}
+  allowUsersInNamespaces:
+    - {{ .Release.Namespace | quote }}
+{{- end }}

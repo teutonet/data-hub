@@ -10,6 +10,8 @@ build:
       - directory:
           - metadata-db/migrations
           - metadata-db/postgraphile
+          - jsonata-sidecar
+          - sensor-transformer
       - directory: &python_images # add here to run unit tests
           - lorawan-receiver
           - rtb-receiver

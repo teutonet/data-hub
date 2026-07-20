@@ -7,6 +7,6 @@
 	// If the page is accidentally rendered, we can redirect to the root page.
 
 	if (browser) {
-		void goto('/overview', { replaceState: true });
+		void goto('/', { replaceState: true });
 	}
 </script>

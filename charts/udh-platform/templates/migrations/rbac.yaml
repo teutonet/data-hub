@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "migrations") }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "data-hub.name" (dict "context" . "name" "migrations") }}
+{{- if .Values.objectStorage.reuseClusterFromNamespace }}
+    namespace: {{ .Release.Namespace }}
+kind: ClusterRoleBinding
+metadata:
+  name: {{ printf "migrations-ns-%s" .Release.Namespace | quote }}
+{{- else }}
+kind: RoleBinding
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "migrations") }}
+{{- end }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io

@@ -1,12 +1,9 @@
 <script lang="ts">
-	import { getContextClient, queryStore } from '@urql/svelte';
-	import { GET_THINGS } from '$lib/common/graphql/queries';
 	import ThingsOverview from '$lib/ThingsOverview.svelte';
-	import type { GetThingsQuery, GetThingsQueryVariables } from '$lib/common/generated/types';
 	import { _ } from 'svelte-i18n';
 	import PageTitle from '$lib/PageTitle.svelte';
 	import type { PageData } from './$types';
-	import { projectCondition } from '$lib/common/graphql/utils';
+	import { getThingsStore } from '$lib/common/graphql/utils';
 
 	interface Props {
 		data: PageData;
@@ -14,19 +11,7 @@
 
 	let { data }: Props = $props();
 
-	const client = getContextClient();
-
-	let allThingsStore = $derived(
-		queryStore<GetThingsQuery, GetThingsQueryVariables>({
-			client: client,
-			query: GET_THINGS,
-			variables: {
-				condition: {
-					project: projectCondition(data.projectId)
-				}
-			}
-		})
-	);
+	let allThingsStore = $derived(getThingsStore(data.projectId));
 
 	let allThings = $derived($allThingsStore.data?.things ?? []);
 </script>

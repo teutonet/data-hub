@@ -1,12 +1,14 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:23.11.0-alpine
+FROM ${REGISTRY_MIRROR_LIB}node:24.18.0-alpine
+
+RUN apk upgrade --no-cache
 
 WORKDIR /migrate
 ENTRYPOINT [ "node_modules/.bin/graphile-migrate" ]
-COPY package.json package-lock.json /migrate/
+COPY package.json pnpm-lock.yaml /migrate/
 
-RUN npm ci --omit=dev
+RUN corepack enable && pnpm i --frozen-lockfile --prod
 
 COPY .gmrc.js .
 COPY migrations migrations

@@ -24,14 +24,6 @@
 
 	let projectId = $derived(data.projectId);
 
-	const initialInput = {
-		name: '',
-		description: '',
-		metricName: '',
-		measure: '',
-		project: data.projectId ?? ''
-	};
-
 	$effect(() => {
 		if (projectId === 'all') {
 			goto('../properties').catch((e) => {
@@ -40,7 +32,13 @@
 		}
 	});
 
-	let property: PropertyInput = $state(initialInput);
+	let property: PropertyInput = $derived({
+		name: '',
+		description: '',
+		metricName: '',
+		measure: '',
+		project: data.projectId ?? ''
+	});
 
 	async function submitFunction() {
 		await performMutation<CreatePropertyMutation, CreatePropertyMutationVariables>(
@@ -75,6 +73,6 @@
 	{$_('page.newProperty.title')}
 </Heading>
 
-<Card class="max-w-full">
+<Card class="max-w-[80rem]">
 	<PropertyEdit create bind:property id="property-edit" {submitFunction} />
 </Card>

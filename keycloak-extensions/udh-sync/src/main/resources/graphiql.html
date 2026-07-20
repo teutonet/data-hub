@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en_US">
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui"
+		/>
+		<meta name="robots" content="noindex, nofollow, noimageindex, nosnippet" />
+		<title>GraphiQL</title>
+		<style>
+			body {
+				height: 100%;
+				margin: 0;
+				width: 100%;
+				overflow: hidden;
+			}
+
+			#graphiql {
+				height: 100vh;
+			}
+		</style>
+
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/graphiql@3.0.6/graphiql.min.css" />
+	</head>
+
+	<body>
+		<div id="graphiql">Loading...</div>
+
+		<script
+			src="https://cdn.jsdelivr.net/npm/react@17/umd/react.development.js"
+			integrity="sha512-Vf2xGDzpqUOEIKO+X2rgTLWPY+65++WPwCHkX2nFMu9IcstumPsf/uKKRd5prX3wOu8Q0GBylRpsDB26R6ExOg=="
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.development.js"
+			integrity="sha512-Wr9OKCTtq1anK0hq5bY3X/AvDI5EflDSAh0mE9gma+4hl+kXdTJPKZ3TwLMBcrgUeoY0s3dq9JjhCQc7vddtFg=="
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/graphiql@3.0.6/graphiql.min.js"
+			integrity="sha512-J1qOEDzw11Yb9g9NS8iyR/Gq92y7k3fGnIxFBvQd9VRuS0iRbDkZo6S+k0SK+3UjQotW35LP/jSXgJfu2LsjHA=="
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://unpkg.com/oidc-client-ts@3.0.1/dist/browser/oidc-client-ts.min.js"
+			integrity="sha384-yYhoQzX1y1sIMUbNtkFyPz1wJjxay2OjW7gh5mZHBuUWWuqwnEumdW+auXJDabNU"
+			crossorigin="anonymous"
+		></script>
+
+		<script>
+			var serverUrl = '/${graphQLEndpoint}';
+			var authenticatedFetch = async (url, opts) => {
+				var user = await window.userManager.getUser();
+				var token = user.access_token;
+				return await fetch(url, {
+					...opts,
+					headers: { ...opts.headers, Authorization: 'Bearer ' + token }
+				});
+			};
+			var fetcher = GraphiQL.createFetcher({
+				url: serverUrl,
+				fetch: authenticatedFetch
+			});
+
+			(async () => {
+				userManager = new oidc.UserManager({
+					authority: `https://${location.host}/realms/udh`,
+					client_id: 'graphiql',
+					redirect_uri: location.href,
+					response_mode: 'fragment',
+					scope: 'openid data-hub'
+				});
+
+				window.userManager = userManager;
+
+				userManager.events.addSilentRenewError(() => {
+					throw new Error('Silent renew failed');
+				});
+
+				try {
+					// require a fresh signin when the page loads, this automatically gets rid of outdated local state
+					await userManager.signinCallback();
+					history.replaceState({}, '', location.pathname);
+					ReactDOM.render(
+						React.createElement(GraphiQLWithPlugins),
+						document.getElementById('graphiql')
+					);
+				} catch (_) {
+					await userManager.signinRedirect();
+				}
+			})();
+
+			function GraphiQLWithPlugins() {
+				var [query, setQuery] = React.useState('');
+				var [variables, setVariables] = React.useState('');
+				var [headers, setHeaders] = React.useState('');
+				var defaultHeaders = `{\n  "content-type": "application/json"\n}`;
+
+				return React.createElement(GraphiQL, {
+					fetcher,
+					query,
+					onEditQuery: setQuery,
+					variables,
+					onEditVariables: setVariables,
+					headers: '',
+					onEditHeaders: setHeaders,
+					defaultHeaders,
+					defaultEditorToolsVisibility: true,
+					plugins: [],
+					shouldPersistHeaders: true
+				});
+			}
+		</script>
+	</body>
+	<!-- mostly taken from: https://github.com/ExpediaGroup/graphql-kotlin/blob/7412ed8c296dcfebe196c0790e7928d305d278b9/servers/graphql-kotlin-server/src/main/resources/graphql-graphiql.html -->
+</html>

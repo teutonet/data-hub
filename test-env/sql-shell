@@ -6,6 +6,14 @@ NAMESPACE="-n udh"
 
 DATABASE_USER="${1-postgres}"
 DATABASE="${2-mdb}"
+if [ "$DATABASE_USER" == "postgres" ]
+then
+  SECRET=local-udh-platform-cnpg-superuser
+else
+  SECRET=local-udh-platform-$DATABASE_USER-postgres-credentials
+fi
+PGUSER="$(${KUBECTL} get secret $NAMESPACE $SECRET -ojsonpath="{.data.username}" | base64 -d)"
+PGPASSWORD="$(${KUBECTL} get secret $NAMESPACE $SECRET -ojsonpath="{.data.password}" | base64 -d)"
 
-exec ${KUBECTL} exec $NAMESPACE -ti $(${KUBECTL} get pods $NAMESPACE -lapplication=spilo,spilo-role=master,cluster-name=local-udh-platform-postgres -ojsonpath='{.items[].metadata.name}') -- \
-  psql -U $DATABASE_USER $DATABASE
+exec ${KUBECTL} exec $NAMESPACE -ti local-udh-platform-cnpg-1 -- \
+  env PGPASSWORD="$PGPASSWORD" psql -U $PGUSER $DATABASE -h localhost

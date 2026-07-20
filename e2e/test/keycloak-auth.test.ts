@@ -1,166 +1,199 @@
-import test, { BrowserContext, Page, expect } from 'playwright/test';
+import test, { Browser, Page, expect } from 'playwright/test';
 import { GRAFANA, KEYCLOAK, MDB_FRONTEND, PROMETHEUS } from './helper/urls';
-import axios from 'axios';
-import { Agent } from 'https';
-import { getRandomString } from './helper/util';
-import { MdbApi, Thing, aquireTokenViaDeviceCode } from './helper/mdb-api';
+import { checkGrafanaMenuState, getRandomString, login, RandomTenantManager } from './helper/util';
+import { MdbApi, Thing } from './helper/mdb-api';
 import {
 	DATA_HUB_ADMIN_PASSWORD,
 	DATA_HUB_ADMIN_USERNAME,
-	createTestUserViaApi
+	createResourceToken,
+	createResources,
+	createTestUserViaApi,
+	withSetupClient
 } from './helper/keycloak';
 import { pushMetrics } from 'prometheus-remote-write';
+import { checkedResourceApiGraphqlRequest, graphql } from './helper/graphql';
+import { docsScreenshot, fixupText } from './helper/screenshot';
+
+const TENANT_MGR = new RandomTenantManager();
 
 async function expectGrafanaWorking(page: Page): Promise<void> {
-	await page.getByTestId('data-testid Toggle menu').click();
+	await checkGrafanaMenuState(page);
 	await page
 		.getByTestId('data-testid navigation mega-menu')
-		.getByRole('link', { name: 'Explore' })
+		.getByRole('link', { name: 'Drilldown' })
 		.click();
-	await page.getByLabel('Select a data source').click();
-	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
-	await page.getByLabel('Metric').click();
-	await expect(page.getByText('battery_level', { exact: true })).toBeVisible();
-	await page.getByText('air_pressure', { exact: true }).click();
-	await page.getByTestId('data-testid Select label-input').click();
-	await page.getByText('measureQuality', { exact: true }).click();
-	await page.getByTestId('data-testid Select value-input').click();
-	await expect(page.getByText('bad', { exact: true })).toBeVisible();
-	await page.getByText('good', { exact: true }).click();
+	await page.getByRole('heading', { name: 'Metrics' }).getByRole('link').click();
+	await page.locator('#ds').click();
+	await page.getByTestId('data-testid Select option').getByText('Prometheus').click();
+
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await page.getByRole('option', { name: '__name__' }).click();
+	await page.getByRole('option', { name: '= Equals' }).click();
+	await expect(page.getByRole('option', { name: 'battery_level' })).toBeVisible();
+	await page.getByRole('option', { name: 'air_pressure', exact: true }).click();
+
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await page.getByRole('option', { name: 'measureQuality' }).click();
+	await page.getByText('=Equals').click();
+	await expect(page.getByRole('option', { name: 'bad' })).toBeVisible();
+	await page.getByRole('option', { name: 'good' }).click();
+
 	await page.getByTestId('data-testid RefreshPicker run button').click();
 }
 
 async function freshLoginFrontend(
-	page: Page,
-	context: BrowserContext,
+	browser: Browser,
 	username: string,
 	password: string
-): Promise<void> {
-	await context.clearCookies();
-	await page.goto(`${MDB_FRONTEND}overview`);
+): Promise<Page> {
+	const page = await browser.newPage();
+	await page.goto(`${MDB_FRONTEND}`);
 	await page.getByLabel('Username or email').fill(username);
 	await page.getByLabel('Password', { exact: true }).fill(password);
 	await page.getByRole('button', { name: 'Sign In' }).click();
-	await expect(page.getByRole('heading', { name: 'Willkommen im MetaData_DB Hub' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Willkommen im DataHub' })).toBeVisible();
+	return page;
 }
 
 async function expectFrontendWorking(page: Page, testPostfix: string): Promise<void> {
-	await page.getByRole('link', { name: 'MetaData_DB' }).click();
+	await page.getByRole('link', { name: 'Datahub' }).click();
 	await page.getByRole('link', { name: `knuffingen-${testPostfix}.trainstation` }).click();
-	await page
-		.locator('a')
-		.filter({ hasText: /^Eigenschaften$/ })
-		.click();
+	await page.getByRole('button', { name: 'Sensorverwaltung' }).click();
+
+	const subMenuButton = page.getByRole('link', { name: 'Sensoreigenschaften', exact: true });
+	await expect(subMenuButton).toHaveAttribute('href', /.*properties/);
+	await subMenuButton.click();
 	await expect(page.getByRole('cell', { name: 'batteryLevel' })).toBeVisible();
 	await page.locator('a').filter({ hasText: 'Sensortypen' }).click();
 	await expect(page.getByRole('cell', { name: `e2e-${testPostfix}` })).toBeVisible();
-	await page
-		.locator('a')
-		.filter({ hasText: /^Sensoren$/ })
-		.click();
+	await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
+
 	await expect(page.getByText(`e2e-thing-${testPostfix}-2`)).toBeVisible();
 	await page.getByRole('cell', { name: `e2e-thing-${testPostfix}-0` }).click();
 	await expect(page.getByRole('heading', { name: 'Allgemeine Informationen' })).toBeVisible();
 }
 
-test('keycloak', async ({ page, context }) => {
+test('only-keycloak', async ({ browser }) => {
 	test.slow();
 
 	const testPostfix = getRandomString(6);
-	console.log(`testPostfix: ${testPostfix}`);
+	const tenant = TENANT_MGR.with(testPostfix);
 
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub']
-	);
+	// group data-analyst: read access to all data (prometheus-read), dashboard analytics
+	// group view-group: read access to all data (prometheus-read), all dashboards (dashboard-read)
+	// group limited-group: only access to limited viz-group and trainstation data
+	// viz-group analytics: access to all
+	// viz-group limited: access to trainstation
 
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
-
-	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}`);
-
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/groups/data-analyst`
-	);
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/groups/limited-group`
-	);
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/groups/view-group`
-	);
-
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/permissions/data-viewer`,
-		{
-			scopes: ['project:prometheus-read', 'project:view', 'group:view', 'group:dashboard-read'],
-			principals: [{ type: 'group', tenant: `knuffingen-${testPostfix}`, group: 'view-group' }]
-		}
-	);
-
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/permissions/data-analyst`,
-		{
-			scopes: ['project:prometheus-read', 'project:view'],
-			principals: [{ type: 'group', tenant: `knuffingen-${testPostfix}`, group: 'data-analyst' }]
-		}
-	);
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/groups/data-analyst/permissions/data-analyst`,
-		{
-			scopes: ['group:dashboard-edit'],
-			principals: [{ type: 'group', tenant: `knuffingen-${testPostfix}`, group: 'data-analyst' }]
-		}
+	await checkedResourceApiGraphqlRequest(
+		graphql`
+			mutation ($tenant: String!) {
+				createTenant(tenant: $tenant) {
+					da: createGroup(group: "data-analyst") {
+						group
+					}
+					lg: createGroup(group: "limited-group") {
+						group
+					}
+					vg: createGroup(group: "view-group") {
+						group
+					}
+					a: createVizGroup(vizGroup: "analytics") {
+						createPermission(
+							permission: {
+								name: "analytics"
+								scopes: ["viz-group:admin"]
+								groupPrincipals: [{ tenant: $tenant, group: "data-analyst" }]
+							}
+						)
+					}
+					l: createVizGroup(vizGroup: "limited") {
+						createPermission(
+							permission: {
+								name: "limited"
+								scopes: ["viz-group:admin"]
+								groupPrincipals: [{ tenant: $tenant, group: "limited-group" }]
+							}
+						)
+					}
+					p1: createPermission(
+						permission: {
+							name: "view-group"
+							scopes: ["tenant:read"]
+							groupPrincipals: [{ tenant: $tenant, group: "view-group" }]
+						}
+					)
+					p2: createPermission(
+						permission: {
+							name: "analytics"
+							scopes: ["project:view", "project:prometheus-read"]
+							vizGroupPrincipals: [{ tenant: $tenant, vizGroup: "analytics" }]
+						}
+					)
+				}
+			}
+		`,
+		{ tenant }
 	);
 
 	const analyzerUser = await createTestUserViaApi(
-		[`knuffingen-${testPostfix}/data-analyst`],
+		[`${tenant}/data-analyst`],
 		`analyzer-${testPostfix}`
 	);
 	const tenantAdminUser = await createTestUserViaApi(
-		[`knuffingen-${testPostfix}/admin`],
+		[`${tenant}/admin`],
 		`tenant-admin-${testPostfix}`
 	);
 	const limitedUser = await createTestUserViaApi(
-		[`knuffingen-${testPostfix}/limited-group`],
+		[`${tenant}/limited-group`],
 		`limited-${testPostfix}`
 	);
-	const viewerUser = await createTestUserViaApi(
-		[`knuffingen-${testPostfix}/view-group`],
-		`viewer-${testPostfix}`
-	);
+	const viewerUser = await createTestUserViaApi([`${tenant}/view-group`], `viewer-${testPostfix}`);
 
-	await context.clearCookies();
-
-	const tenantAdminToken = await tenantAdminUser.token();
-
-	const tenantAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${tenantAdminToken}` }
-	});
-
-	await tenantAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/trainstation`
-	);
-	await tenantAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/trainstation/permissions/limited-group`,
-		{
-			scopes: ['project:sensor-metadata-write', 'project:view'],
-			principals: [{ type: 'group', tenant: `knuffingen-${testPostfix}`, group: 'limited-group' }]
+	const {
+		data: {
+			t: {
+				p: { c: sensorCredential }
+			}
 		}
-	);
-
-	const sensorCredentials = await tenantAdminClient.put<{ username: string; password: string }>(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/trainstation/sensor-credentials/${getRandomString(4)}`
+	} = await checkedResourceApiGraphqlRequest(
+		graphql`
+			mutation ($tenant: String!) {
+				t: tenant(tenant: $tenant) {
+					p: createProject(project: "trainstation") {
+						p1: createPermission(
+							permission: {
+								name: "limited-group"
+								scopes: ["project:sensor-metadata-write", "project:view"]
+								groupPrincipals: [{ tenant: $tenant, group: "limited-group" }]
+							}
+						)
+						p2: createPermission(
+							permission: {
+								name: "reading"
+								scopes: ["project:prometheus-read", "project:view"]
+								vizGroupPrincipals: [
+									{ tenant: $tenant, vizGroup: "limited" }
+									{ tenant: $tenant, vizGroup: "analytics" }
+								]
+							}
+						)
+						c: createSensorCredential(sensorCredential: "cred") {
+							username
+							password
+						}
+					}
+				}
+			}
+		`,
+		{ tenant },
+		tenantAdminUser
 	);
 
 	const apiClient = new MdbApi(
-		`knuffingen-${testPostfix}.trainstation`,
-		sensorCredentials.data.username,
-		sensorCredentials.data.password
+		`${tenant}.trainstation`,
+		sensorCredential.username as string,
+		sensorCredential.password as string
 	);
 
 	const sensorTypeId = await apiClient.createSensorTypeWithProperties(`e2e-${testPostfix}`, [
@@ -210,150 +243,396 @@ test('keycloak', async ({ page, context }) => {
 		}
 	}
 
-	// // checking if the users have access to mdb-frontend and/or grafana
+	// checking if the users have access to mdb-frontend and/or grafana
 
-	// // tenant-admin should have access to both
-	await freshLoginFrontend(page, context, tenantAdminUser.username, DATA_HUB_ADMIN_PASSWORD);
-	await expectFrontendWorking(page, testPostfix);
-	await page.goto(GRAFANA);
-	await page.getByLabel('Change organization').click();
-	await expect(
-		page
+	// tenant-admin should have access to both
+	await test.step('admin', async () => {
+		const page = await freshLoginFrontend(
+			browser,
+			tenantAdminUser.username,
+			DATA_HUB_ADMIN_PASSWORD
+		);
+		await expectFrontendWorking(page, testPostfix);
+		await page.goto(GRAFANA);
+		await checkGrafanaMenuState(page);
+		await page.getByRole('combobox', { name: 'Change organization' }).click();
+		await expect(
+			page.getByLabel('Select options menu').getByText(`${tenant}:admin`, { exact: true })
+		).toBeVisible();
+		await expect(
+			page.getByLabel('Select options menu').getByText(`${tenant}:limited`, { exact: true })
+		).toBeVisible();
+		await page
 			.getByLabel('Select options menu')
-			.getByText(`knuffingen-${testPostfix}:admin`, { exact: true })
-	).toBeVisible();
-	await expect(
-		page
-			.getByLabel('Select options menu')
-			.getByText(`knuffingen-${testPostfix}:limited-group`, { exact: true })
-	).toBeVisible();
-	await expect(
-		page
-			.getByLabel('Select options menu')
-			.getByText(`knuffingen-${testPostfix}:view-group`, { exact: true })
-	).toBeVisible();
-	await page
-		.getByLabel('Select options menu')
-		.getByText(`knuffingen-${testPostfix}:data-analyst`, { exact: true })
-		.click();
-	await expectGrafanaWorking(page);
+			.getByText(`${tenant}:analytics`, { exact: true })
+			.click();
+		await expectGrafanaWorking(page);
+		await page.close();
+	});
 
 	// analyzer only has access to one org in grafana but not mdb-frontend
-
-	await freshLoginFrontend(page, context, analyzerUser.username, DATA_HUB_ADMIN_PASSWORD);
-	await page.getByRole('link', { name: 'MetaData_DB' }).click();
-	await page.getByText('Projekt auswählen').click();
-	await expect(
-		page.getByRole('link', { name: `knuffingen-${testPostfix}.trainstation` })
-	).not.toBeVisible();
-	await expect(page.getByRole('link', { name: 'Alle Projekte', exact: true })).toBeVisible();
-	await page.goto(GRAFANA);
-	await expect(page.getByLabel('Change organization')).not.toBeVisible();
-	await expectGrafanaWorking(page);
+	await test.step('analyzer', async () => {
+		const page = await freshLoginFrontend(browser, analyzerUser.username, DATA_HUB_ADMIN_PASSWORD);
+		await page.getByRole('link', { name: 'Datahub' }).click();
+		await page.getByRole('button', { name: 'Alle Projekte' }).click();
+		await expect(page.getByRole('button', { name: `${tenant}.trainstation` })).not.toBeVisible();
+		await expect(
+			page.getByRole('tooltip', { name: 'Alle Projekte' }).getByRole('button')
+		).toBeVisible();
+		await page.goto(GRAFANA);
+		await checkGrafanaMenuState(page);
+		await expect(page.getByRole('combobox', { name: 'Change organization' })).not.toBeVisible();
+		await expectGrafanaWorking(page);
+		await page.close();
+	});
 
 	// limited only has mdb access to a project, nothing in grafana
-
-	await freshLoginFrontend(page, context, limitedUser.username, DATA_HUB_ADMIN_PASSWORD);
-	await expectFrontendWorking(page, testPostfix);
-	await page.goto(GRAFANA);
-	await page.waitForLoadState('networkidle');
-	await expect(page.getByLabel('Change organization')).not.toBeVisible();
+	await test.step('limited', async () => {
+		const page = await freshLoginFrontend(browser, limitedUser.username, DATA_HUB_ADMIN_PASSWORD);
+		await expectFrontendWorking(page, testPostfix);
+		await page.goto(GRAFANA);
+		await page.waitForLoadState('networkidle');
+		await checkGrafanaMenuState(page);
+		await expect(page.getByRole('combobox', { name: 'Change organization' })).not.toBeVisible();
+		await page.close();
+	});
 
 	// viewer can look at grafana dashboards
-
-	await freshLoginFrontend(page, context, viewerUser.username, DATA_HUB_ADMIN_PASSWORD);
-	await page.goto(GRAFANA);
-	await page.getByLabel('Change organization').click();
-	await expect(page.getByText('Viewer').first()).toBeVisible();
-	await expect(page.getByText('Editor')).not.toBeVisible();
+	await test.step('viewer', async () => {
+		const page = await freshLoginFrontend(browser, viewerUser.username, DATA_HUB_ADMIN_PASSWORD);
+		await page.goto(GRAFANA);
+		await checkGrafanaMenuState(page);
+		await page.getByRole('combobox', { name: 'Change organization' }).click();
+		await expect(
+			page.getByTestId('data-testid Select menu').getByText(`Viewer`).first()
+		).toBeVisible();
+		await expect(page.getByTestId('data-testid Select menu').getByText('Editor')).not.toBeVisible();
+		await page.close();
+	});
 });
 
 test('resource-api-cross-tenant', async ({ page }) => {
-	const testPostfix1 = getRandomString(6);
-	const testPostfix2 = getRandomString(6);
+	const testTenant1 = TENANT_MGR.get();
+	const testTenant2 = TENANT_MGR.get();
 
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub']
-	);
-
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
-
-	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}`);
-	await realmAdminClient.put(`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix2}`);
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test`
-	);
-
-	const sensorCredentials = await realmAdminClient.put<{ username: string; password: string }>(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test/sensor-credentials/${getRandomString(4)}`
-	);
+	await createResources([`tenants/${testTenant1}/projects/test`, `tenants/${testTenant2}`]);
+	const sensorCredentials = await createResourceToken(testTenant1, 'test', 'test');
 
 	const apiClient = new MdbApi(
-		`knuffingen-${testPostfix1}.test`,
-		sensorCredentials.data.username,
-		sensorCredentials.data.password
+		`${testTenant1}.test`,
+		sensorCredentials.username,
+		sensorCredentials.password
 	);
 
-	await pushMetrics(
+	const res = await pushMetrics(
 		{ testmetric: 1 },
 		{
-			url: `${PROMETHEUS}/api/v1/write`,
+			url: `${PROMETHEUS}api/v1/write`,
 			headers: {
-				Authorization: `Bearer ${await apiClient.getOrFetchToken()}`,
-				'X-Scope-OrgID': `knuffingen-${testPostfix1}.test`
+				Authorization: `Bearer ${await apiClient.getOrFetchToken()}`
 			},
 			fetch
 		}
 	);
 
-	await realmAdminClient.put(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test/permissions/cross`,
+	expect(res.status).toBe(200);
+
+	await withSetupClient(async (realmAdminClient) => {
+		await realmAdminClient.put(
+			`${KEYCLOAK}realms/udh/data-hub/tenants/${testTenant1}/projects/test/permissions/cross`,
+			{
+				scopes: ['project:prometheus-read'],
+				principals: [
+					{
+						type: 'vizGroup',
+						tenant: `${testTenant2}`,
+						vizGroup: 'admin'
+					}
+				]
+			}
+		);
+	});
+
+	await login(page, GRAFANA, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
+	await checkGrafanaMenuState(page);
+	await page.getByRole('combobox', { name: 'Change organization' }).click();
+	await page
+		.getByLabel('Select options menu')
+		.getByText(`${testTenant2}:admin`, { exact: true })
+		.click();
+	await checkGrafanaMenuState(page);
+	await page
+		.getByTestId('data-testid navigation mega-menu')
+		.getByRole('link', { name: 'Drilldown' })
+		.click();
+	await page.getByRole('heading', { name: 'Metrics' }).getByRole('link').click();
+	// we need to make sure the page loaded before doing a reload
+	await expect(page.locator('#ds')).toBeVisible();
+
+	await expect(async () => {
+		await page.reload();
+		await page.locator('#ds').click();
+		await page.getByTestId('data-testid Select option').getByText('Prometheus').click();
+		await page.getByRole('combobox', { name: 'Filters' }).click();
+		await page.getByRole('option', { name: '__name__' }).click();
+		await page.getByRole('option', { name: '= Equals' }).click();
+		await page.getByRole('option', { name: 'testmetric', exact: true }).click({ timeout: 5000 });
+		await page.getByLabel('Remove filter with key __name__').click();
+	}).toPass({ intervals: [0] });
+
+	await withSetupClient(async (realmAdminClient) => {
+		await realmAdminClient.delete(
+			`${KEYCLOAK}realms/udh/data-hub/tenants/${testTenant1}/projects/test/permissions/cross`
+		);
+	});
+
+	await expect(async () => {
+		await page.reload();
+		await page.getByRole('combobox', { name: 'Filters' }).click();
+		await expect(page.getByRole('option', { name: 'No options found' })).toBeVisible({
+			timeout: 5000
+		});
+	}).toPass({ intervals: [0] });
+});
+
+test.fail('tenant-principals match whole tenant', async () => {
+	// and not only the prefix
+	const suffix = getRandomString(5);
+	const tenant1 = TENANT_MGR.with(suffix);
+	const tenant2 = TENANT_MGR.with(`${suffix}-test`);
+	await checkedResourceApiGraphqlRequest(
+		graphql`
+			mutation ($tenant1: String!, $tenant2: String!) {
+				t1: createTenant(tenant: $tenant1) {
+					tenant
+				}
+				t2: createTenant(tenant: $tenant2) {
+					tenant
+				}
+			}
+		`,
 		{
-			scopes: ['project:prometheus-read'],
-			principals: [
+			tenant1,
+			tenant2
+		}
+	);
+	const tenant1User = await createTestUserViaApi([tenant1]);
+	const tenant2User = await createTestUserViaApi([tenant2]);
+	await expect(
+		checkedResourceApiGraphqlRequest(
+			graphql`
+				query {
+					tenants {
+						tenant
+					}
+				}
+			`,
+			{},
+			tenant1User
+		)
+	).resolves.toEqual({
+		errors: [],
+		data: {
+			tenants: [
 				{
-					type: 'group',
-					tenant: `knuffingen-${testPostfix2}`,
-					group: 'admin'
+					tenant: tenant1
 				}
 			]
+		},
+		dataPresent: true
+	});
+	await expect(
+		checkedResourceApiGraphqlRequest(
+			graphql`
+				query {
+					tenants {
+						tenant
+					}
+				}
+			`,
+			{},
+			tenant2User
+		)
+	).resolves.toEqual({
+		errors: [],
+		data: {
+			tenants: [
+				{
+					tenant: tenant2
+				}
+			]
+		},
+		dataPresent: true
+	});
+});
+
+test('groups principals match whole group', async () => {
+	// and not only the prefix
+	const tenant = TENANT_MGR.get();
+	await checkedResourceApiGraphqlRequest(
+		graphql`
+			mutation ($tenant: String!) {
+				createTenant(tenant: $tenant) {
+					g1: createGroup(group: "test") {
+						group
+					}
+					g2: createGroup(group: "test-with-postfix") {
+						group
+					}
+					createProject(project: "trainstation") {
+						createPermission(
+							permission: {
+								name: "perm"
+								scopes: ["project:admin"]
+								groupPrincipals: [{ tenant: $tenant, group: "test" }]
+							}
+						)
+					}
+				}
+			}
+		`,
+		{ tenant }
+	);
+
+	const user = await createTestUserViaApi([`${tenant}/test-with-postfix`]);
+
+	await expect(
+		checkedResourceApiGraphqlRequest(
+			graphql`
+				query ($tenant: String!) {
+					tenant(tenant: $tenant) {
+						projects {
+							project
+						}
+					}
+				}
+			`,
+			{ tenant },
+			user
+		)
+	).resolves.toEqual({
+		data: {
+			tenant: {
+				projects: []
+			}
+		},
+		dataPresent: true,
+		errors: []
+	});
+});
+
+test('screenshot-keycloak', async ({ page }) => {
+	const testTenant = TENANT_MGR.get();
+	const suffix = testTenant.split('-')[1];
+	await createResources([
+		`tenants/${testTenant}/projects/testproject`,
+		`tenants/${testTenant}/groups/testgroup`,
+		`tenants/${testTenant}`
+	]);
+
+	const user = await createTestUserViaApi([`${testTenant}/admin`]);
+
+	await page.goto(`${KEYCLOAK}admin/udh/console`);
+	await page.getByLabel('Username or email').fill(user.username);
+	await page.getByLabel('Password', { exact: true }).fill(DATA_HUB_ADMIN_PASSWORD);
+	await page.getByRole('button', { name: 'Sign In' }).click();
+	await expect(page.getByRole('img', { name: 'Keycloak icon' })).toBeVisible();
+
+	// screenshot of keycloak side bar
+	await page.getByRole('link', { name: 'Users' }).focus();
+	await docsScreenshot(
+		'keycloak-sidebar-users-btn-highlight',
+		page.getByRole('link', { name: 'Users' }),
+		{
+			highlight: true
 		}
 	);
 
-	await page.goto(GRAFANA);
-	await page.getByLabel('Change organization').click();
-	await page
-		.getByLabel('Select options menu')
-		.getByText(`knuffingen-${testPostfix2}:admin`, { exact: true })
-		.click();
-	await page.getByTestId('data-testid Toggle menu').click();
-	await page
-		.getByTestId('data-testid navigation mega-menu')
-		.getByRole('link', { name: 'Explore' })
-		.click();
-	await expect(page.getByLabel('Select a data source')).toBeVisible();
+	await page.getByRole('link', { name: 'Users' }).click();
+	await expect(page.getByTestId('view-header')).toBeVisible();
 
-	await expect(async () => {
-		await page.reload();
-		await page.getByLabel('Select a data source').click();
-		await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
-		await page.getByLabel('Metric').click();
-		await page.getByText('testmetric', { exact: true }).click({ timeout: 5000 });
-	}).toPass({ intervals: [0] });
+	// screenshot of add user button
+	await page.getByTestId('add-user').focus();
+	await docsScreenshot('keycloak-user-add-user-btn-highlight', page.getByTestId('add-user'), {
+		highlight: true
+	});
 
-	await realmAdminClient.delete(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix1}/projects/test/permissions/cross`
+	await page.getByTestId('add-user').click();
+	await expect(page.getByTestId('view-header')).toBeVisible();
+
+	await page.locator('.pf-v5-c-switch__toggle').click();
+	await page.getByTestId('username').fill(`testuser-${suffix}`);
+	await page.getByTestId('email').fill(`test${suffix}@example.com`);
+
+	await page.getByTestId('join-groups-button').click();
+	await expect(page.getByText(testTenant)).toBeVisible();
+
+	// screenshot of group assignation pt1
+	await fixupText(page, testTenant, 'teutonet');
+	await docsScreenshot('keycloak-users-join-group-highlight', page.getByText('teutonet'), {
+		highlight: true,
+		highlightRadius: 10,
+		cropZoom: 3
+	});
+
+	await page.getByText('teutonet').click();
+	await expect(page.getByTestId('admin').getByText('admin')).toBeVisible();
+	await page.getByTestId('admin-check').check();
+
+	// screenshot of group assignation pt2
+	await fixupText(page, 'testgroup', 'viewer');
+	await fixupText(page, testTenant, 'testgroup');
+	await docsScreenshot('keycloak-users-check-group-highlight', page.getByTestId('join-button'), {
+		highlight: true,
+		highlightRadius: 20,
+		cropZoom: 3
+	});
+
+	await page.getByTestId('join-button').click();
+	await expect(page.getByText(`/${testTenant}/admin`)).toBeVisible();
+	await page.getByTestId('user-creation-save').click();
+	await expect(page.getByText('The user has been created')).toBeVisible();
+	await page.getByRole('button', { name: 'Close alert: The user has' }).click();
+
+	await page.getByTestId('credentials').click();
+
+	// screenshot of credentials tab button
+	await fixupText(page, `testuser-${suffix}`, 'teutonet');
+	await docsScreenshot(
+		'keycloak-users-credentials-tab-highlight',
+		page.getByTestId('credentials'),
+		{
+			highlight: true,
+			highlightRadius: 20,
+			cropZoom: 1
+		}
 	);
 
-	await expect(async () => {
-		await page.reload();
-		await page.getByLabel('Metric').click();
-		await expect(page.getByText('testmetric', { exact: true })).not.toBeVisible({ timeout: 5000 });
-	}).toPass({ intervals: [0] });
+	//screenshot of credential reset password button
+	await page.getByTestId('credential-reset-empty-action').focus();
+	await docsScreenshot(
+		'keycloak-users-credentials-reset-highlight',
+		page.getByTestId('credential-reset-empty-action'),
+		{
+			highlight: true,
+			highlightRadius: 20,
+			cropZoom: 1
+		}
+	);
+
+	await page.getByTestId('credential-reset-empty-action').click();
+	await expect(page.getByText('Credentials Reset')).toBeVisible();
+	await page.getByRole('combobox', { name: 'Type to filter' }).click();
+	await page.getByRole('option', { name: 'Verify Email' }).click();
+	await page.getByRole('option', { name: 'Update Password' }).click();
+
+	//screenshot of credential reset modal button
+	await docsScreenshot(
+		'keycloak-users-credentials-reset-modal',
+		page.getByTestId('credential-reset-modal'),
+		{
+			highlight: false,
+			zoom: 1.5
+		}
+	);
 });

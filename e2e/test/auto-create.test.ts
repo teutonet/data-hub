@@ -1,11 +1,17 @@
 import test, { expect, Page } from 'playwright/test';
 import { DATA_HUB_ADMIN_PASSWORD, DATA_HUB_ADMIN_USERNAME } from './helper/keycloak';
-import { getRandomString, loginCreateProjectAndToken } from './helper/util';
+import {
+	checkGrafanaMenuState,
+	loginCreateProjectAndToken,
+	RandomTenantManager
+} from './helper/util';
 import { MdbApi, Thing } from './helper/mdb-api';
 import { randomUUID } from 'crypto';
 import { EXPORT, GRAFANA } from './helper/urls';
 import axios from 'axios';
 import { Agent } from 'https';
+
+const TENANT_MGR = new RandomTenantManager();
 
 async function checkSensorTypeSelectOptions(
 	page: Page,
@@ -19,10 +25,7 @@ async function checkSensorTypeSelectOptions(
 }
 
 test('auto-create', async ({ page, context }) => {
-	const testPostfix = getRandomString(6);
-	console.log(`testPostfix: ${testPostfix}`);
-
-	const tenantName = `knuffingen-${testPostfix}`;
+	const tenantName = TENANT_MGR.get();
 
 	const { username, password } = await loginCreateProjectAndToken(
 		page,
@@ -97,31 +100,25 @@ test('auto-create', async ({ page, context }) => {
 		rainbow: '🌈'
 	});
 
-	await page.getByRole('link', { name: 'MetaData_DB' }).click();
-	await page.getByRole('link', { name: `knuffingen-${testPostfix}.trainstation` }).click();
+	await page.getByRole('link', { name: 'Datahub' }).click();
+	await page.getByRole('link', { name: `${tenantName}.trainstation` }).click();
+	await page.getByRole('button', { name: 'Sensorverwaltung' }).click();
 
-	await page
-		.locator('a')
-		.filter({ hasText: /^Neue Sensoren$/ })
-		.click();
+	await page.getByRole('link', { name: 'Neue Sensoren', exact: true }).click();
 	await page.getByText(`auto-${testTypThing.deveui}`).click();
 	await expect(page.getByLabel('Sensortyp')).toContainText('Test Typ');
 	await page.getByRole('button', { name: 'Speichern & Sensor Aktivieren' }).click();
 
-	await page
-		.locator('a')
-		.filter({ hasText: /^Neue Sensoren$/ })
-		.click();
+	await page.getByRole('link', { name: 'Neue Sensoren', exact: true }).click();
+
 	await page.getByText(`auto-${testTypThingExtra.deveui}`).click();
 	await expect(page.getByLabel('Sensortyp')).toContainText('Test Typ');
 	await expect(page.getByLabel('Breitengrad (latitude)')).toHaveValue('52.022246162285');
 	await expect(page.getByLabel('Längengrad (longitude)')).toHaveValue('8.532277249677');
 	await page.getByRole('button', { name: 'Speichern & Sensor Aktivieren' }).click();
 
-	await page
-		.locator('a')
-		.filter({ hasText: /^Neue Sensoren$/ })
-		.click();
+	await page.getByRole('link', { name: 'Neue Sensoren', exact: true }).click();
+
 	await page.getByText(`auto-${superTestTypThing.deveui}`).click();
 	await checkSensorTypeSelectOptions(page);
 	await expect(page.getByLabel('Sensortyp')).toHaveValue('');
@@ -129,17 +126,13 @@ test('auto-create', async ({ page, context }) => {
 	await expect(page.getByRole('button', { name: 'Speichern & Sensor Aktivieren' })).toBeDisabled();
 	await page.getByRole('button', { name: 'Sensortyp finden' }).click();
 	await expect(page.getByText('healthStatus: good')).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Super Test Typ Auswählen' })).toBeVisible();
-	await expect(
-		page.getByRole('heading', { name: 'Test Typ Auswählen', exact: true })
-	).toBeVisible();
-	await page.getByRole('heading', { name: 'Super Test Typ Auswählen' }).getByRole('button').click();
+	await expect(page.getByRole('button', { name: 'Super Test Typ Auswählen' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Test Typ Auswählen', exact: true })).toBeVisible();
+	await page.getByRole('button', { name: 'Super Test Typ Auswählen' }).click();
 	await page.getByRole('button', { name: 'Speichern & Sensor Aktivieren' }).click();
 
-	await page
-		.locator('a')
-		.filter({ hasText: /^Neue Sensoren$/ })
-		.click();
+	await page.getByRole('link', { name: 'Neue Sensoren', exact: true }).click();
+
 	await page.getByText(`auto-${superTestTypThingExtra.deveui}`).click();
 
 	await checkSensorTypeSelectOptions(page);
@@ -148,11 +141,9 @@ test('auto-create', async ({ page, context }) => {
 	await expect(page.getByRole('button', { name: 'Speichern & Sensor Aktivieren' })).toBeDisabled();
 	await page.getByRole('button', { name: 'Sensortyp finden' }).click();
 	await expect(page.getByText('healthStatus: good')).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Super Test Typ Auswählen' })).toBeVisible();
-	await expect(
-		page.getByRole('heading', { name: 'Test Typ Auswählen', exact: true })
-	).toBeVisible();
-	await page.getByRole('heading', { name: 'Super Test Typ Auswählen' }).getByRole('button').click();
+	await expect(page.getByRole('button', { name: 'Super Test Typ Auswählen' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Test Typ Auswählen', exact: true })).toBeVisible();
+	await page.getByRole('button', { name: 'Super Test Typ Auswählen' }).click();
 	await page.getByRole('button', { name: 'Speichern & Sensor Aktivieren' }).click();
 
 	// write vars again
@@ -184,45 +175,50 @@ test('auto-create', async ({ page, context }) => {
 	await page.getByLabel('Username or email').fill(DATA_HUB_ADMIN_USERNAME);
 	await page.getByLabel('Password', { exact: true }).fill(DATA_HUB_ADMIN_PASSWORD);
 	await page.getByRole('button', { name: 'Sign In' }).click();
-	await page.getByLabel('Change organization').click();
+	await checkGrafanaMenuState(page);
+	await page.getByRole('combobox', { name: 'Change organization' }).click();
 	await page.getByLabel('Select options menu').getByText(`${tenantName}:admin`).click();
-	await page.getByTestId('data-testid Toggle menu').click();
+	await checkGrafanaMenuState(page);
 	await page
 		.getByTestId('data-testid navigation mega-menu')
-		.getByRole('link', { name: 'Explore' })
+		.getByRole('link', { name: 'Drilldown' })
 		.click();
+	await page.getByRole('heading', { name: 'Metrics' }).getByRole('link').click();
 
-	await page.getByLabel('Select a data source').click();
-	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
-	await page.getByLabel('Metric').click();
-	await page.getByText('air_pressure_mbar', { exact: true }).click();
+	await page.locator('#ds').click();
+	await page.getByTestId('data-testid Select option').getByText('Prometheus').click();
 
-	const selectLabel = page.getByTestId('data-testid Select label-input');
-	const selectValue = page.getByTestId('data-testid Select value-input');
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await page.getByRole('option', { name: '__name__' }).click();
+	await page.getByRole('option', { name: '= Equals' }).click();
+	await page.getByRole('option', { name: 'air_pressure_mbar', exact: true }).click();
 
-	await selectLabel.click();
-	await page.getByText('healthStatus', { exact: true }).click();
-	await selectValue.click();
-	await page.getByText('good', { exact: true }).click();
-	await page.getByTestId('query-editor-row').getByLabel('Add').click();
-	await selectLabel.nth(1).click();
-	await page.getByText('deveui', { exact: true }).click();
-	await selectValue.nth(1).click();
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await page.getByRole('option', { name: 'healthStatus' }).click();
+	await page.getByText('=Equals').click();
+	await page.getByRole('option', { name: 'good' }).click();
+
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await page.getByRole('option', { name: 'deveui' }).click();
+	await page.getByText('=Equals').click();
 
 	// only "Super Test Typ" is present
 	for (const thing of [superTestTypThing, superTestTypThingExtra]) {
-		await expect(page.getByText(thing.deveui, { exact: true })).toBeVisible();
+		await expect(page.getByRole('option', { name: thing.deveui })).toBeVisible();
 	}
 	for (const thing of [testTypThing, testTypThingExtra]) {
-		await expect(page.getByText(thing.deveui, { exact: true })).not.toBeVisible();
+		await expect(page.getByRole('option', { name: thing.deveui })).not.toBeVisible();
 	}
-	await page.getByText(superTestTypThing.deveui, { exact: true }).click();
+	await page.getByRole('option', { name: superTestTypThing.deveui }).click();
 
-	await page.getByLabel('remove-deveui').click();
+	await page.getByLabel('Remove filter with key deveui').click();
+	await page.getByLabel('Remove filter with key healthStatus').click();
+	//await page.getByRole('button', { name: 'Remove filter with key deveui' }).click();
+	//await page.getByRole('button', { name: 'Remove filter with key healthStatus' }).click();
 
-	await selectLabel.click();
-	await page.getByText('deveui', { exact: true }).click();
-	await selectValue.click();
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await page.getByRole('option', { name: 'deveui' }).click();
+	await page.getByText('=Equals').click();
 
 	// check that all things are present
 	for (const thing of [
@@ -231,7 +227,7 @@ test('auto-create', async ({ page, context }) => {
 		superTestTypThing,
 		superTestTypThingExtra
 	]) {
-		await expect(page.getByText(thing.deveui, { exact: true })).toBeVisible();
+		await expect(page.getByRole('option', { name: thing.deveui })).toBeVisible();
 	}
 
 	// check geojson export

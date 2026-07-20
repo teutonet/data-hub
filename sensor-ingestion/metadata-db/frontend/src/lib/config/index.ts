@@ -12,6 +12,9 @@ export interface Config {
 	MDB_GRAPHIQL_URL: string;
 	SENTRY_DSN: string;
 	API_BASE_URL: string;
+	STORAGE_URL: string;
+	DOCS_URL: string;
+	RESOURCE_API_GRAPHQL_ENDPOINT: string;
 }
 
 const DUMMY_CONFIG: Config = {
@@ -26,7 +29,10 @@ const DUMMY_CONFIG: Config = {
 	JUPYTERHUB_URL: '',
 	MDB_GRAPHIQL_URL: '',
 	SENTRY_DSN: '',
-	API_BASE_URL: ''
+	API_BASE_URL: '',
+	STORAGE_URL: '',
+	DOCS_URL: '',
+	RESOURCE_API_GRAPHQL_ENDPOINT: ''
 };
 
 export function getConfig<K extends keyof Config>(key: K): Config[K] {

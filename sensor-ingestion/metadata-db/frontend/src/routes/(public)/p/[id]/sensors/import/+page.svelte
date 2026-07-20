@@ -6,9 +6,9 @@
 	import { getContextClient, queryStore } from '@urql/svelte';
 	import {
 		type CreateThingsMutation,
+		type CreateThingsMutationVariables,
 		type GetSensorsQuery,
-		type GetSensorsQueryVariables,
-		type CreateThingsMutationVariables
+		type GetSensorsQueryVariables
 	} from '$lib/common/generated/types';
 	import { CREATE_THINGS, GET_SENSORS } from '$lib/common/graphql/queries';
 	import { _ } from 'svelte-i18n';
@@ -102,7 +102,7 @@
 			let foundProblems: Problem[] = [];
 			newThings.forEach((thing, index) => {
 				required.forEach((req, reqIndex) => {
-					if (!thing[req]) {
+					if (!(thing as Record<string, any>)[req]) {
 						foundProblems.push({
 							kind: 'required',
 							row: index + 2,
@@ -110,6 +110,7 @@
 						});
 					}
 				});
+
 				const foundSensor = sensors.find((sensor) => sensor.name === thing.sensortypeName);
 				if (!foundSensor) {
 					foundProblems.push({
@@ -134,18 +135,20 @@
 			const result = await client.mutation<CreateThingsMutation, CreateThingsMutationVariables>(
 				CREATE_THINGS,
 				{
-					mnThing: thingsToImport.map((thing) => ({
-						deveui: thing.deveui,
-						name: thing.thingName,
-						project: projectId,
-						sensorId: thing.sensortypeId!,
-						status: defaultActivate ? 'activated' : 'created',
-						altitude: emptyToNull(thing.altitude),
-						appid: emptyToNull(thing.appid),
-						devid: emptyToNull(thing.devid),
-						lat: emptyToNull(thing.lat),
-						long: emptyToNull(thing.long)
-					}))
+					things: thingsToImport.map((thing) =>
+						JSON.stringify({
+							deveui: thing.deveui,
+							name: thing.thingName,
+							project: projectId,
+							sensorId: thing.sensortypeId!,
+							status: defaultActivate ? 'activated' : 'created',
+							altitude: emptyToNull(thing.altitude),
+							appid: emptyToNull(thing.appid),
+							devid: emptyToNull(thing.devid),
+							lat: emptyToNull(thing.lat),
+							long: emptyToNull(thing.long)
+						})
+					)
 				}
 			);
 			if (result.error) {

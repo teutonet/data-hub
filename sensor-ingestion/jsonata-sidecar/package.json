@@ -1,0 +1,9 @@
+{
+	"name": "jsonata-sidecar",
+	"version": "1.0.0",
+	"type": "module",
+	"dependencies": {
+		"express": "5.2.1",
+		"jsonata": "2.2.1"
+	}
+}

@@ -3,9 +3,10 @@
 	import PermissionEdit from '$lib/permissions/PermissionEdit.svelte';
 	import {
 		fetchGroups,
+		fetchVizGroups,
 		fetchPermission,
 		fetchScopes,
-		type ProjectResource
+		type ResourceType
 	} from '$lib/nav/fetchUtils';
 	import { accessToken } from '$lib/common/auth';
 	import { Spinner } from 'flowbite-svelte';
@@ -15,28 +16,29 @@
 	}
 
 	let { data }: Props = $props();
-	const tenant = data.tenant;
-	const project = data.project;
-	const permission = data.permission;
+	const tenant = $derived(data.tenant);
+	const project = $derived(data.project);
+	const permission = $derived(data.permission);
 
-	const resource: ProjectResource = {
+	const resource: ResourceType = $derived({
 		type: 'project',
-		tenant,
-		project
-	};
+		tenant: tenant,
+		resourceName: project,
+		displayName: ''
+	});
 
-	let isNew = permission == 'new';
+	let isNew = $derived(permission == 'new');
 
-	const groupsPromise = fetchGroups(tenant, $accessToken);
+	const groupsPromise = $derived(fetchGroups(tenant, $accessToken));
+	const vizGroupsPromise = $derived(fetchVizGroups(tenant, $accessToken));
+	const scopesPromise = $derived(fetchScopes(resource, $accessToken));
 
-	const scopesPromise = fetchScopes(resource, $accessToken);
-
-	const permissionPromise = isNew
-		? { scopes: [], principals: [] }
-		: fetchPermission(resource, permission, $accessToken);
+	const permissionPromise = $derived(
+		isNew ? { scopes: [], principals: [] } : fetchPermission(resource, permission, $accessToken)
+	);
 </script>
 
-{#await Promise.all([permissionPromise, groupsPromise, scopesPromise])}
+{#await Promise.all([permissionPromise, groupsPromise, vizGroupsPromise, scopesPromise])}
 	<Spinner />
 {:then responseData}
 	<PermissionEdit
@@ -45,6 +47,7 @@
 		{permission}
 		permissionObject={responseData[0]}
 		selectableGroups={responseData[1]}
-		selectableScopes={responseData[2].all}
+		selectableVizGroups={responseData[2]}
+		selectableScopes={responseData[3].all}
 	/>
 {/await}

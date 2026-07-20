@@ -49,6 +49,7 @@ export const GET_SENSORS = gql`
 			datasheet
 			description
 			sensorProperties {
+				alias
 				writeDelta
 				property {
 					measure
@@ -197,12 +198,20 @@ export const THING_FRAGMENT = gql`
 	}
 `;
 
-export const CREATE_THINGS = gql`
-	mutation createThings($mnThing: [ThingInput!]) {
-		mnCreateThing(input: { mnThing: $mnThing }) {
+export const CREATE_THING = gql`
+	mutation createThing($input: CreateThingInput!) {
+		createThing(input: $input) {
 			thing {
 				id
 			}
+		}
+	}
+`;
+
+export const CREATE_THINGS = gql`
+	mutation createThings($things: [JSON!]!) {
+		createThings(input: { things: $things }) {
+			clientMutationId
 		}
 	}
 `;
@@ -465,7 +474,7 @@ export const UPDATE_THING_OFFSET = gql`
 
 export const GET_THING_CHANGES = gql`
 	query thingChanges($id: UUID!) {
-		thingChanges(_id: $id) {
+		changes: thingChanges(_id: $id) {
 			auditId
 			auditUserName
 			eventKey
@@ -481,7 +490,7 @@ export const GET_THING_CHANGES = gql`
 
 export const GET_SENSOR_CHANGES = gql`
 	query sensorChanges($id: UUID!) {
-		sensorChanges(_id: $id) {
+		changes: sensorChanges(_id: $id) {
 			auditId
 			auditUserName
 			eventKey
@@ -497,7 +506,7 @@ export const GET_SENSOR_CHANGES = gql`
 
 export const GET_SENSOR_PROPERTY_CHANGES = gql`
 	query sensorPropertyChanges($id: UUID!) {
-		sensorPropertyChanges(_id: $id) {
+		changes: sensorPropertyChanges(_id: $id) {
 			auditId
 			auditUserName
 			eventKey
@@ -513,7 +522,7 @@ export const GET_SENSOR_PROPERTY_CHANGES = gql`
 
 export const GET_PROPERTY_CHANGES = gql`
 	query propertyChanges($id: UUID!) {
-		propertyChanges(_id: $id) {
+		changes: propertyChanges(_id: $id) {
 			auditId
 			auditUserName
 			eventKey

@@ -104,7 +104,7 @@
 						patch: {
 							metricName: currentOffsetMetricName,
 							offsetType: currentOffsetType,
-							offsetValue: currentOffsetValue
+							offsetValue: `${currentOffsetValue}`
 						}
 					},
 					{
@@ -135,7 +135,7 @@
 							project: $activeProjectId,
 							metricName: currentOffsetMetricName,
 							offsetType: currentOffsetType,
-							offsetValue: currentOffsetValue
+							offsetValue: `${currentOffsetValue}`
 						}
 					},
 					{
@@ -162,10 +162,10 @@
 		currentOffsetValue = undefined;
 	}
 
-	function editOffset(offset, index: number) {
+	function editOffset(offset: (typeof offsets)[0], index: number) {
 		editingOffsetIndex = index;
 		currentOffsetMetricName = offset.metricName;
-		currentOffsetValue = offset.offsetValue;
+		currentOffsetValue = parseFloat(offset.offsetValue);
 		currentOffsetType = offset.offsetType;
 		currentOffsetId = offset.id;
 	}
@@ -429,9 +429,9 @@
 					</TableBodyCell>
 				</TableBodyRow>
 			{:else}
-				<TableBodyRow>
+				<TableBodyRow class="h-[5rem]">
 					<TableBodyCell colspan={4}>
-						<div class="flex h-full content-center justify-center p-4">
+						<div class="flex h-full content-center justify-center">
 							{$_('thingOffsetList.noOffsets')}
 						</div>
 					</TableBodyCell>
@@ -440,7 +440,8 @@
 		{/snippet}
 	</SortingTable>
 	<Button
-		color="alternative"
+		outline
+		color="green"
 		class="mb-2 w-full rounded-none rounded-b-lg"
 		on:click={() => (showNewOffsetRow = true)}
 		disabled={editingOffsetIndex != -1 || offsets.length === metricNames.length}

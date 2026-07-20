@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { LayoutData } from './$types';
-	import { projectAccess } from '$lib/common/auth';
 	import { Button } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
 	import PageTitle from '$lib/PageTitle.svelte';
+	import { getUserReadableProjects } from '$lib/common/graphql/ressource-api-utils';
 
 	interface Props {
 		data: LayoutData;
@@ -12,8 +12,11 @@
 
 	let { data, children }: Props = $props();
 
+	const projects = getUserReadableProjects();
+
+	// TODO: remove `&& $projects.length` again, only required to fix a race condition
 	let projectMissing = $derived(
-		data.projectId != 'all' && !$projectAccess.includes(data.projectId)
+		data.projectId != 'all' && $projects.length && !$projects.includes(data.projectId)
 	);
 </script>
 

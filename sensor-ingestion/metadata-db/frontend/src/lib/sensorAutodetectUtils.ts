@@ -1,5 +1,5 @@
 import type { OperationResult } from '@urql/svelte';
-import type { Exact, GetThingsQuery, ThingCondition } from './common/generated/types';
+import type { GetThingsQuery, ThingCondition } from './common/generated/types';
 import { parsePayload } from './common/sensor-ingestion';
 
 export interface ResolvedProperty {
@@ -37,8 +37,8 @@ export function getSensorMatches(
 		const missingKeys = shape.properties
 			.filter((prop) => !payloadKeys.has(prop.name))
 			.map((prop) => prop.name);
-		const labels = {};
-		const metrics = {};
+		const labels: Record<string, string | number> = {};
+		const metrics: Record<string, string | number> = {};
 		shape.properties.forEach((prop) => {
 			if (payloadKeys.has(prop.name)) {
 				if (prop.metricName) {
@@ -66,7 +66,7 @@ export function getSensorMatches(
 
 export function getThingMatches(
 	shape: SensorShape,
-	thingsResult: OperationResult<GetThingsQuery, Exact<{ condition: ThingCondition }>>
+	thingsResult: OperationResult<GetThingsQuery, { condition: ThingCondition }>
 ) {
 	const result: SensortypeAutodetectionMatch[] = [];
 

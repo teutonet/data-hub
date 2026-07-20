@@ -3,6 +3,7 @@
 	import { UserManager, type UserManagerSettings } from 'oidc-client-ts';
 	import {
 		accessToken,
+		idToken,
 		errorMessage,
 		isAuthenticated,
 		profile,
@@ -25,11 +26,15 @@
 			isAuthenticated.set(true);
 			profile.set(user.profile as ExtendedTokenClaims);
 			accessToken.set(user.access_token);
+			if (user.id_token) {
+				idToken.set(user.id_token);
+			}
 		});
 
 		userManager.events.addSilentRenewError((error) => {
 			isAuthenticated.set(false);
 			accessToken.set('');
+			idToken.set('');
 			errorMessage.set({
 				msgKey: 'auth.silentRenewError',
 				srcMsg: error.message
@@ -40,6 +45,7 @@
 		userManager.events.addUserSignedOut(() => {
 			isAuthenticated.set(false);
 			accessToken.set('');
+			idToken.set('');
 			startLogin();
 		});
 	}
@@ -108,7 +114,7 @@
 						await goto(href, { replaceState: true });
 					}
 				}
-			} catch (err) {
+			} catch (err: any) {
 				errorMessage.set({
 					msgKey: 'auth.loginError',
 					srcMsg: err
@@ -164,6 +170,7 @@
 	}
 </script>
 
+<!-- svelte-ignore state_referenced_locally -->
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { InMemoryWebStorage, WebStorageStateStore } from 'oidc-client-ts';
@@ -185,7 +192,7 @@
 			...settings,
 			// eslint-disable-next-line camelcase
 			response_type: 'code',
-			scope: 'openid profile data-hub',
+			scope: 'openid profile data-hub buckets',
 
 			// Automatically sets a timer to refresh access token 60 seconds before
 			// expiration. Triggers `UserLoaded` event and we can update our copy of

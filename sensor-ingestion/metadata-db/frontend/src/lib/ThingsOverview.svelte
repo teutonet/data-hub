@@ -104,50 +104,26 @@
 							values: { number: things.length, filteredNumber: items.length }
 						})}
 					</span>
-					{#if $activeProjectId === 'all'}
-						<div class="mt-2 flex w-full gap-2">
-							<FloatingLabelInput
-								classDiv="xs:w-full sm:w-1/2"
-								style="outlined"
-								bind:value={filteredProject}
-							>
+					<div class="flex flex-col gap-2 xl:flex-row">
+						{#if $activeProjectId === 'all'}
+							<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredProject}>
 								{$_('component.thingsOverview.projectFilterHeader')}
 							</FloatingLabelInput>
-						</div>
-					{/if}
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredName}
-						>
+						{/if}
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredName}>
 							{$_('component.thingsOverview.nameFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredSensorType}
-						>
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredSensorType}>
 							{$_('component.thingsOverview.sensorTypeFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredStatus}
-						>
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredStatus}>
 							{$_('component.thingsOverview.statusFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full justify-end gap-2">
 						{#if $projectAccess.length > 1}
 							<SensorMassCopyModal things={thingArr} />
 						{/if}
 
-						<Button on:click={() => resetFilters()}>
+						<Button color="red" on:click={() => resetFilters()}>
 							{$_('component.thingsOverview.resetFilters')}
 						</Button>
 					</div>

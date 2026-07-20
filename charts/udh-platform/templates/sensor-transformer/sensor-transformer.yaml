@@ -1,0 +1,97 @@
+{{- $name := "sensor-transformer" -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ .Values.sensorIngestion.sensorTransformer.replicas | default 1 | int }}
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      {{- include "udh-platform.imagePullSecrets" (dict "context" .) | nindent 6 }}
+      containers:
+      - name: sensor-transformer
+        {{ include "sensor-ingestion.standard.image" (dict "image" .Values.sensorIngestion.sensorTransformer.image "context" .) | nindent 8 }}
+        ports:
+          - containerPort: 8088
+            name: http
+        env:
+          - name: RUST_BACKTRACE
+            value: "full"
+          - name: INSECURE_SSL_SKIP_VERIFY
+            value: {{ .Values.global.sslInsecureSkipVerify | quote }}
+          - name: GRAPHQL_URL
+            value: {{ printf "http://%s-mdb/graphql" (include "common.names.fullname" .) | quote }}
+          - name: AUTH_ISSUER
+            value: {{ .Values.global.auth.issuer | quote }}
+          - name: AUTH_TOKEN_PATH
+            value: {{ .Values.global.auth.tokenPath | quote }}
+          - name: TARGETS
+            value: {{ list (printf "https://api.%s/api/v1/write" .Values.global.baseDomain) | toJson | quote }}
+          - name: PROMETHEUS_URL
+            value: {{ .Values.sensorIngestion.prometheusWriter.prometheus.url | quote }}
+          - name: PROMETHEUS_READY_PATH
+            value: {{ .Values.sensorIngestion.prometheusWriter.prometheus.readyPath | quote }}
+        resources: {{- toYaml .Values.sensorIngestion.sensorTransformer.resources | nindent 10 }}
+        livenessProbe:
+          periodSeconds: 2
+          httpGet:
+            path: /livez
+            port: http
+        readinessProbe:
+          periodSeconds: 5
+          httpGet:
+            path: /readyz
+            port: http
+      - name: jsonata-sidecar
+        {{ include "sensor-ingestion.standard.image" (dict "image" .Values.sensorIngestion.jsonataSidecar.image "context" .) | nindent 8 }}
+        resources: {{- toYaml .Values.sensorIngestion.jsonataSidecar.resources | nindent 10 }}
+        ports:
+          - containerPort: 3001
+            name: http-sidecar
+        livenessProbe:
+          periodSeconds: 2
+          httpGet:
+            path: /readyz
+            port: http-sidecar
+        readinessProbe:
+          periodSeconds: 5
+          httpGet:
+            path: /readyz
+            port: http-sidecar
+
+---
+{{- $serviceName := printf "%s-%s" (include "common.names.fullname" .) $name -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $serviceName }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  ports:
+  - port: 8088
+    name: http
+    targetPort: http
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+{{- if gt (.Values.sensorIngestion.sensorTransformer.replicas | int64) 1 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ printf "%s-pdb-%s" (include "common.names.fullname" .) $name }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+{{- end }}

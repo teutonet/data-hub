@@ -5,14 +5,14 @@
 		SensorsWithPropertiesQuery,
 		SensorsWithPropertiesQueryVariables
 	} from './common/generated/types';
-	import { Button, Card, Heading, Li, List } from 'flowbite-svelte';
-	import HeroiconsCheck from '~icons/heroicons/check';
+	import { Button, Card, Li, List } from 'flowbite-svelte';
 	import { _ } from 'svelte-i18n';
 	import {
 		getSensorMatches,
 		type SensortypeAutodetectionMatch,
 		type SensorShape
 	} from './sensorAutodetectUtils';
+	import Title from './Title.svelte';
 
 	interface Props {
 		payload: Record<string, string | number>;
@@ -60,43 +60,39 @@
 	);
 </script>
 
-<Heading tag="h1">{$_('component.sensorFind.pleaseSelect')}</Heading>
+<Title type="SubTitle" title={$_('component.sensorFind.pleaseSelect')} />
 {#each sensorMatches as sensorMatch (sensorMatch.id)}
 	<Card>
-		<Heading tag="h4">
-			{sensorMatch.name}
-			<Button
-				class="ml-4"
-				title={$_('component.sensorFind.select')}
-				color="green"
-				size="sm"
-				on:click={() => selectCallback(sensorMatch.id)}
-			>
-				<HeroiconsCheck />
-				<span class="sr-only">
-					{$_('component.sensorFind.select')}
-				</span>
-			</Button>
-		</Heading>
+		<Title type="SmallHeading" title={sensorMatch.name} />
 		{@const labelEntries = Object.entries(sensorMatch.labels)}
 		{#if labelEntries.length}
-			<Heading tag="h5">{$_('component.sensorFind.labels')}</Heading>
+			<Title type="SmallHeading" title={$_('component.sensorFind.labels')} />
 			<List>
 				{#each labelEntries as [key, value] (key)}
 					<Li>{key}: {value}</Li>
 				{/each}
 			</List>
 		{/if}
-		<Heading tag="h5">{$_('component.sensorFind.metrics')}</Heading>
+		<Title type="SmallHeading" title={$_('component.sensorFind.metrics')} />
 		<List>
 			{#each Object.entries(sensorMatch.metrics) as [key, value] (key)}
 				<Li>{key}: {value}</Li>
 			{/each}
 		</List>
 		{#if sensorMatch.missingKeys.length}
-			<Heading tag="h6">{$_('component.sensorFind.propertiesNotFoundInPayload')}</Heading>
+			<Title type="SmallHeading" title={$_('component.sensorFind.propertiesNotFoundInPayload')} />
 			{sensorMatch.missingKeys.join(', ')}
 		{/if}
+		<Button
+			aria-label={`${sensorMatch.name} ${$_('component.sensorFind.select')}`}
+			class="ml-4"
+			title={$_('component.sensorFind.select')}
+			color="green"
+			size="sm"
+			on:click={() => selectCallback(sensorMatch.id)}
+		>
+			{$_('component.sensorFind.select')}
+		</Button>
 	</Card>
 {:else}
 	{$_('component.sensorFind.noSensorFound')}

@@ -12,7 +12,6 @@
 	import { Button, Modal, P, TableBodyCell, TableBodyRow, Toggle } from 'flowbite-svelte';
 	import FloatingLabelSelect from '$lib/flowbite-extensions/FloatingLabelSelect.svelte';
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
-	import type { Scalars } from '$lib/common/generated/types';
 	import { error, success } from '$lib/common/toast/toast';
 	import PlusIcon from '~icons/heroicons/plus';
 	import EditIcon from '~icons/heroicons/pencil-square';
@@ -49,24 +48,12 @@
 			description?: string,
 			measure?: string,
 			metricName?: string
-		) => Promise<Scalars['UUID']['output']>;
+		) => Promise<string | undefined>;
 		editSensorPropFunction?:
-			| ((
-					propertyId: Scalars['UUID']['input'],
-					writeDelta: boolean,
-					alias?: string
-			  ) => Promise<void>)
-			| undefined;
+			((propertyId: string, writeDelta: boolean, alias?: string) => Promise<void>) | undefined;
 		createSensorPropFunction?:
-			| ((
-					propertyId: Scalars['UUID']['input'],
-					writeDelta: boolean,
-					alias?: string
-			  ) => Promise<void>)
-			| undefined;
-		deleteSensorPropFunction?:
-			| ((propertyId: Scalars['UUID']['input']) => Promise<void>)
-			| undefined;
+			((propertyId: string, writeDelta: boolean, alias?: string) => Promise<void>) | undefined;
+		deleteSensorPropFunction?: ((propertyId: string) => Promise<void>) | undefined;
 	}
 
 	let {
@@ -88,7 +75,7 @@
 	let newSensorPropModalOpen = $state(false);
 	let newPropModalOpen = $state(false);
 
-	let selectedProperty: Scalars['UUID']['input'] | undefined = $state(undefined);
+	let selectedProperty: string | undefined = $state(undefined);
 	let propSelectHelperText: string | undefined = $state();
 	let newSensorPropAlias: string | undefined = $state(undefined);
 	let newSensorPropWriteDelta = $state(false);
@@ -101,7 +88,10 @@
 	let editPropAlias: string | undefined = $state();
 	let editPropWriteDelta: boolean = $state(false);
 
-	let propertyInputArr: PropertyInputRecordInput[] | undefined = $state(create ? [] : undefined);
+	let propertyInputArr: PropertyInputRecordInput[] | undefined = $derived.by(() => {
+		let state = $state(create ? [] : undefined);
+		return state;
+	});
 
 	let propertyOptions = $derived([
 		{ name: $_('component.sensorEdit.sensorProp.newPropertyOption'), value: undefined },
@@ -134,7 +124,7 @@
 		}
 	}
 
-	function editSensorProp(propId: Scalars['UUID']['input']) {
+	function editSensorProp(propId: string) {
 		if ((!create && sensorProps?.length) || (create && propertyInputArr?.length)) {
 			editPropModalOpen = true;
 			selectedProperty = propId;
@@ -148,7 +138,7 @@
 		}
 	}
 
-	async function deleteSensorProp(propId: Scalars['UUID']['input']) {
+	async function deleteSensorProp(propId: string) {
 		if (create) {
 			propertyInputArr = propertyInputArr?.filter((elem) => elem.propertyId != propId);
 		} else if (deleteSensorPropFunction) {
@@ -348,7 +338,7 @@
 						}
 					});
 			}
-		} catch (e) {
+		} catch (e: any) {
 			error(e.message);
 		}
 	}
@@ -478,7 +468,12 @@
 				</TableBodyRow>
 			{/snippet}
 		</SortingTable>
-		<Button on:click={() => newSensorProp()} class="w-full rounded-none rounded-b-lg">
+		<Button
+			outline
+			color="green"
+			on:click={() => newSensorProp()}
+			class="w-full rounded-none rounded-b-lg"
+		>
 			<div class="flex flex-row gap-2">
 				<PlusIcon class="h-5 w-5" />
 				{$_('component.sensorEdit.sensorProp.newSensorPropButton')}
@@ -525,7 +520,7 @@
 			<Toggle bind:checked={editPropWriteDelta}>
 				{$_('component.sensorEdit.sensorProp.newSensorPropWriteDeltaLabel')}
 			</Toggle>
-			<Button type="submit">
+			<Button color="green" type="submit">
 				{$_('shared.action.save')}
 			</Button>
 		</div>
@@ -550,8 +545,10 @@
 				/>
 				{#if !selectedProperty}
 					<Button
+						outline
+						color="green"
 						on:click={() => (newPropModalOpen = true)}
-						class="w-full !rounded-b-lg rounded-t-none"
+						class="w-full rounded-t-none !rounded-b-lg"
 					>
 						<div class="flex flex-row gap-2">
 							<PlusIcon class="h-5 w-5" />

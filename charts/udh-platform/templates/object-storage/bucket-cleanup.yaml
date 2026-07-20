@@ -1,0 +1,48 @@
+{{- if and .Values.objectStorage.enabled .Values.objectStorage.allowDeletion -}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-bucket-cleanup" (include "common.names.fullname" .) | quote }}
+  annotations:
+    helm.sh/hook: pre-delete
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: configure
+          image: public.ecr.aws/aws-cli/aws-cli:2.15.19
+          command:
+            - bash
+            - -ce
+            - aws s3 ls | cut -d" " -f 3 | xargs -I{} aws s3 rb s3://{} --force
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+          env:
+            - name: AWS_ENDPOINT_URL
+              value: {{ print "https://" ( include "data-hub.storage.hostname" . ) | quote }}
+            {{- include "udh.objectstore.userEnv" (dict "user" "bucket-admin" "context" .) | nindent 12 }}
+            - name: AWS_REGION
+              value: none
+      {{- if .Values.global.trustCaSecretName }}
+            - name: AWS_CA_BUNDLE
+              value: /tls/ca.crt
+          volumeMounts:
+            - mountPath: /tls
+              name: ca-cert
+      volumes:
+        - name: ca-cert
+          secret:
+            secretName: {{ .Values.global.trustCaSecretName }}
+            items:
+            - key: ca.crt
+              path: ca.crt
+      {{- end }}
+{{- end -}}

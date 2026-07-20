@@ -4,14 +4,14 @@ source "$(dirname "$BASH_SOURCE")/.common"
 
 cd "$REPO"
 
-$KUBECTL port-forward -n udh pod/local-udh-platform-postgres-0 5435:5432 1>/dev/null &
+$KUBECTL port-forward -n udh pod/local-udh-platform-cnpg-1 5435:5432 1>/dev/null &
 PID_PORT_FORWARD=$!
 trap "kill $PID_PORT_FORWARD" EXIT
 
 MDB_DB=mdb
 
-ROOT_USER=`${KUBECTL} -n udh get secret postgres.local-udh-platform-postgres.credentials.postgresql.acid.zalan.do -o jsonpath='{.data.username}' | base64 -d`
-ROOT_PASSWORD=`${KUBECTL} -n udh get secret postgres.local-udh-platform-postgres.credentials.postgresql.acid.zalan.do -o jsonpath='{.data.password}' | base64 -d`
+ROOT_USER=`${KUBECTL} -n udh get secret local-udh-platform-cnpg-superuser -o jsonpath='{.data.username}' | base64 -d`
+ROOT_PASSWORD=`${KUBECTL} -n udh get secret local-udh-platform-cnpg-superuser -o jsonpath='{.data.password}' | base64 -d`
 
 export PGUSER=$ROOT_USER
 export PGPASSWORD=$ROOT_PASSWORD

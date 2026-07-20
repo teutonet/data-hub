@@ -35,6 +35,13 @@ function renderToast({
 	};
 }
 
+Element.prototype.animate = vi.fn().mockImplementation(function () {
+	return {
+		finished: Promise.resolve(),
+		cancel: vi.fn()
+	};
+});
+
 beforeEach(() => {
 	vi.useFakeTimers();
 });
@@ -100,14 +107,6 @@ describe('ToastList', () => {
 	});
 
 	test('removes closed toasts from the store', () => {
-		const mockAnimations = () => {
-			Element.prototype.animate = vi.fn().mockImplementation(() => ({
-				finished: Promise.resolve(),
-				cancel: vi.fn()
-			}));
-		};
-
-		mockAnimations();
 		success('component.thingsImport.success');
 		const { getByText } = renderToastList();
 		expect(getByText('Import Erfolgreich')).toBeInTheDocument();

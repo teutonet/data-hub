@@ -2,7 +2,6 @@
 	import {
 		Alert,
 		Button,
-		Heading,
 		Label,
 		Listgroup,
 		Modal,
@@ -12,7 +11,6 @@
 	} from 'flowbite-svelte';
 	import type {
 		GetAllThingsQuery,
-		Scalars,
 		SensorMassCopyMutation,
 		SensorMassCopyMutationVariables
 	} from './common/generated/types';
@@ -27,6 +25,7 @@
 	import { SENSOR_MASS_COPY } from './common/graphql/queries';
 	import { success, error as errorToast } from './common/toast/toast';
 	import { twMerge } from 'tailwind-merge';
+	import Title from './Title.svelte';
 
 	interface Props {
 		things: NonNullable<GetAllThingsQuery['things']>;
@@ -46,7 +45,7 @@
 			})
 	);
 
-	let selectedThings: Scalars['UUID']['input'][] = $state([]);
+	let selectedThings: string[] = $state([]);
 	let findSensortype: boolean = $state(false);
 	let overwriteValues: boolean = $state(false);
 	let targetProject: string | undefined = $state();
@@ -112,7 +111,7 @@
 	let buttonClass = twMerge('focus-within:ring-4', 'focus-within:outline-none', 'rounded-lg');
 </script>
 
-<Button on:click={() => (modalOpen = true)} color="primary">
+<Button outline color="blue" on:click={() => (modalOpen = true)}>
 	{$_('component.sensorMassCopyModal.bulkCopyButton')}
 </Button>
 
@@ -150,9 +149,7 @@
 	/>
 
 	<div class="w-full flex-col gap-2 text-left">
-		<Heading tag="h5">
-			{$_('component.sensorMassCopyModal.thingsHeading')}
-		</Heading>
+		<Title type="SubTitle" title={$_('component.sensorMassCopyModal.thingsHeading')} />
 		<div class="mt-4 flex w-full flex-row">
 			<Button
 				class={buttonClass}
@@ -196,11 +193,8 @@
 	</div>
 	<svelte:fragment slot="footer">
 		<Button
-			class={twMerge(
-				buttonClass,
-				'bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white',
-				'focus-within:ring-primary-300 dark:focus-within:ring-primary-800'
-			)}
+			color="red"
+			class={buttonClass}
 			on:click={() => {
 				modalOpen = false;
 				resetInputs();
@@ -209,12 +203,8 @@
 			{$_('shared.action.abort')}
 		</Button>
 		<Button
-			class={twMerge(
-				buttonClass,
-				'hover:text-primary-700 focus-within:text-primary-700 border border-gray-200 bg-white text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:focus-within:text-white dark:hover:bg-gray-700 dark:hover:text-white',
-				'focus-within:ring-gray-200 dark:focus-within:ring-gray-700',
-				(!selectedThings.length || showSpinner) && 'cursor-not-allowed opacity-50'
-			)}
+			color="green"
+			class={twMerge((!selectedThings.length || showSpinner) && 'cursor-not-allowed opacity-50')}
 			on:click={(e: MouseEvent) => copySensors(e)}
 			disabled={!selectedThings.length || showSpinner}
 		>

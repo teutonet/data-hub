@@ -1,5 +1,5 @@
 import test, { expect, Page } from 'playwright/test';
-import { checkAndDismissToast, getRandomString, login } from './helper/util';
+import { checkAndDismissToast, getRandomString, login, RandomTenantManager } from './helper/util';
 import { MdbApi } from './helper/mdb-api';
 import { MDB_FRONTEND } from './helper/urls';
 import {
@@ -8,6 +8,8 @@ import {
 	DATA_HUB_ADMIN_PASSWORD,
 	DATA_HUB_ADMIN_USERNAME
 } from './helper/keycloak';
+
+const TENANT_MGR = new RandomTenantManager();
 
 async function traverseCopyDialog(
 	page: Page,
@@ -22,8 +24,10 @@ async function traverseCopyDialog(
 	await expect(page.getByText('0 ausgewählt')).toBeVisible();
 	if (copySensorType) {
 		await page
-			.getByRole('checkbox', { name: 'Sensortyp in Zielprojekt suchen und setzen' })
-			.check({ force: true });
+			.locator('label')
+			.filter({ hasText: 'Sensortyp in Zielprojekt' })
+			.locator('span')
+			.click();
 	}
 	if (overrideValues) {
 		await page
@@ -59,10 +63,9 @@ test.describe('sensor mass copy', () => {
 	test.beforeAll(async () => {
 		postfixA = getRandomString(6);
 		postfixB = getRandomString(6);
-		tenantNameA = `schrecklicheim-${postfixA}`;
-		tenantNameB = `schrecklicheim-${postfixB}`;
+		tenantNameA = TENANT_MGR.with(postfixA);
+		tenantNameB = TENANT_MGR.with(postfixB);
 
-		console.log('setting up tenants');
 		await createResources([
 			`tenants/${tenantNameA}/projects/busterminal`,
 			`tenants/${tenantNameB}/projects/busterminal`
@@ -98,19 +101,15 @@ test.describe('sensor mass copy', () => {
 
 	test('dependent', async ({ page }) => {
 		await test.step('copy A to B', async () => {
-			await page.goto(MDB_FRONTEND + 'overview');
+			await page.goto(MDB_FRONTEND);
 			await page.waitForLoadState();
-			await login(
-				page,
-				MDB_FRONTEND + 'overview',
-				DATA_HUB_ADMIN_USERNAME,
-				DATA_HUB_ADMIN_PASSWORD
-			);
+			await login(page, MDB_FRONTEND, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
 			await page.getByRole('link', { name: `${tenantNameA}.busterminal` }).click();
+			await page.getByRole('button', { name: 'Sensorverwaltung', exact: true }).click();
 			await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 			await traverseCopyDialog(page, `${tenantNameB}.busterminal`, 5, 5);
 			await page.getByText(`Projekt: ${tenantNameA}.busterminal`).click();
-			await page.getByRole('link', { name: `${tenantNameB}.busterminal` }).click();
+			await page.getByRole('button', { name: `${tenantNameB}.busterminal` }).click();
 			await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 			await page.waitForLoadState();
 			await expect(page.getByText('created')).toHaveCount(5);
@@ -118,17 +117,19 @@ test.describe('sensor mass copy', () => {
 		});
 
 		await test.step('attempt copy from A to B with sensors already there', async () => {
-			await page.goto(MDB_FRONTEND + 'overview');
+			await page.goto(MDB_FRONTEND);
 			await page.waitForLoadState();
 			await page.getByRole('link', { name: `${tenantNameA}.busterminal` }).click();
+			await page.getByRole('button', { name: 'Sensorverwaltung', exact: true }).click();
 			await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 			await traverseCopyDialog(page, `${tenantNameB}.busterminal`, 5, 0);
 		});
 
 		await test.step('copy A to B with value override', async () => {
-			await page.goto(MDB_FRONTEND + 'overview');
+			await page.goto(MDB_FRONTEND);
 			await page.waitForLoadState();
 			await page.getByRole('link', { name: `${tenantNameA}.busterminal` }).click();
+			await page.getByRole('button', { name: 'Sensorverwaltung', exact: true }).click();
 			await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 			await page.getByRole('row').nth(1).click();
 			await page.getByRole('textbox', { name: 'Name', exact: true }).fill('MODIFIED');
@@ -136,7 +137,7 @@ test.describe('sensor mass copy', () => {
 			await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 			await traverseCopyDialog(page, `${tenantNameB}.busterminal`, 5, 5, false, true);
 			await page.getByText(`Projekt: ${tenantNameA}.busterminal`).click();
-			await page.getByRole('link', { name: `${tenantNameB}.busterminal` }).click();
+			await page.getByRole('button', { name: `${tenantNameB}.busterminal` }).click();
 			await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 			await page.waitForLoadState();
 			await expect(page.getByText('MODIFIED')).toBeVisible();
@@ -144,22 +145,23 @@ test.describe('sensor mass copy', () => {
 	});
 
 	test('copy A to B with sensortype', async ({ page }) => {
-		const postfix = getRandomString(6);
-		const tenantName = `schrecklicheim-${postfix}`;
+		const tenantName = TENANT_MGR.get();
 		const projectName = `${tenantName}.busterminal`;
 		await createResources([`tenants/${tenantName}/projects/busterminal`]);
 		const { username, password } = await createResourceToken(tenantName, 'busterminal', 'test3');
 		const client = new MdbApi(projectName, username, password);
 		await client.createSensorType(sensorTypeAName);
 
-		await page.goto(MDB_FRONTEND + 'overview');
+		await page.goto(MDB_FRONTEND);
 		await page.waitForLoadState();
-		await login(page, MDB_FRONTEND + 'overview', DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
+		await login(page, MDB_FRONTEND, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
 		await page.getByRole('link', { name: `${tenantNameA}.busterminal` }).click();
+		await page.getByRole('button', { name: 'Sensorverwaltung', exact: true }).click();
+
 		await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 		await traverseCopyDialog(page, projectName, 5, 5, true);
 		await page.getByText(`Projekt: ${tenantNameA}.busterminal`).click();
-		await page.getByRole('link', { name: projectName }).click();
+		await page.getByRole('button', { name: projectName }).click();
 		await page.getByRole('link', { name: 'Sensoren', exact: true }).click();
 		await page.waitForLoadState();
 		await expect(page.getByText('activated')).toHaveCount(5);

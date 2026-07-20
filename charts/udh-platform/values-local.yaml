@@ -1,5 +1,6 @@
 global:
   baseDomain: data-hub.local
+  trustCaSecretName: udh-test-iss
   udhImageRegistry: "localimage.test"
   auth:
     issuer: https://login.data-hub.local/realms/udh
@@ -10,16 +11,30 @@ global:
     annotations:
       kubernetes.io/tls-acme: "true"
       cert-manager.io/issuer: "udh-test-iss"
+  testDeployment: true
 grafana:
+  # only takes effect after completely reinstalling grafana
+  adminPassword: admin
+  image:
+    registry: "localhost:5000"
+    pullPolicy: IfNotPresent
+    repository: grafana
   smtp:
     enabled: true
     from_adress: alert@example.com
     from_name: grafana-local
     user: ""
     password: ""
+grafanaPublic:
+  # only takes effect after completely reinstalling grafana
+  adminPassword: admin
 keycloak:
   debug: true
   logLevel: info,udh:debug
+  adminAuth:
+    # only takes effect after completely reinstalling keycloak
+    adminUser: admin
+    adminPassword: admin
   extensions:
     image:
       registry: "localimage.test"
@@ -52,7 +67,7 @@ keycloak:
     ssl: false
   integrationTestClient: true
 
-database:
+cloudnativePostgres:
   shadowTables: true
 
 mailpit:
@@ -117,7 +132,7 @@ fakeCa:
   name: "udh-test-iss"
 
 objectStorage:
-  enabled: false
+  singleNode: true
 
 grafanaPublicSync:
   syncIntervalSeconds: 3
@@ -142,6 +157,11 @@ mimir:
 geojsonExport:
   image:
     repository: geojson-export
+    pullPolicy: IfNotPresent
+
+doc:
+  image:
+    repository: doc
     pullPolicy: IfNotPresent
 
 sensorIngestion:
@@ -173,3 +193,26 @@ sensorIngestion:
     image:
       pullPolicy: IfNotPresent
       repository: prometheus-remote-write
+  owmCollector:
+    image:
+      pullPolicy: IfNotPresent
+      repository: owm-collector
+    owmApiEndpoint: "http://127.0.0.1:5000/data/2.5/weather"
+    logLevel: "DEBUG"
+  owmFakeApi:
+    image:
+      pullPolicy: IfNotPresent
+      repository: owm-fake-api
+  sensorTransformer:
+    image:
+      pullPolicy: IfNotPresent
+      repository: sensor-transformer
+  jsonataSidecar:
+    image:
+      pullPolicy: IfNotPresent
+      repository: jsonata-sidecar
+
+
+jupyterhub:
+  singleuser:
+    allowPrivateIPs: true # local test-env routes ingresses internally

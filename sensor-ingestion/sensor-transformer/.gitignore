@@ -1,0 +1,2 @@
+# only "target" doesn't work with tar --exclude-vcs-ignores
+**/target

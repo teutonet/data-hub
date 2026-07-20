@@ -14,9 +14,14 @@
 </script>
 
 {#if $isAuthenticated}
-	<Button pill={true} class="p-0" outline={true} color="light" size="xl">
+	<Button
+		class="mt-[.4rem] h-fit w-fit rounded-[100%] border-none p-0"
+		outline={true}
+		color="light"
+		size="xl"
+	>
 		<span class="">
-			<UserCircle class="h-12 w-12 text-gray-800 dark:text-white" />
+			<UserCircle class="h-8 w-8 text-gray-800 dark:text-white" />
 		</span>
 		<span class="sr-only">
 			{$_('component.userDropdown.title')}

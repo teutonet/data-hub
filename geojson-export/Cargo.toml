@@ -5,22 +5,23 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.98"
-axum = "0.8.3"
+axum = "0.8.4"
 bytes = "1.10.1"
-chrono = "0.4.40"
+chrono = "0.4.41"
 deadpool-postgres = "0.14.1"
 geohash = "0.13.1"
-geojson = "0.24.2"
+geojson = "1.0.0"
 mime = "0.3.17"
-prometheus-http-query = { version = "0.8.3", default-features = false }
-promql-parser = "0.5.0"
-reqwest = { version = "0.12.15", default-features = false }
-rustls = { version = "0.23.26", default-features = false, features = ["ring"] }
+prometheus-http-query = { version = "0.9.0", default-features = false }
+promql-parser = "0.10.0"
+reqwest = { version = "0.13.3", default-features = false }
+rustls = { version = "0.23.31", default-features = false, features = ["ring"] }
+rustls-pemfile = "2.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-tokio = { version = "1.44.2", features = ["rt", "macros", "signal"] }
+serde_json = "1.0.142"
+tokio = { version = "1.47.1", features = ["rt", "macros", "signal"] }
 tokio-postgres = "0.7.13"
-tokio-postgres-rustls = "0.13.0"
-tower-http = { version = "0.6.2", features = ["compression-br", "compression-deflate", "compression-gzip", "compression-zstd", "cors", "trace"] }
+tokio-postgres-rustls = "0.14.0"
+tower-http = { version = "0.7.0", features = ["compression-br", "compression-deflate", "compression-gzip", "compression-zstd", "cors", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }

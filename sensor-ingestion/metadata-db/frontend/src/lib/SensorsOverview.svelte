@@ -14,6 +14,8 @@
 	import type { TableHeadItem } from './common/sortingTableUtils';
 	import { caseInsensitiveIncludes } from './stringUtils';
 	import { activeProjectId } from './nav/activeProject';
+	import { projectUrl } from './common/url';
+
 	interface Props {
 		sensors: NonNullable<GetAllSensorsQuery['sensors']>;
 	}
@@ -74,37 +76,19 @@
 							values: { number: sensors.length, filteredNumber: items.length }
 						})}
 					</span>
-					{#if $activeProjectId === 'all'}
-						<div class="mt-2 flex w-full gap-2">
-							<FloatingLabelInput
-								classDiv="xs:w-full sm:w-1/2"
-								style="outlined"
-								bind:value={filteredProject}
-							>
+					<div class="flex flex-col gap-2 xl:flex-row">
+						{#if $activeProjectId === 'all'}
+							<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredProject}>
 								{$_('component.sensorsOverview.projectFilterHeader')}
 							</FloatingLabelInput>
-						</div>
-					{/if}
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredId}
-						>
+						{/if}
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredId}>
 							{$_('component.sensorsOverview.idFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredName}
-						>
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredName}>
 							{$_('component.sensorsOverview.nameFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full justify-end gap-2">
-						<Button on:click={() => resetFilters()}>
+						<Button color="red" on:click={() => resetFilters()}>
 							{$_('component.sensorsOverview.resetFilters')}
 						</Button>
 					</div>
@@ -115,7 +99,8 @@
 	{#snippet bodyContent(item)}
 		<TableBodyRow
 			class="cursor-pointer"
-			on:click={async () => await goto(`sensortype/${encodeURI(item.id)}`)}
+			on:click={async () =>
+				await goto(projectUrl(item.project ?? 'all', 'sensortype', encodeURI(item.id)))}
 		>
 			{#if $activeProjectId === 'all'}
 				<TableBodyCell>{item.project}</TableBodyCell>

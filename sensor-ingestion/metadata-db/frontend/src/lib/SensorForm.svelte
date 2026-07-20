@@ -28,7 +28,6 @@
 <script lang="ts">
 	import {
 		Card,
-		Heading,
 		P,
 		TableBodyRow,
 		TableBodyCell,
@@ -58,11 +57,15 @@
 	import TrashIcon from '~icons/heroicons/trash';
 	import EditIcon from '~icons/heroicons/pencil-square';
 	import type { Snippet } from 'svelte';
+	import ThingOffsetList from './ThingOffsetList.svelte';
+	import { MediaQuery } from 'svelte/reactivity';
+	import Title from './Title.svelte';
 
 	interface Props {
 		title: string;
 		sensorTypes?: GetAllSensorsQuery['sensors'];
 		thing: ThingPatch | ThingInput;
+		thingId?: string;
 		payload?: string;
 		alertTop?: Snippet;
 		generalExtension?: Snippet;
@@ -74,6 +77,7 @@
 		title,
 		sensorTypes = [],
 		thing = $bindable(),
+		thingId,
 		payload,
 		alertTop,
 		generalExtension,
@@ -83,6 +87,8 @@
 
 	const labelKeyInputRegex = '^(?!__)^[a-zA-Z_][a-zA-Z0-9_]*$';
 	const labelValueInputRegex = '^[^\x00-\x1F\x7F]+$';
+
+	const largeScreenQuery = new MediaQuery('min-width: 60rem');
 
 	let showNewCustomLabelRow = $state(false);
 	let customLabelEditingIndex = $state(-1);
@@ -233,16 +239,14 @@
 	}
 </script>
 
-<PageTitle headingTag="h2" headingClass="pb-5" {title} />
+<PageTitle {title} />
 {#if alertTop}
 	{@render alertTop()}
 {/if}
 <Card class="max-w-full">
 	<div class="mb-4">
 		<div class="flex flex-col gap-4">
-			<Heading tag="h3" class="mb-2">
-				{$_('sensorView.general')}
-			</Heading>
+			<Title type="SubTitle" title={$_('sensorView.general')} />
 			<div class="grid grid-cols-1 gap-4 pr-4">
 				<ValidatedFormField
 					bind:value={thing.name}
@@ -263,9 +267,7 @@
 		</div>
 	</div>
 	<div class="mb-4">
-		<Heading tag="h3" class="mb-2">
-			{$_('sensorView.sensorLocation')}
-		</Heading>
+		<Title type="SubTitle" title={$_('sensorView.sensorLocation')} />
 		<div class="flex flex-row">
 			<div>
 				<div class="flex flex-row gap-4">
@@ -319,10 +321,8 @@
 			</div>
 		</div>
 	</div>
-	<div class="mb-4 mr-4">
-		<Heading tag="h3">
-			{$_('sensorView.sensorType')}
-		</Heading>
+	<div class="mr-4 mb-4">
+		<Title type="SubTitle" title={$_('sensorView.sensorType')} />
 		{#if allSensorTypes}
 			{@const allSensorItems = allSensorTypes.map((e) => ({ name: e.name, value: e.id }))}
 			<FloatingLabelSelect
@@ -371,12 +371,10 @@
 			{/if}
 			{#if currentSensorType}
 				{@const items = getSensorPropertyItems(currentSensorType)}
-				<Heading tag="h6" class="mt-4">
-					{$_('sensorView.sensorProperties.properties')}
-				</Heading>
+				<Title type="SubTitle" title={$_('sensorView.sensorProperties.properties')} />
 				<SortingTable
 					hoverable
-					tableDivClass="max-w-100 mt-4"
+					tableDivClass="my-4"
 					{items}
 					shownKeys={[
 						{
@@ -416,197 +414,207 @@
 			{/if}
 		{/if}
 	</div>
-	<div class="mb-4 mr-4">
-		<Heading tag="h3">
-			{$_('sensorView.customLabels')}
-		</Heading>
-		<form
-			novalidate
-			class="needs-validation"
-			onsubmit={(e) => labelSubmit(e, customLabelEditingIndex)}
+	<div class={`mr-4 mb-4 flex gap-5 ${largeScreenQuery.current ? 'flex-row' : 'flex-col'}`}>
+		<div
+			class={`flex flex-col ${largeScreenQuery.current && thingId && thing.sensorId ? 'w-[50%]' : 'w-full'}`}
 		>
-			<SortingTable
-				hoverable
-				shadow
-				tableDivClass="max-w-100 mt-4"
-				componentLocKey="sensorView.sensorProperties"
-				shownKeys={[
-					{
-						name: 'key',
-						key: 'key',
-						sortable: true
-					},
-					{
-						name: 'value',
-						key: 'value',
-						sortable: true
-					},
-					{
-						name: null,
-						key: null,
-						sortable: false,
-						cellClasses: 'w-44'
-					}
-				]}
-				items={customLabels}
-				sortKey="key"
+			<Title type="SubTitle" title={$_('sensorView.customLabels')} />
+			<form
+				novalidate
+				class="needs-validation"
+				onsubmit={(e) => labelSubmit(e, customLabelEditingIndex)}
 			>
-				{#snippet bodyContent(item, index)}
-					<TableBodyRow>
-						{#if customLabelEditingIndex === index}
-							<TableBodyCell>
-								<ValidatedFormField
-									bind:value={newCustomLabelKey}
-									inputId="newCustomLabelKeyInput"
-									inputLabel={$_('sensorView.customLabelKey')}
-									pattern={labelKeyInputRegex}
-									required
-									patternMismatchText={$_('sensorView.customLabelKeyPatternMismatch')}
-								/>
-							</TableBodyCell>
-							<TableBodyCell>
-								<ValidatedFormField
-									bind:value={newCustomLabelValue}
-									inputId="newCustomLabelValueInput"
-									inputLabel={$_('sensorView.customLabelValue')}
-									required
-									pattern={labelValueInputRegex}
-									patternMismatchText={$_('sensorView.customLabelValuePatternMismatch')}
-								/>
-							</TableBodyCell>
-							<TableBodyCell>
-								<Button color="green" type="submit" title={$_('shared.action.save')}>
-									<CheckIcon />
-								</Button>
-								<Button
-									color="alternative"
-									on:click={() => (customLabelEditingIndex = -1)}
-									title={$_('shared.action.abort')}
-								>
-									<CancelIcon />
-								</Button>
-							</TableBodyCell>
-						{:else}
-							<TableBodyCell>
-								{item.key}
-							</TableBodyCell>
-							<TableBodyCell>
-								{item.value}
-							</TableBodyCell>
-							<TableBodyCell>
-								<Button
-									on:click={() => setCustomLabelEditingIndex(index, item.key, item.value)}
-									title={$_('sensorView.editCustomLabelButton')}
-									disabled={showNewCustomLabelRow}
-								>
-									<EditIcon />
-								</Button>
-								<Button
-									color="red"
-									on:click={() => deleteCustomLabel(`${item.key}:${item.value}`)}
-									title={$_('sensorview.deleteCustomLabelButton')}
-								>
-									<TrashIcon />
-								</Button>
-							</TableBodyCell>
+				<SortingTable
+					hoverable
+					componentLocKey="sensorView.sensorProperties"
+					shownKeys={[
+						{
+							name: 'key',
+							key: 'key',
+							sortable: true
+						},
+						{
+							name: 'value',
+							key: 'value',
+							sortable: true
+						},
+						{
+							name: null,
+							key: null,
+							sortable: false,
+							cellClasses: 'w-44'
+						}
+					]}
+					items={customLabels}
+					sortKey="key"
+				>
+					{#snippet bodyContent(item, index)}
+						<TableBodyRow class="h-[5rem]">
+							{#if customLabelEditingIndex === index}
+								<TableBodyCell>
+									<ValidatedFormField
+										bind:value={newCustomLabelKey}
+										inputId="newCustomLabelKeyInput"
+										inputLabel={$_('sensorView.customLabelKey')}
+										pattern={labelKeyInputRegex}
+										required
+										patternMismatchText={$_('sensorView.customLabelKeyPatternMismatch')}
+									/>
+								</TableBodyCell>
+								<TableBodyCell>
+									<ValidatedFormField
+										bind:value={newCustomLabelValue}
+										inputId="newCustomLabelValueInput"
+										inputLabel={$_('sensorView.customLabelValue')}
+										required
+										pattern={labelValueInputRegex}
+										patternMismatchText={$_('sensorView.customLabelValuePatternMismatch')}
+									/>
+								</TableBodyCell>
+								<TableBodyCell>
+									<Button color="green" type="submit" title={$_('shared.action.save')}>
+										<CheckIcon />
+									</Button>
+									<Button
+										color="alternative"
+										on:click={() => (customLabelEditingIndex = -1)}
+										title={$_('shared.action.abort')}
+									>
+										<CancelIcon />
+									</Button>
+								</TableBodyCell>
+							{:else}
+								<TableBodyCell>
+									{item.key}
+								</TableBodyCell>
+								<TableBodyCell>
+									{item.value}
+								</TableBodyCell>
+								<TableBodyCell>
+									<Button
+										on:click={() => setCustomLabelEditingIndex(index, item.key, item.value)}
+										title={$_('sensorView.editCustomLabelButton')}
+										disabled={showNewCustomLabelRow}
+									>
+										<EditIcon />
+									</Button>
+									<Button
+										color="red"
+										on:click={() => deleteCustomLabel(`${item.key}:${item.value}`)}
+										title={$_('sensorview.deleteCustomLabelButton')}
+									>
+										<TrashIcon />
+									</Button>
+								</TableBodyCell>
+							{/if}
+						</TableBodyRow>
+						{#if index === customLabels.length - 1 && showNewCustomLabelRow}
+							<TableBodyRow>
+								<TableBodyCell>
+									<ValidatedFormField
+										bind:value={newCustomLabelKey}
+										inputId="newCustomLabelKeyInput"
+										inputLabel={$_('sensorView.customLabelKey')}
+										pattern={labelKeyInputRegex}
+										required
+										patternMismatchText={$_('sensorView.customLabelKeyPatternMismatch')}
+									/>
+								</TableBodyCell>
+								<TableBodyCell>
+									<ValidatedFormField
+										bind:value={newCustomLabelValue}
+										inputId="newCustomLabelValueInput"
+										inputLabel={$_('sensorView.customLabelValue')}
+										required
+										pattern={labelValueInputRegex}
+										patternMismatchText={$_('sensorView.customLabelValuePatternMismatch')}
+									/>
+								</TableBodyCell>
+								<TableBodyCell>
+									<Button color="green" type="submit" title={$_('shared.action.save')}>
+										<CheckIcon />
+									</Button>
+									<Button
+										color="alternative"
+										on:click={() => (showNewCustomLabelRow = false)}
+										title={$_('shared.action.abort')}
+									>
+										<CancelIcon />
+									</Button>
+								</TableBodyCell>
+							</TableBodyRow>
 						{/if}
-					</TableBodyRow>
-					{#if index === customLabels.length - 1 && showNewCustomLabelRow}
-						<TableBodyRow>
-							<TableBodyCell>
-								<ValidatedFormField
-									bind:value={newCustomLabelKey}
-									inputId="newCustomLabelKeyInput"
-									inputLabel={$_('sensorView.customLabelKey')}
-									pattern={labelKeyInputRegex}
-									required
-									patternMismatchText={$_('sensorView.customLabelKeyPatternMismatch')}
-								/>
-							</TableBodyCell>
-							<TableBodyCell>
-								<ValidatedFormField
-									bind:value={newCustomLabelValue}
-									inputId="newCustomLabelValueInput"
-									inputLabel={$_('sensorView.customLabelValue')}
-									required
-									pattern={labelValueInputRegex}
-									patternMismatchText={$_('sensorView.customLabelValuePatternMismatch')}
-								/>
-							</TableBodyCell>
-							<TableBodyCell>
-								<Button color="green" type="submit" title={$_('shared.action.save')}>
-									<CheckIcon />
-								</Button>
-								<Button
-									color="alternative"
-									on:click={() => (showNewCustomLabelRow = false)}
-									title={$_('shared.action.abort')}
-								>
-									<CancelIcon />
-								</Button>
-							</TableBodyCell>
-						</TableBodyRow>
-					{/if}
-				{/snippet}
-				{#snippet defaultContent()}
-					{#if showNewCustomLabelRow}
-						<TableBodyRow>
-							<TableBodyCell>
-								<ValidatedFormField
-									bind:value={newCustomLabelKey}
-									inputId="newCustomLabelKeyInput"
-									inputLabel={$_('sensorView.customLabelKey')}
-									pattern={labelKeyInputRegex}
-									required
-									patternMismatchText={$_('sensorView.customLabelKeyPatternMismatch')}
-								/>
-							</TableBodyCell>
-							<TableBodyCell>
-								<ValidatedFormField
-									bind:value={newCustomLabelValue}
-									inputId="newCustomLabelValueInput"
-									inputLabel={$_('sensorView.customLabelValue')}
-									required
-									pattern={labelValueInputRegex}
-									patternMismatchText={$_('sensorView.customLabelValuePatternMismatch')}
-								/>
-							</TableBodyCell>
-							<TableBodyCell>
-								<Button color="green" type="submit" title={$_('shared.action.save')}>
-									<CheckIcon />
-								</Button>
-								<Button
-									color="alternative"
-									on:click={() => (showNewCustomLabelRow = false)}
-									title={$_('shared.action.abort')}
-								>
-									<CancelIcon />
-								</Button>
-							</TableBodyCell>
-						</TableBodyRow>
-					{:else}
-						<TableBodyRow>
-							<TableBodyCell colspan={3}>
-								<div class="flex h-full content-center justify-center p-4">
-									{$_('sensorView.noCustomLabels')}
-								</div>
-							</TableBodyCell>
-						</TableBodyRow>
-					{/if}
-				{/snippet}
-			</SortingTable>
-		</form>
-		<Button
-			color="alternative"
-			class="mb-2 w-full rounded-none rounded-b-lg"
-			on:click={() => (showNewCustomLabelRow = true)}
-			disabled={customLabelEditingIndex != -1}
-		>
-			{$_('sensorView.newCustomLabelButton')}
-		</Button>
-		<Helper>
-			{$_('sensorView.customLabelHelperText')}
-		</Helper>
+					{/snippet}
+					{#snippet defaultContent()}
+						{#if showNewCustomLabelRow}
+							<TableBodyRow>
+								<TableBodyCell>
+									<ValidatedFormField
+										bind:value={newCustomLabelKey}
+										inputId="newCustomLabelKeyInput"
+										inputLabel={$_('sensorView.customLabelKey')}
+										pattern={labelKeyInputRegex}
+										required
+										patternMismatchText={$_('sensorView.customLabelKeyPatternMismatch')}
+									/>
+								</TableBodyCell>
+								<TableBodyCell>
+									<ValidatedFormField
+										bind:value={newCustomLabelValue}
+										inputId="newCustomLabelValueInput"
+										inputLabel={$_('sensorView.customLabelValue')}
+										required
+										pattern={labelValueInputRegex}
+										patternMismatchText={$_('sensorView.customLabelValuePatternMismatch')}
+									/>
+								</TableBodyCell>
+								<TableBodyCell>
+									<Button color="green" type="submit" title={$_('shared.action.save')}>
+										<CheckIcon />
+									</Button>
+									<Button
+										color="red"
+										on:click={() => (showNewCustomLabelRow = false)}
+										title={$_('shared.action.abort')}
+									>
+										<CancelIcon />
+									</Button>
+								</TableBodyCell>
+							</TableBodyRow>
+						{:else}
+							<TableBodyRow>
+								<TableBodyCell colspan={3}>
+									<div class="flex h-full content-center justify-center p-4">
+										{$_('sensorView.noCustomLabels')}
+									</div>
+								</TableBodyCell>
+							</TableBodyRow>
+						{/if}
+					{/snippet}
+				</SortingTable>
+			</form>
+			<Button
+				outline
+				color="green"
+				class="mb-2 w-full rounded-none rounded-b-lg"
+				on:click={() => (showNewCustomLabelRow = true)}
+				disabled={customLabelEditingIndex != -1}
+			>
+				{$_('sensorView.newCustomLabelButton')}
+			</Button>
+			<Helper>
+				{$_('sensorView.customLabelHelperText')}
+			</Helper>
+		</div>
+		{#if thingId && thing.sensorId}
+			<div class={`flex flex-col ${largeScreenQuery.current ? 'w-[50%]' : 'w-full'}`}>
+				<Title type="SubTitle" title={$_('sensorView.offsetsHeading')} />
+				<ThingOffsetList {thingId} sensorTypeId={thing.sensorId} />
+				<Helper>
+					{$_('sensorView.editOrDeleteWarning')}
+				</Helper>
+			</div>
+		{/if}
 	</div>
 	{#if children}
 		{@render children()}

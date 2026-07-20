@@ -20,6 +20,9 @@ data:
         MDB_GRAPHIQL_URL: {{ printf "//mdb.%s" .Values.global.baseDomain | quote }},
         SENTRY_DSN: {{ .Values.sensorIngestion.metadataDB.frontend.sentry.dsn | quote }},
         API_BASE_URL: {{ printf "https://api.%s/api/v1/sensordata" .Values.global.baseDomain | quote }},
+        STORAGE_URL: {{ printf "https://storage.%s" .Values.global.baseDomain | quote }},
+        DOCS_URL: "https://{{ include "data-hub.docs.hostname" . }}",
+        RESOURCE_API_GRAPHQL_ENDPOINT: {{ printf "//login.%s/realms/udh/data-hub/graphql" .Values.global.baseDomain | quote }},
     };
   config.toml: | 
     [advanced]

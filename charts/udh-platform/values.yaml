@@ -20,13 +20,24 @@ global:
       registry: "docker.io"
       pullPolicy: Always
       repository: "babashka/babashka"
-      tag: 1.12.197
+      tag: 1.12.218
       digest: ""
+  basePipeline:
+    image:
+      registry: tickets.teuto.net:5050
+      repository: teuto-public/base-pipeline/base-pipeline
+      tag: v2.0.28
+  busybox:
+    image:
+      registry: "docker.io"
+      repository: busybox
+      tag: 1.38.0
   sslInsecureSkipVerify: false
   ingress:
     annotations:
       kubernetes.io/tls-acme: "true"
   loglevel: info
+  testDeployment: false
 keycloak:
   realm: udh
   replicas: 1
@@ -40,13 +51,15 @@ keycloak:
       tag: ""
       digest: ""
   ingress:
-    annotations: {}
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
   resources:
     requests:
       cpu: 20m
       memory: 512Mi
     limits:
-      memory: 2048Mi
+      memory: 3072Mi
   testUsers: null
   smtp:
     fromDisplayName: keycloak-config-cli
@@ -63,7 +76,7 @@ mailpit:
   image:
     registry: docker.io
     repository: axllent/mailpit
-    tag: v1.24.1
+    tag: v1.30.4
   readinessProbe:
     initialDelaySeconds: 0
     periodSeconds: 1
@@ -86,48 +99,21 @@ mailpit:
   auth:
     users: {}
 
-database:
-  version: 15
-  # backup:
-  #   awsAccesKey: KEY
-  #   awsSecretKey: SECRET_KEY
-  #   bucketName: MY_BUCKET
-  #   endpoint: https://api.ffm3.teutostack.de:6780
-  backup: { }
-  # recovery:
-  #   awsAccesKey: KEY
-  #   awsSecretKey: SECRET_KEY
-  #   bucketName: MY_BUCKET
-  #   clusterName: MY_CLUSTER
-  #   enabled: false
-  #   endpoint: https://api.ffm3.teutostack.de:6780
-  #   uid: CLUSTER_UID
-  #   walPath: PATH
-  #   timestamp: "2017-12-19T12:40:33+01:00"  # timezone required (offset relative to UTC, see RFC 3339 section 5.6)
-  recovery: { }
-  loadbalancer:
-    enabled: false
-    allowedSourceRanges: [ ]
+cloudnativePostgres:
   image:
     registry: ghcr.io
-    repository: teutonet/oci-images/spilo
-    tag: 16.0.1
+    repository: teutonet/oci-images/cnpg
+    tag: 16.1.2
   replicas: 1
-  resources:
-    requests:
-      cpu: 10m
-      memory: 100Mi
-    limits:
-      cpu: 500m
-      memory: 500Mi
   persistence:
     size: 4Gi
-  ssl:
-    enabled: false
   shadowTables: false
 
 grafana:
   replicas: 1
+  image:
+    registry: "registry-gitlab.teuto.net"
+    repository: 4teuto/dev/udh/teuto-data-hub/grafana
   ingress:
     annotations: {}
   smtp:
@@ -146,6 +132,7 @@ grafana:
   plugins:
     - volkovlabs-echarts-panel
     - marcusolsson-dynamictext-panel
+    - yesoreyeram-infinity-datasource
 
 grafanaOauth2Proxy:
   resources:
@@ -221,6 +208,16 @@ jupyterhub:
         memory: 256Mi
       limits:
         memory: 1024Mi
+  notebook:
+    image:
+      registry: "registry-gitlab.teuto.net"
+      pullPolicy: Always
+      repository: "4teuto/dev/udh/teuto-data-hub/jupyterhub-notebook"
+      tag: ""
+      digest: ""
+  singleuser:
+    storageCapacity: 1Gi
+    allowPrivateIPs: false
 
 mimir:
   externalS3:
@@ -234,8 +231,14 @@ mimir:
   config:
     minio:
       enabled: false
+    kafka:
+      enabled: false
     mimir:
       structuredConfig:
+        ingest_storage:
+          enabled: false
+        ingester:
+          push_grpc_method_enabled: true
         tenant_federation:
           enabled: true
         limits:
@@ -274,10 +277,17 @@ fakeCa:
   name: ""
 
 objectStorage:
-  enabled: false
+  enabled: true
   allowDeletion: false
   storage: 5Gi
-  monStorage: 1Gi
+  monStorage: 5Gi
+  singleNode: false
+  ingress:
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  operator:
+    enabled: false
+  reuseClusterFromNamespace: ""
 
 grafanaPublicSync:
   syncIntervalSeconds: 60
@@ -291,6 +301,15 @@ geojsonExport:
   image:
     registry: "registry-gitlab.teuto.net"
     repository: 4teuto/dev/udh/teuto-data-hub/geojson-export
+  ingress:
+    annotations: {}
+
+doc:
+  enabled: true
+  replicas: 1
+  image:
+    registry: "registry-gitlab.teuto.net"
+    repository: 4teuto/dev/udh/teuto-data-hub/doc
   ingress:
     annotations: {}
 
@@ -358,10 +377,40 @@ sensorIngestion:
       annotations: {}
     image:
       repository: 4teuto/dev/udh/teuto-data-hub/lorawan-receiver
-      tag: latest
       #pullPolicy: Never|IfNotPresent|Always
       pullSecrets: []
     resources: &default_python_resources
+      requests:
+        memory: 32Mi
+        cpu: 50m
+      limits:
+        memory: 128Mi
+  sensorTransformer:
+    enabled: true
+    replicas: 1
+    #loglevel: DEBUG|INFO|WARNING|ERROR|CRITICAL
+    targets:
+      - prometheus-writer
+      # - sensor-things-writer
+      #- https://other-target.example.com/api/v1/some-write-path
+    ingress:
+      enabled: true
+      annotations: {}
+    image:
+      repository: 4teuto/dev/udh/teuto-data-hub/sensor-transformer
+      #pullPolicy: Never|IfNotPresent|Always
+      pullSecrets: []
+    resources: &default_python_resources #to be changed
+      requests:
+        memory: 32Mi
+        cpu: 50m
+      limits:
+        memory: 128Mi
+  jsonataSidecar:
+    image:
+      repository: 4teuto/dev/udh/teuto-data-hub/jsonata-sidecar
+      #pullPolicy: Never|IfNotPresent|Always
+    resources: &default_python_resources #to be changed
       requests:
         memory: 32Mi
         cpu: 50m
@@ -378,9 +427,23 @@ sensorIngestion:
     prometheus:
       forwardToken: true
       url: https://prometheus.example.com/api/v1/write
-      readyPath: /oauth2-write
+      readyPath: /ready
     image:
       repository: 4teuto/dev/udh/teuto-data-hub/prometheus-remote-write
       #pullPolicy: Never|IfNotPresent|Always
       pullSecrets: []
+  owmCollector: 
+    resources: *default_python_resources
+    image:
+      repository: 4teuto/dev/udh/teuto-data-hub/owm-collector
+    owmApiEndpoint: "https://api.openweathermap.org/data/2.5/weather"
+    logLevel: "INFO"
+  owmFakeApi:
+    image:
+      repository: 4teuto/dev/udh/teuto-data-hub/owm-fake-api
+      pullSecrets: []
+    enabled: true
   resources: *default_python_resources
+
+testAutoProvision:
+  writeSensorData: true

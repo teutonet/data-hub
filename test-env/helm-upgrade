@@ -31,7 +31,7 @@ done
 # echo $image_opts
 
 helm dependency update $CHART_PATH
-helm upgrade --install --create-namespace -n udh local $CHART_PATH -f $CHART_PATH/values.yaml -f $CHART_PATH/values-local.yaml $image_opts
+helm upgrade --install --timeout 20m --create-namespace -n udh local $CHART_PATH -f $CHART_PATH/values.yaml -f $CHART_PATH/values-local.yaml $image_opts
 
 # ensures that all ingresses have been created before the domains are written to /etc/hosts
 kubectl wait --for=condition=Ready -n udh helmrelease --all --timeout=-1s

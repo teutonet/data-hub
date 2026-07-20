@@ -1,0 +1,124 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "teuto-cnpg") }}
+spec:
+  interval: 1h0m0s
+  url: oci://ghcr.io/teutonet/teutonet-helm-charts/teuto-cnpg
+  ref:
+    tag: 3.1.0
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "cnpg") }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: {{ include "data-hub.name" (dict "context" . "name" "teuto-cnpg") }}
+  interval: 1m
+  values:
+    databaseImage:
+      registry: {{ .Values.cloudnativePostgres.image.registry }}
+      repository: {{ .Values.cloudnativePostgres.image.repository }}
+      tag: {{ .Values.cloudnativePostgres.image.tag | quote }}
+    {{- if .Values.cloudnativePostgres.backup }}
+    backup:
+      schedule: {{ .Values.cloudnativePostgres.backup.schedule | quote }}
+      s3:
+        endpointURL: {{ .Values.cloudnativePostgres.backup.s3.endpointURL | quote }}
+        path: {{ .Values.cloudnativePostgres.backup.s3.path | quote }}
+        secret:
+          name: {{ printf "%s-cnpg-backup" (include "common.names.fullname"  .) | quote }}
+    {{- end }}
+    storageSize: {{ .Values.cloudnativePostgres.persistence.size }}
+    instances: {{ .Values.cloudnativePostgres.replicas }}
+    databases:
+      keycloak: keycloak_owner_user
+      grafana: grafana_owner_user
+      grafana_public: grafana_public_owner_user
+      mdb:
+        owner: mdb_owner_user
+        extensions:
+          pgmemento:
+            schema: pgmemento
+        schemas:
+          pgmemento:
+            owner: mdb_owner_user
+      {{- if .Values.cloudnativePostgres.shadowTables }}
+      mdb_shadow: mdb_shadow_owner_user
+      {{- end }}
+      jupyterhub: jupyterhub
+    roles:
+      - name: keycloak_owner_user
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-keycloak-owner-user-postgres-credentials" (include "common.names.fullname"  .) }}
+      - name: grafana_owner_user
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-grafana-owner-user-postgres-credentials" (include "common.names.fullname"  .) }}
+      - name: grafana_public_owner_user
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-grafana-public-owner-user-postgres-credentials" (include "common.names.fullname"  .) }}
+      - name: postgraphile
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-postgraphile-postgres-credentials" (include "common.names.fullname"  .) }}
+      - name: mdb_backend
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-mdb-backend-postgres-credentials" (include "common.names.fullname"  .) }}
+      - name: mdb_owner_user
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-mdb-owner-user-postgres-credentials" (include "common.names.fullname"  .) }}
+      - name: mdb_geojson_reader
+        ensure: present
+        login: true
+        superuser: false
+        bypassrls: true
+        passwordSecret:
+          name: {{ printf "%s-mdb-geojson-reader-postgres-credentials" (include "common.names.fullname"  .) }}
+      {{- if .Values.cloudnativePostgres.shadowTables }}
+      - name: mdb_shadow_owner_user
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-mdb-owner-user-shadow-postgres-credentials" (include "common.names.fullname"  .) }}
+      {{- end }}
+      - name: jupyterhub
+        ensure: present
+        login: true
+        superuser: false
+        passwordSecret:
+          name: {{ printf "%s-jupyterhub-postgres-credentials" (include "common.names.fullname"  .) }}
+
+---
+{{- if .Values.cloudnativePostgres.backup }}
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: {{ printf "%s-cnpg-backup" (include "common.names.fullname"  .) | quote }}
+stringData:
+  ACCESS_KEY_ID: {{ .Values.cloudnativePostgres.backup.s3.secret.accessKeyId }}
+  ACCESS_SECRET_KEY: {{ .Values.cloudnativePostgres.backup.s3.secret.accessSecretKey }}
+{{- end -}}

@@ -1,0 +1,26 @@
+diff --git a/pkg/services/dashboards/accesscontrol.go b/pkg/services/dashboards/accesscontrol.go
+index bfeb6802e94..a4f38af5de1 100644
+--- a/pkg/services/dashboards/accesscontrol.go
++++ b/pkg/services/dashboards/accesscontrol.go
+@@ -32,7 +32,7 @@ const (
+ 	ActionDashboardsDelete           = "dashboards:delete"
+ 	ActionDashboardsPermissionsRead  = "dashboards.permissions:read"
+ 	ActionDashboardsPermissionsWrite = "dashboards.permissions:write"
+-	ActionDashboardsPublicWrite      = "dashboards.public:write"
++	ActionDashboardsPublicWrite      = "dashboards:write"
+ 	ActionSnapshotsCreate            = "snapshots:create"
+ 	ActionSnapshotsDelete            = "snapshots:delete"
+ 	ActionSnapshotsRead              = "snapshots:read"
+diff --git a/public/app/types/accessControl.ts b/public/app/types/accessControl.ts
+index ddf332ccb8c..e3470134f25 100644
+--- a/public/app/types/accessControl.ts
++++ b/public/app/types/accessControl.ts
+@@ -76,7 +76,7 @@ export enum AccessControlAction {
+   DashboardsCreate = 'dashboards:create',
+   DashboardsPermissionsRead = 'dashboards.permissions:read',
+   DashboardsPermissionsWrite = 'dashboards.permissions:write',
+-  DashboardsPublicWrite = 'dashboards.public:write',
++  DashboardsPublicWrite = 'dashboards:write',
+   SnapshotsCreate = 'snapshots:create',
+   SnapshotsDelete = 'snapshots:delete',
+   SnapshotsRead = 'snapshots:read',

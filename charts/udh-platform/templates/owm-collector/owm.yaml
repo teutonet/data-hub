@@ -1,0 +1,90 @@
+{{- $name := "owm-collector" -}}
+--- 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.sensorIngestion.owmCollector.image) "global" .Values.global) | nindent 6 }}
+      initContainers:
+      - name: wait-for-mimir-and-keycloak
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.global.busybox.image "global" .Values.global) }}
+        command:
+          - sh
+          - -c
+          - |
+            # Wait for mimir service to be available
+            echo "Waiting for mimir service..."
+            until nc -z {{ include "data-hub.name" (dict "context" . "name" "mimir-nginx") }} 80; do
+              echo "waiting for mimir...";
+              sleep 5;
+            done;
+
+            # Wait for keycloak service to be available
+            echo "Waiting for keycloak service..."
+            until nc -z {{ include "data-hub.name" (dict "context" . "name" "sso-keycloak") }} 443; do
+              echo "waiting for keycloak...";
+              sleep 5;
+            done;
+
+            echo "Both mimir and keycloak services are available, proceeding to main container..."
+      containers:
+        {{- if .Values.sensorIngestion.owmFakeApi.enabled }}
+        - name: fake-owm-api
+          {{- include "sensor-ingestion.standard.image" (dict "image" .Values.sensorIngestion.owmFakeApi.image "context" .) | nindent 10 }}
+          resources: 
+          {{- toYaml .Values.sensorIngestion.owmCollector.resources | nindent 12 }}
+          env:
+            - name: OWM_API_ENDPOINT
+              value: {{.Values.sensorIngestion.owmCollector.owmApiEndpoint}}
+        {{- end }}
+        - name: owm-collector-container
+          {{- include "sensor-ingestion.standard.image" (dict "image" .Values.sensorIngestion.owmCollector.image "context" .) | nindent 10 }}
+          resources: 
+          {{- toYaml .Values.sensorIngestion.owmCollector.resources | nindent 12 }}
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: LOG_LEVEL
+              value: {{ .Values.sensorIngestion.owmCollector.logLevel }}
+            {{- if .Values.fakeCa.name }}
+            - name: TRUST_LOCAL_CA_PATH
+              value: "/tls/ca.crt"
+            {{- end }}
+            - name: OWM_API_ENDPOINT
+              value: {{ .Values.sensorIngestion.owmCollector.owmApiEndpoint }}
+            - name: KEYCLOAK_BASE_URL
+              value: https://{{ include "data-hub.keycloak.hostname" . }}
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "data-hub.name" (dict "context" . "name" "owm-secret") }}
+                  key: owm-secret 
+            - name: PROMETHEUS_SERVICE_URL
+              value: http://{{ include "data-hub.name" (dict "context" . "name" "mimir-nginx") }}/api/v1/push
+      {{- if .Values.fakeCa.name }}
+          volumeMounts:
+            - mountPath: /tls
+              name: ca-cert
+              readOnly: true  
+      volumes:
+        - name: ca-cert
+          secret:
+            defaultMode: 0640
+            secretName: {{ .Values.fakeCa.name }}
+            items:
+              - key: ca.crt
+                path: ca.crt
+      {{- end }}
+

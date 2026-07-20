@@ -148,7 +148,6 @@ export class MdbApi {
 	async doGraphqlRequest(
 		query: string,
 		variables: Record<string, number | string | null>
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	): Promise<any> {
 		// console.log(query, variables);
 		const response = await this.httpClient.post(
@@ -166,6 +165,7 @@ export class MdbApi {
 		);
 		return response.data;
 	}
+
 	async createSensorType(name: string): Promise<string> {
 		const createSensorTypeQuery = `mutation MyMutation($name: String!, $project: String!) {
 			createSensor(input: { sensor: { project: $project, name: $name } }) {
@@ -175,12 +175,12 @@ export class MdbApi {
 				}
 			}
 		}`;
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 		const sensorTypeResponse = await this.doGraphqlRequest(createSensorTypeQuery, {
 			name,
 			project: this.projectName
 		});
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
 		return sensorTypeResponse.data.createSensor.sensor.id as string;
 	}
 	async createSensorTypeWithProperties(name: string, properties: Property[]): Promise<string> {
@@ -208,14 +208,13 @@ export class MdbApi {
 		}`;
 
 		for (const property of properties) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			const createPropResponse = await this.doGraphqlRequest(createProperty, {
 				name: property.name,
 				project: this.projectName,
 				measure: property.measure,
 				metricName: property.metricName
 			});
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
 			const propertyId = createPropResponse.data.createProperty.property.id as string;
 			await this.doGraphqlRequest(createSensorProperty, {
 				propertyId,
@@ -238,11 +237,9 @@ export class MdbApi {
 		}`;
 
 		for (const property of properties) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			const searchResponse = await this.doGraphqlRequest(searchProperty, {
 				name: property.name
 			});
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			const propertyId = searchResponse.data.properties[0].id as string;
 			await this.doGraphqlRequest(createSensorProperty, {
 				propertyId,
@@ -308,8 +305,12 @@ export class MdbApi {
 		);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	async remoteWriteVarsLorawan(thing: Thing, variables: Record<string, any>) {
+		const response = await this.remotWriteVarsLorawanUnchecked(thing, variables);
+		expect(response.status).toBe(200);
+	}
+
+	async remotWriteVarsLorawanUnchecked(thing: Thing, variables?: Record<string, any>) {
 		const data = {
 			'@type': 'type.googleapis.com/ttn.lorawan.v3.ApplicationUp',
 			end_device_ids: {
@@ -344,8 +345,24 @@ export class MdbApi {
 			auth: {
 				username: this.clientId,
 				password: this.clientSecret
-			}
+			},
+			validateStatus: (status) => status < 500
 		});
-		expect(response.status).toBe(200);
+		return response;
+	}
+
+	// used in lorawan errors test, if this produces an error (should be true)
+	async postToLorawanWithoutRequestBody(endpoint: string = `${API}api/v1/sensordata`, data?) {
+		const response = await this.httpClient.post(endpoint, JSON.stringify(data), {
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			auth: {
+				username: this.clientId,
+				password: this.clientSecret
+			},
+			validateStatus: (status) => status < 500
+		});
+		return response;
 	}
 }

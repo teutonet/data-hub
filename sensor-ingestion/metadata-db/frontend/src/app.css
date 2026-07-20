@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+@plugin 'flowbite/plugin';
+@custom-variant dark (&:where(.dark, .dark *));
+/* ... */
+@source '../node_modules/flowbite-svelte/dist';
+@source '../node_modules/flowbite-svelte-icons/dist';
+
+@config './../tailwind.config.cjs';
+
+@theme {
+	--color-primary-900: var(--theme-color-primary-900);
+	--color-primary-800: var(--theme-color-primary-800);
+	--color-primary-700: var(--theme-color-primary-700);
+	--color-primary-600: var(--theme-color-primary-600);
+	--color-primary-500: var(--theme-color-primary-500);
+	--color-primary-400: var(--theme-color-primary-400);
+	--color-primary-300: var(--theme-color-primary-300);
+	--color-primary-200: var(--theme-color-primary-200);
+	--color-primary-100: var(--theme-color-primary-100);
+	--color-primary-50: var(--theme-color-primary-50);
+
+	--color-complementary-900: var(--theme-color-complementary-900);
+	--color-complementary-800: var(--theme-color-complementary-800);
+	--color-complementary-700: var(--theme-color-complementary-700);
+	--color-complementary-600: var(--theme-color-complementary-600);
+	--color-complementary-500: var(--theme-color-complementary-500);
+	--color-complementary-400: var(--theme-color-complementary-400);
+	--color-complementary-300: var(--theme-color-complementary-300);
+	--color-complementary-200: var(--theme-color-complementary-200);
+	--color-complementary-100: var(--theme-color-complementary-100);
+	--color-complementary-50: var(--theme-color-complementary-50);
+}
+
+@layer base {
+	:root {
+		--theme-color-primary-900: #a5371b;
+		--theme-color-primary-800: #cc4522;
+		--theme-color-primary-700: #eb4f27;
+		--theme-color-primary-600: #ef562f;
+		--theme-color-primary-500: #fe795d;
+		--theme-color-primary-400: #ffbcad;
+		--theme-color-primary-300: #ffd5cc;
+		--theme-color-primary-200: #ffe4de;
+		--theme-color-primary-100: #fff1ee;
+		--theme-color-primary-50: #fff5f2;
+
+		--theme-color-complementary-900: #1e3a8a;
+		--theme-color-complementary-800: #1e40af;
+		--theme-color-complementary-700: #1d4ed8;
+		--theme-color-complementary-600: #2563eb;
+		--theme-color-complementary-500: #3b82f6;
+		--theme-color-complementary-400: #60a5fa;
+		--theme-color-complementary-300: #93c5fd;
+		--theme-color-complementary-200: #bfdbfe;
+		--theme-color-complementary-100: #dbeafe;
+		--theme-color-complementary-50: #eff6ff;
+	}
+}
+
+.project-indicator {
+	position: relative;
+	padding-left: 0.75rem;
+}
+
+.project-indicator::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 4px;
+	height: 16px;
+	border-radius: 2px;
+	background: var(--project-color);
+}

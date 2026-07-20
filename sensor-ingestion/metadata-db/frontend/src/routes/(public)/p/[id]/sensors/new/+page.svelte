@@ -4,13 +4,14 @@
 
 	import { getContextClient, queryStore } from '@urql/svelte';
 	import type {
-		CreateThingsMutation,
-		CreateThingsMutationVariables,
+		CreateThingInput,
+		CreateThingMutation,
+		CreateThingMutationVariables,
 		GetAllSensorsQuery,
 		GetAllSensorsQueryVariables,
 		ThingInput
 	} from '$lib/common/generated/types';
-	import { CREATE_THINGS, GET_ALL_SENSORS } from '$lib/common/graphql/queries';
+	import { CREATE_THING, GET_ALL_SENSORS } from '$lib/common/graphql/queries';
 	import { handleCombinedErrors, performMutation } from '$lib/common/graphql/utils';
 	import SensorForm from '$lib/SensorForm.svelte';
 	import { success } from '$lib/common/toast/toast';
@@ -26,15 +27,20 @@
 
 	let { data }: Props = $props();
 
-	if (data.projectId === 'all') {
-		goto('./').catch((e) => {
-			console.error(e.message);
-		});
-	}
+	$effect(() => {
+		if (data.projectId === 'all') {
+			goto('./').catch((e) => {
+				console.error(e.message);
+			});
+		}
+	});
 
-	let thing: ThingInput = $state({
-		project: data.projectId,
-		name: ''
+	let thing: ThingInput = $derived.by(() => {
+		let state = $state({
+			project: data.projectId,
+			name: ''
+		});
+		return state;
 	});
 
 	let sensorTypeStore = $derived(
@@ -56,17 +62,25 @@
 		thing.long = emptyToNull(replaceComma(thing.long ?? ''));
 		thing.altitude = emptyToNull(replaceComma(thing.altitude ?? ''));
 
-		await performMutation<CreateThingsMutation, CreateThingsMutationVariables>(
-			client,
-			CREATE_THINGS,
-			{
-				mnThing: thing
+		// don't include sensorId variable because it gets generated in backend
+		const { sensorId: _sensorId, ...thingNoId } = thing;
+		const thingInput: { input: CreateThingInput } = {
+			input: {
+				thing: {
+					...thingNoId
+				}
 			}
+		};
+
+		await performMutation<CreateThingMutation, CreateThingMutationVariables>(
+			client,
+			CREATE_THING,
+			thingInput
 		).then((result) => {
 			if (result.error) {
 				handleCombinedErrors(result.error, { showToasts: true });
 			} else {
-				const id = result.data?.mnCreateThing?.thing?.id;
+				const id = result.data?.createThing?.thing?.id;
 				success('shared.message.savedSuccessfully');
 				void goto(`../sensor/${id}`);
 			}
@@ -81,7 +95,7 @@
 	sensorTypes={allSensorTypes}
 >
 	{#snippet bottomButtons()}
-		<Button class="my-4 grow" on:click={() => createThing('created')}>
+		<Button color="green" class="my-4 grow" on:click={() => createThing('created')}>
 			{$_('sensorView.createSensor')}
 		</Button>
 		<Button color="green" class="my-4 basis-1/6" on:click={() => createThing('activated')}>

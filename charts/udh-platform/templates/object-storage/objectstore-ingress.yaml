@@ -1,0 +1,32 @@
+{{- if and .Values.objectStorage.enabled .Values.objectStorage.reuseClusterFromNamespace -}}
+{{- $name := "objectstore" -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  name: {{ printf "ns-%s" .Release.Namespace | quote }}
+  namespace: {{ .Values.objectStorage.reuseClusterFromNamespace | quote }}
+  annotations:
+    {{- include "udh.objectstore.ingress.annotations" . | nindent 4 }}
+    {{- if .Values.fakeCa.enabled }}
+    cert-manager.io/issuer: {{ printf "ns-%s" .Release.Namespace | quote }}
+    {{- end }}
+spec:
+  rules:
+    - host: {{ include "data-hub.storage.hostname" . }}
+      http:
+        paths:
+          - path: /
+            backend:
+              service:
+                name: {{ printf "rook-ceph-rgw-ns-%s" .Release.Namespace | quote }}
+                port:
+                  number: 80
+            pathType: Prefix
+  tls:
+    - hosts:
+        - {{ include "data-hub.storage.hostname" . }}
+      secretName: {{ include "data-hub.storage.hostname" . }}-tls
+{{- end }}

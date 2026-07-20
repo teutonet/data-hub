@@ -1,51 +1,36 @@
 import test, { expect } from 'playwright/test';
-import { aquireTokenViaDeviceCode, MdbApi } from './helper/mdb-api';
+import { MdbApi } from './helper/mdb-api';
 import {
+	createResources,
+	createResourceToken,
 	DATA_HUB_ADMIN_USERNAME,
-	DATA_HUB_ADMIN_PASSWORD,
-	signInAdminKeycloak
+	DATA_HUB_ADMIN_PASSWORD
 } from './helper/keycloak';
-import { Agent } from 'https';
-import axios from 'axios';
-import { GRAFANA, KEYCLOAK, MDB_FRONTEND } from './helper/urls';
-import { getRandomString } from './helper/util';
+import { GRAFANA, MDB_FRONTEND } from './helper/urls';
+import { checkGrafanaMenuState, login, RandomTenantManager } from './helper/util';
+
+const TENANT_MGR = new RandomTenantManager();
+
 test(
 	'technical_ prefix cant be used',
 	{
 		tag: '@technicalPrefixPrevent'
 	},
 	async ({ page }) => {
-		await signInAdminKeycloak(page);
+		const tenant = TENANT_MGR.get();
 
-		const realmAdminToken = await aquireTokenViaDeviceCode(
-			page,
-			DATA_HUB_ADMIN_USERNAME,
-			DATA_HUB_ADMIN_PASSWORD,
-			['data-hub']
-		);
-		const realmAdminClient = axios.create({
-			httpsAgent: new Agent({ rejectUnauthorized: false }),
-			headers: { Authorization: `Bearer ${realmAdminToken}` }
-		});
-		const testPostfix = getRandomString(6);
-		await realmAdminClient.put<string[]>(
-			`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/`
-		);
-		await realmAdminClient.put<string[]>(
-			`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/testproject-${testPostfix}/`
-		);
+		await createResources([`tenants/${tenant}/projects/testproject`]);
 
-		await page.goto(MDB_FRONTEND + 'overview');
-		await page.getByText('Projekt auswählen').click();
+		await login(page, MDB_FRONTEND, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
+		await page.getByRole('button', { name: 'Alle Projekte' }).click();
 		await page
 			.getByRole('tooltip')
-			.getByRole('link', { name: `knuffingen-${testPostfix}.testproject-${testPostfix}` })
+			.getByRole('button', { name: `${tenant}.testproject` })
 			.first()
 			.click();
-		await page
-			.locator('a')
-			.filter({ hasText: /^Eigenschaften$/ })
-			.click();
+
+		await page.getByRole('button', { name: 'Sensorverwaltung', exact: true }).click();
+		await page.getByRole('link', { name: 'Sensoreigenschaften', exact: true }).click();
 		await page.getByRole('button', { name: 'Neue Eigenschaft anlegen' }).click();
 		await page.getByLabel('Name', { exact: true }).fill('test_metric');
 		await page.getByLabel('Messeinheit').fill('litres of test');
@@ -59,32 +44,16 @@ test(
 );
 
 test('label names are escaped', async ({ page }) => {
-	const realmAdminToken = await aquireTokenViaDeviceCode(
-		page,
-		DATA_HUB_ADMIN_USERNAME,
-		DATA_HUB_ADMIN_PASSWORD,
-		['data-hub', 'prometheus_read', 'prometheus_write']
-	);
-	const realmAdminClient = axios.create({
-		httpsAgent: new Agent({ rejectUnauthorized: false }),
-		headers: { Authorization: `Bearer ${realmAdminToken}` }
-	});
-	const testPostfix = getRandomString(6);
-	await realmAdminClient.put<string[]>(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/`
-	);
-	await realmAdminClient.put<string[]>(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/trainstation/`
-	);
+	const tenant = TENANT_MGR.get();
 
-	const sensorCredentials = await realmAdminClient.put<{ username: string; password: string }>(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/knuffingen-${testPostfix}/projects/trainstation/sensor-credentials/${getRandomString(4)}`
-	);
+	await createResources([`tenants/${tenant}/projects/trainstation`]);
+
+	const sensorCredentials = await createResourceToken(tenant, 'trainstation', 'test');
 
 	const mdbClient = new MdbApi(
-		`knuffingen-${testPostfix}.trainstation`,
-		sensorCredentials.data.username,
-		sensorCredentials.data.password
+		`${tenant}.trainstation`,
+		sensorCredentials.username,
+		sensorCredentials.password
 	);
 
 	const sensorTypeId = await mdbClient.createSensorTypeWithProperties('Weird Naming', [
@@ -130,21 +99,27 @@ test('label names are escaped', async ({ page }) => {
 			'123tést456': 'test'
 		}
 	);
-	await page.goto(GRAFANA);
-	await page.getByLabel('Change organization').click();
-	await page.getByLabel('Select options menu').getByText(`knuffingen-${testPostfix}:admin`).click();
-	await page.getByTestId('data-testid Toggle menu').click();
+	await login(page, GRAFANA, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
+	await checkGrafanaMenuState(page);
+	await page.getByRole('combobox', { name: 'Change organization' }).click();
+	await page.getByLabel('Select options menu').getByText(`${tenant}:admin`).click();
+	await checkGrafanaMenuState(page);
 	await page
 		.getByTestId('data-testid navigation mega-menu')
-		.getByRole('link', { name: 'Explore' })
+		.getByRole('link', { name: 'Drilldown' })
 		.click();
+	await page.getByRole('heading', { name: 'Metrics' }).getByRole('link').click();
 
-	await page.getByLabel('Select a data source').click();
-	await page.getByRole('button', { name: 'Prometheus Prometheus' }).click();
-	await page.getByLabel('Metric').click();
-	await page.getByText('testmetric', { exact: true }).click();
-	await page.getByTestId('data-testid Select label-input').click();
-	await expect(page.getByText('test_label')).toBeVisible();
-	await expect(page.getByText('t_st456')).toBeVisible();
-	await expect(page.getByText('notpresent')).not.toBeVisible();
+	await page.locator('#ds').click();
+	await page.getByTestId('data-testid Select option').getByText('Prometheus').click();
+
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await page.getByRole('option', { name: '__name__' }).click();
+	await page.getByRole('option', { name: '= Equals' }).click();
+	await page.getByRole('option', { name: 'testmetric', exact: true }).click();
+
+	await page.getByRole('combobox', { name: 'Filters' }).click();
+	await expect(page.getByRole('option', { name: 'test_label' })).toBeVisible();
+	await expect(page.getByRole('option', { name: 't_st456' })).toBeVisible();
+	await expect(page.getByRole('option', { name: 'notpresent' })).not.toBeVisible();
 });

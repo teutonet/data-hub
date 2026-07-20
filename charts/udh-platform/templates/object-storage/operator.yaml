@@ -1,0 +1,29 @@
+{{- if and .Values.objectStorage.enabled .Values.objectStorage.operator.enabled -}}
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ printf "%s-rook-ceph" (include "common.names.fullname" .) | quote }}
+spec:
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "rook-ceph") }}
+  targetNamespace: {{ .Release.Namespace }}
+  chart:
+    spec:
+      chart: rook-ceph
+      version: 1.20.x # renovate: datasource=helm depName=rook-ceph versioning=helm registryUrl=https://charts.rook.io/release
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: {{ printf "%s-rook" (include "common.names.fullname" .) | quote }}
+  interval: 1h0m0s
+  values:
+    crds:
+      enabled: false
+    currentNamespaceOnly: true
+    csi:
+      enableRbdDriver: false
+      enableCephfsDriver: false
+    {{- if .Values.global.testDeployment }}
+    allowLoopDevices: true
+    {{- end }}
+{{- end -}}

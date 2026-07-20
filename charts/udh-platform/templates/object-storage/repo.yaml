@@ -1,0 +1,10 @@
+{{- if .Values.objectStorage.enabled -}}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: {{ printf "%s-rook" (include "common.names.fullname" .) | quote }}
+spec:
+  interval: 1h0m0s
+  url: https://charts.rook.io/release
+{{- end -}}

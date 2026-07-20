@@ -73,6 +73,10 @@ spec:
 "src" (dict "app.kubernetes.io/component" "authentication-proxy")
 "dst" (dict "app.kubernetes.io/component" "postgraphile" "app.kubernetes.io/part-of" "metadata-db")) .) }}
 
+{{ include "sensor-ingestion.standard.networkPolicy" (merge (dict "name" "sensor-transformer-mdb"
+"src" (dict "app.kubernetes.io/component" "sensor-transformer")
+"dst" (dict "app.kubernetes.io/component" "postgraphile" "app.kubernetes.io/part-of" "metadata-db")) .) }}
+
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -91,8 +95,9 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              application: spilo
-              cluster-name: {{ printf "%s-udh-platform-postgres" .Release.Name }}
+              cnpg.io/cluster: {{ include "data-hub.name" (dict "context" . "name" "cnpg") }}
+              cnpg.io/instanceRole: primary
+              cnpg.io/podRole: instance
       ports:
         - protocol: TCP
           port: 5432

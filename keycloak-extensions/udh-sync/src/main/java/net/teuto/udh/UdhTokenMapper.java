@@ -25,7 +25,7 @@ public class UdhTokenMapper extends AbstractOIDCProtocolMapper implements OIDCAc
 
     @Override
     public int getPriority() {
-        return 50; // ensure our preferred_username is used
+        return 50; // ensure our claims are used over the default ones when in conflict
     }
 
     @Override

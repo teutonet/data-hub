@@ -65,7 +65,7 @@
 
 	{#if helperText}
 		<Helper
-			class="helpertext peer-focus:text-primary-600 peer-focus:dark:text-primary-500 ml-2 mt-2 text-gray-500 dark:text-gray-400"
+			class="helpertext peer-focus:text-primary-600 peer-focus:dark:text-primary-500 mt-2 ml-2 text-gray-500 dark:text-gray-400"
 			color="gray"
 		>
 			{helperText}

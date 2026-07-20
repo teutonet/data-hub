@@ -1,0 +1,51 @@
+publiccodeYmlVersion: '0.3.0'
+
+name: 'Data HUB'
+url: 'https://github.com/teutonet/data-hub'
+softwareVersion: 'prod'
+logo: 'teuto_net-logo.png'
+releaseDate: '2024-09-10'
+platforms:
+  - linux
+  - web
+
+categories:
+  - data-visualization
+  - data-collection
+  - geographic-information-systems
+  - identity-management
+  - inventory-management
+  - digital-asset-management
+  - it-management
+  - it-asset-management
+  - it-development
+  - digital-citizenship
+
+developmentStatus: stable
+
+softwareType: 'standalone/web'
+
+description:
+  de:
+    shortDescription: >
+      Der Data HUB ist eine umfassende urbane Datenplattform, die Städten, Regionen und kommunalen Unternehmen ermöglicht, sämtliche Arten von Daten effizient zu verwalten.
+    longDescription: >
+      Der Data HUB ist flexibel konzipiert, um sich an die spezifischen Anforderungen einer Stadt oder Region anzupassen und einen einfachen Einstieg in das Thema Smart City zu ermöglichen. Er bildet die Grundlage für die Verwaltung städtischer Daten und bietet alles, was dafür notwendig ist. Durch die integrierte Sensor- und Plattformverwaltung ermöglicht der Data HUB einen einfachen Zugang zur Welt der Smart Cities und stellt eine umfassende städtische Datenplattform bereit. Gleichzeitig kann er individuell auf die Bedürfnisse einer Stadt oder Region zugeschnitten werden, um die optimale Lösung zu bieten. Data HUB ist eine Open-Source-Software, die unabhängig von Betreibern genutzt werden kann – öffentliche oder private Einrichtungen haben die Möglichkeit, die Software selbst zu betreiben. Teuto.net entwickelt ein umfassendes Ökosystem, um den Data HUB bestmöglich in städtische Infrastrukturen zu integrieren und Schulungs-, Beratungsdienste sowie Anwendungsfälle, Datenmodelle und Konnektoren bereitzustellen. Das Prinzip „Einmal gebaut – vielfach genutzt“ ermöglicht die Wiederverwendung von konzeptionellen und technischen Bausteinen für verschiedene Anwender.
+    features:
+      - Zentrale Datenplattform für Daten in urbanen und regionalen Kontexten
+      - Datenvisualisierung
+      - Sensorverwaltung
+
+legal:
+  license: AGPL-3.0
+
+maintenance:
+  type: 'internal'
+
+  contacts:
+    - name: info@teuto.net
+
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - de

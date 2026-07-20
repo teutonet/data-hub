@@ -4,7 +4,10 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class ResourceModelTest {
-    private fun <T : UdhResourceModel> checkRoundTrip(res: T, fromAttributes: (Map<String, List<String>>) -> T) {
+    private fun <T : UdhResourceModel> checkRoundTrip(
+        res: T,
+        fromAttributes: (Map<String, List<String>>) -> T,
+    ) {
         val values = res.path.toAttributes()
         val newRes = fromAttributes(values.mapValues { listOf(it.value) })
         assertEquals(res, newRes)
@@ -18,5 +21,4 @@ class ResourceModelTest {
         checkRoundTrip(UdhProject("test", "project"), UdhProject::fromAttributes)
         checkRoundTrip(UdhSensorCredential("test", "project", "credential"), UdhSensorCredential::fromAttributes)
     }
-
 }

@@ -1,7 +1,8 @@
+import { checkedResourceApiGraphqlRequest, deleteTenant, graphql } from './graphql';
 import { DATA_HUB_ADMIN_PASSWORD, DATA_HUB_ADMIN_USERNAME } from './keycloak';
 import { MDB_FRONTEND } from './urls';
 
-import { expect, Page } from 'playwright/test';
+import test, { expect, Page } from 'playwright/test';
 
 export function getRandomString(len: number): string {
 	return String.fromCharCode(
@@ -20,62 +21,6 @@ export async function login(page: Page, url: string, username: string, password:
 	await page.waitForLoadState();
 }
 
-export async function createTenant(page: Page, tenantName: string, url?: string) {
-	if (url) {
-		await page.goto(url);
-	}
-	await page.getByRole('button', { name: 'Neuen Tenant anlegen' }).click();
-	await page.getByPlaceholder(' ').fill(tenantName);
-	await page.getByRole('button', { name: 'Erstellen', exact: true }).click();
-	// TODO: this produces race conditions in keycloak otherwise
-	await page.waitForTimeout(1000);
-}
-
-export async function createProject(page: Page, projectName: string, url?: string) {
-	if (url) {
-		await page.goto(url);
-	}
-	await page.getByRole('button', { name: 'Projekte' }).click();
-	await page.getByRole('button', { name: 'Neues Projekt anlegen' }).click();
-	await page.getByPlaceholder(' ').fill(projectName);
-	await page.getByRole('button', { name: 'Erstellen', exact: true }).click();
-}
-
-export async function createToken(
-	page: Page,
-	tokenName: string,
-	url?: string
-): Promise<{ username: string; password: string }> {
-	if (url) {
-		await page.goto(url);
-	}
-
-	await page.getByRole('button', { name: 'Neuen Token anlegen' }).click();
-	await page.getByPlaceholder(' ').fill(tokenName);
-	await page.getByRole('dialog').getByRole('button', { name: 'Token erzeugen' }).click();
-	const tokenUsername = await page.getByLabel('Username').inputValue();
-	const tokenPassword = await page.getByLabel('Passwort').inputValue();
-	await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
-	return { username: tokenUsername, password: tokenPassword };
-}
-
-export async function createTenantProjectAndToken(
-	page: Page,
-	tenantName: string,
-	projectName: string,
-	tokenName: string,
-	navigate = true
-) {
-	if (navigate) {
-		await page.goto(`${MDB_FRONTEND}api/tenants`);
-	}
-	await createTenant(page, tenantName);
-
-	await createProject(page, projectName);
-	await page.waitForTimeout(1000);
-	return await createToken(page, tokenName);
-}
-
 export async function loginCreateProjectAndToken(
 	page: Page,
 	tenantName: string,
@@ -85,7 +30,32 @@ export async function loginCreateProjectAndToken(
 	password = DATA_HUB_ADMIN_PASSWORD
 ) {
 	await login(page, `${MDB_FRONTEND}api/tenants`, username, password);
-	return await createTenantProjectAndToken(page, tenantName, projectName, tokenName, false);
+	const {
+		data: {
+			createTenant: {
+				createProject: { createSensorCredential: result }
+			}
+		}
+	} = await checkedResourceApiGraphqlRequest(
+		graphql`
+			mutation ($tenant: String!, $project: String!, $sensorCredential: String!) {
+				createTenant(tenant: $tenant) {
+					createProject(project: $project) {
+						createSensorCredential(sensorCredential: $sensorCredential) {
+							username
+							password
+						}
+					}
+				}
+			}
+		`,
+		{
+			tenant: tenantName,
+			project: projectName,
+			sensorCredential: tokenName
+		}
+	);
+	return result as { username: string; password: string };
 }
 
 export async function checkAndDismissToast(
@@ -106,6 +76,12 @@ export async function checkAndDismissToast(
 	}
 }
 
+export async function selectProject(page: Page, project: string) {
+	await page.locator('#activeProjectButton').click();
+	await page.locator('.searchDropdown').getByRole('button', { name: project }).click();
+	await expect(page.locator('#activeProjectButton')).toContainText(project);
+}
+
 export async function checkAndDismissGrafanaAlert(
 	text: string,
 	page: Page,
@@ -123,5 +99,42 @@ export async function checkAndDismissGrafanaAlert(
 	}
 	if (tryToClose || waitForClose) {
 		await expect(alertElement).not.toBeVisible();
+	}
+}
+
+export async function checkGrafanaMenuState(page: Page): Promise<void> {
+	await expect(page.getByRole('button', { name: 'Search...' })).toBeVisible();
+
+	const close = page.getByRole('button', { name: 'Close menu' });
+	const open = page.getByRole('button', { name: 'Open menu' });
+
+	if (!(await close.isVisible())) {
+		await open.click();
+	}
+}
+
+export class RandomTenantManager {
+	tenants: string[] = [];
+
+	constructor() {
+		test.afterAll(async () => {
+			await this.teardown();
+		});
+	}
+
+	get(): string {
+		return this.with(getRandomString(6));
+	}
+
+	with(postfix: string): string {
+		const name = `knuffingen-${postfix}`;
+		this.tenants.push(name);
+		return name;
+	}
+
+	async teardown() {
+		for (const tenant of this.tenants) {
+			await deleteTenant(tenant);
+		}
 	}
 }

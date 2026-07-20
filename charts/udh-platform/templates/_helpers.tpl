@@ -3,6 +3,38 @@
 {{- printf "%s-%s" (include "common.names.fullname" .context) $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{- define "data-hub.postgres.secret" -}}
+{{ printf "%s-%s-postgres-credentials" (include "common.names.fullname"  .context) .name }}
+{{- end -}}
+
+{{- define "data-hub.postgres.superuserSecret" -}}
+{{ include "data-hub.name" (dict "context" . "name" "cnpg-superuser") }}
+{{- end -}}
+
+{{- define "data-hub.postgres.hostRW" -}}
+{{ include "data-hub.name" (dict "context" . "name" "cnpg-rw") }}
+{{- end -}}
+
+{{- define "data-hub.postgres.hostRO" -}}
+{{ include "data-hub.name" (dict "context" . "name" (ternary "cnpg-ro" "cnpg-r" (gt (.Values.cloudnativePostgres.replicas | int64) 1))) }}
+{{- end -}}
+
+{{- define "data-hub.postgres.caMount" -}}
+- mountPath: /tls
+  name: database-ca
+  readOnly: true
+{{- end -}}
+
+{{- define "data-hub.postgres.caVolume" -}}
+- name: database-ca
+  secret:
+    defaultMode: 0640
+    secretName: {{ printf "%s-cnpg-ca" (include "common.names.fullname" .) }}
+    items:
+      - key: ca.crt
+        path: ca.crt
+{{- end -}}
+
 {{- define "udh.secret" -}}
 {{ (get ((lookup "v1" "Secret" $.Release.Namespace (printf "%s-%s" (include "common.names.fullname" $) .name)).data | default dict) .name) | b64dec | default (randAlphaNum 32) }}
 {{- end -}}
@@ -52,6 +84,19 @@ resources:
 
 {{- define "udh.objectstore.storageclass" -}}
 {{ .Release.Namespace}}-{{ .Release.Name }}-bucket
+{{- end -}}
+
+{{- define "udh.rook-ceph-bucket.service" -}}
+http://rook-ceph-rgw-
+{{- if .Values.objectStorage.reuseClusterFromNamespace -}}
+{{ printf "ns-%s" .Release.Namespace }}.{{ .Values.objectStorage.reuseClusterFromNamespace }}
+{{- else -}}
+bucket.{{ .Release.Namespace }}
+{{- end -}}
+{{- end -}}
+
+{{- define "udh.keycloak.realmUrl" -}}
+https://{{ include "data-hub.keycloak.hostname" . }}/realms/{{ .Values.keycloak.realm }}
 {{- end -}}
 
 {{- define "sensor-ingestion.targets" -}}

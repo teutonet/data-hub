@@ -1,0 +1,25 @@
+{{- if .Values.sensorIngestion.sensorTransformer.ingress.enabled -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-sensor-transformer" (include "common.names.fullname" .) | quote }}
+  annotations:
+    {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.sensorTransformer.ingress.annotations "context" .) | nindent 4 }}
+spec:
+  rules:
+  - host: {{ include "sensor-ingestion.sensorTransformer.hostname" . }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ printf "%s-sensor-transformer" (include "common.names.fullname" .) | quote }}
+            port:
+              number: 8088
+        path: /transform
+        pathType: Prefix
+  tls:
+  - hosts:
+    - {{ include "sensor-ingestion.sensorTransformer.hostname" . }}
+    secretName: {{ include "sensor-ingestion.sensorTransformer.hostname" . }}-tls
+{{- end -}}

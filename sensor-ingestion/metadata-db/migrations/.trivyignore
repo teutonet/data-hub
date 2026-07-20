@@ -6,3 +6,6 @@ CVE-2023-5841
 
 # will not be fixed if you can believe the status 'will_not_fix'
 CVE-2023-45853
+
+# false positive https://github.com/madler/zlib/issues/1142#issuecomment-3729902129
+CVE-2026-22184

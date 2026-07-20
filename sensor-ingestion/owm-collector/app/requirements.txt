@@ -1,0 +1,10 @@
+certifi==2026.6.17
+charset-normalizer==3.4.9
+cramjam==2.11.0
+idna==3.18
+oauthlib==3.3.1
+protobuf==7.35.1
+python-snappy==0.7.3
+requests==2.34.2
+requests-oauthlib==2.0.0
+urllib3==2.7.0

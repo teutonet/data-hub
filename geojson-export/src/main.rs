@@ -1,4 +1,4 @@
-use std::{collections::{BTreeMap, HashMap}, env, sync::Arc, time::Duration};
+use std::{collections::{BTreeMap, HashMap}, env, fs::File, io::BufReader, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use axum::{
@@ -19,7 +19,7 @@ use promql_parser::{
     },
 };
 use reqwest::header::HeaderValue;
-use rustls::{client::danger::ServerCertVerifier, crypto::CryptoProvider};
+use rustls::RootCertStore;
 use serde::Deserialize;
 use tokio::{signal::unix::SignalKind, time::Instant};
 use tokio_postgres::config::SslMode;
@@ -38,54 +38,27 @@ async fn main() -> anyhow::Result<()> {
     let prometheus_host =
         env::var("PROMETHEUS_HOST").context("you need to specify PROMETHEUS_HOST")?;
 
-    // TODO: this should be changed to actually verify the server certificate, which is currently not possible because
-    // it's self generated
-    #[derive(Debug)]
-    struct InsecureVerifier(Vec<rustls::SignatureScheme>);
+    let tls_root_crt_path = env::var("PGSSLROOTCERT")
+        .context("you need to specify PGSSLROOTCERT")?;
 
-    impl ServerCertVerifier for InsecureVerifier {
-        fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-            self.0.clone()
+    // postgres tls init
+    let root_cert_store = {
+        let mut f = BufReader::new(
+            File::open(&tls_root_crt_path)
+                .with_context(|| format!("can't open {tls_root_crt_path}"))?,
+        );
+        let mut root_ca = RootCertStore::empty();
+        for cert in rustls_pemfile::certs(&mut f) {
+            root_ca.add(cert.context("invalid root certificate")?)?;
         }
-
-        fn verify_server_cert(
-            &self,
-            _end_entity: &rustls::pki_types::CertificateDer<'_>,
-            _intermediates: &[rustls::pki_types::CertificateDer<'_>],
-            _server_name: &rustls::pki_types::ServerName<'_>,
-            _ocsp_response: &[u8],
-            _now: rustls::pki_types::UnixTime,
-        ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-            Ok(rustls::client::danger::ServerCertVerified::assertion())
+        if root_ca.is_empty() {
+            anyhow::bail!("no ca certificates!");
         }
-
-        fn verify_tls12_signature(
-            &self,
-            _message: &[u8],
-            _cert: &rustls::pki_types::CertificateDer<'_>,
-            _dss: &rustls::DigitallySignedStruct,
-        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
-        }
-
-        fn verify_tls13_signature(
-            &self,
-            _message: &[u8],
-            _cert: &rustls::pki_types::CertificateDer<'_>,
-            _dss: &rustls::DigitallySignedStruct,
-        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
-        }
-    }
+        root_ca
+    };
 
     let client_config = rustls::ClientConfig::builder()
-        .dangerous()
-        .with_custom_certificate_verifier(Arc::new(InsecureVerifier(
-            CryptoProvider::get_default()
-                .context("No CryptoProvider!")?
-                .signature_verification_algorithms
-                .supported_schemes(),
-        )))
+        .with_root_certificates(root_cert_store)
         .with_no_client_auth();
 
     let tls = tokio_postgres_rustls::MakeRustlsConnect::new(client_config);
@@ -96,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
         .host(&db_host)
         .dbname(&db_name)
         .connect_timeout(Duration::from_secs(10))
-        .ssl_mode(SslMode::Prefer);
+        .ssl_mode(SslMode::Require);
 
     let pool = Pool::builder(
         Manager::from_config(client_config, tls, ManagerConfig {
@@ -311,7 +284,7 @@ fn promql_result_to_geojson(
             // the library only accepts geohashs up to 12 characters
             .and_then(|hash| geohash::decode(&hash[..12]).ok())
             .map(|(coord, _, _)| {
-                geojson::Geometry::new(geojson::Value::Point(vec![coord.x, coord.y]))
+                geojson::Geometry::new(geojson::GeometryValue::new_point([coord.x, coord.y]))
             })
         {
             let properties: geojson::JsonObject = metric

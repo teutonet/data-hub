@@ -2,23 +2,24 @@
 	"name": "e2e",
 	"version": "0.0.1",
 	"scripts": {
-		"e2e:gen": "npx playwright codegen -b firefox data-hub.local --ignore-https-errors",
+		"e2e:gen": "npx playwright codegen -b firefox data-hub.local --ignore-https-errors --lang en-US",
 		"lint:fix": "eslint --max-warnings 0 --fix --cache test",
 		"lint:check": "eslint --max-warnings 0 --cache test"
 	},
+	"packageManager": "pnpm@11.10.0",
 	"dependencies": {
-		"@playwright/test": "1.51.1",
-		"axios": "1.8.4",
-		"playwright": "1.51.1",
-		"prometheus-remote-write": "^0.5.0"
+		"@playwright/test": "1.61.1",
+		"axios": "1.18.1",
+		"playwright": "1.61.1",
+		"prometheus-remote-write": "^0.5.0",
+		"sharp": "0.35.3"
 	},
 	"devDependencies": {
-		"@eslint/eslintrc": "^3.2.0",
-		"@eslint/js": "^9.17.0",
-		"@types/node": "22.14.1",
-		"@typescript-eslint/eslint-plugin": "8.29.1",
-		"@typescript-eslint/parser": "8.29.1",
-		"eslint": "9.24.0"
+		"@eslint/js": "10.0.1",
+		"@types/node": "24.13.2",
+		"eslint": "10.6.0",
+		"globals": "17.7.0",
+		"typescript-eslint": "8.62.1"
 	},
 	"keywords": [],
 	"author": "",

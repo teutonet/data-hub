@@ -13,7 +13,6 @@
 
 ;; utils
 
-
 (defn json-payload [j]
   {:body (json/encode j)
    :headers {:content-type "application/json"}})
@@ -31,7 +30,6 @@
    Wrap forms or put into threading macros."
   [& args]
   (last (doto args println)))
-
 
 (def ^:dynamic *host* nil)
 (def ^:dynamic *basic-auth* nil)
@@ -52,7 +50,7 @@
 
 (defn token [user]
   (binding [*host* (str keycloak-host
-                               "/realms/master")]
+                        "/realms/udh")]
     (-> (common-http "/protocol/openid-connect/token"
                      {:method :post
                       :form-params
@@ -66,7 +64,7 @@
 (def ^:dynamic *user* {:username "admin"})
 (defn http [path {:keys [assert-status assert-body json] :as opts}]
   (binding [*host* (or *host* (str keycloak-host
-                                                 "/realms/master/data-hub"))
+                                   "/realms/udh/data-hub"))
             *bearer* (token (*user* :username))]
     (let [response
           (common-http path
@@ -82,7 +80,7 @@
 
 (defn create-user [& groups]
   (binding [*host* (str keycloak-host
-                               "/admin/realms/master")]
+                        "/admin/realms/udh")]
     (let [username (random-name)
           id (http "/users"
                    {:method :post
@@ -136,7 +134,7 @@
   (let [tenant (create-tenant)]
     (doseq [json [{:scopes ["group:view"]
                    :principals [[]]}
-                  {:scopes ["group:view"] 
+                  {:scopes ["group:view"]
                    :principals [9]}
                   {:scopes ["group:view"]
                    :principals ["admin"]
@@ -160,6 +158,7 @@
         user (create-user [tenant])]
     (http (str "/tenants/" tenant "/scopes")
           {:assert-body #(-> % :granted set (= #{"tenant:admin"
+                                                 "tenant:read"
                                                  "tenant:view"}))})
 
     (http (str "/tenants/" tenant "/permissions/seeallgroups")
@@ -215,15 +214,16 @@
 
 (deftest admin-group-has-tenant-admin
   (let [tenant (create-tenant)]
-  (http (str "/tenants/" tenant "/permissions/admin")
-        {:assert-body #{{:scopes ["tenant:admin"]
-                         :principals [{:type "group" :tenant tenant :group "admin"}]}}})))
+    (http (str "/tenants/" tenant "/permissions/admin")
+          {:assert-body #(is (and
+                              (-> % :scopes (= ["tenant:admin"]))
+                              (-> % :principals set (= #{{:type "vizGroup" :tenant tenant :vizGroup "admin"} {:type "group" :tenant tenant :group "admin"}}))))})))
 
 (deftest toplevel-group-has-tenant-view
   (let [tenant (create-tenant)]
-  (http (str "/tenants/" tenant "/permissions/members")
-        {:assert-body #{{:scopes ["tenant:view"]
-                         :principals [{:type "tenant" :tenant tenant}]}}})))
+    (http (str "/tenants/" tenant "/permissions/members")
+          {:assert-body #{{:scopes ["tenant:view"]
+                           :principals [{:type "tenant" :tenant tenant}]}}})))
 
 (deftest new-user-can-only-see-their-tenant
   (let [tenant (create-tenant)
@@ -264,8 +264,8 @@
         expected {:name "members"
                   :scopes ["tenant:view"]
                   :principals [{:type "tenant" :tenant tenant}]}]
-  (http (str "/tenants/" tenant "/permissions")
-        {:assert-body #(-> % set (contains? expected))})))
+    (http (str "/tenants/" tenant "/permissions")
+          {:assert-body #(-> % set (contains? expected))})))
 
 (deftest delete-permission
   (let [tenant (create-tenant)]
@@ -414,7 +414,7 @@
     (binding [*user* (create-user [tenant])]
       (http (str "/tenants/" tenant "/groups")
             {:assert-body not-empty})))
-  
+
   ; :admin not at top-level
   (let [tenant (create-tenant {:projects #{"p1"}})
         cred-path (str "/tenants/" tenant "/projects/p1/sensor-credentials/cred1")]
@@ -528,9 +528,9 @@
           {:method :put
            :json permission})
 
-    (binding [*user* tenant1-user] 
+    (binding [*user* tenant1-user]
       (http (str "/tenants/" tenant1 "/permissions/cantbecreated")
-          {:assert-body #(-> % :principals set (contains? {:type "tenant" :tenant tenant2}))}))))
+            {:assert-body #(-> % :principals set (contains? {:type "tenant" :tenant tenant2}))}))))
 
 (deftest groups-from-other-tenants-can-be-added
   (let [tenant1 (create-tenant {:groups #{"sub"}})
@@ -540,7 +540,7 @@
           {:method :put
            :json {:scopes ["tenant:view"]
                   :principals [{:type "group" :tenant tenant1 :group "sub"}]}})
-    
+
     (http (str "/tenants/" tenant2 "/projects/test/permissions/othertenant")
           {:method :put
            :json {:scopes ["project:view"]
@@ -559,10 +559,10 @@
             {:method :put
              :json {:scopes ["tenant:view"]
                     :principals [{:type "user" :userId (tenant1-user2 :id)}]}
-             :assert-status NOT_FOUND})) 
-    (http (str "/tenants/" tenant1 "/permissions/otheruser") 
-          {:method :put 
-           :json {:scopes ["tenant:view"] 
+             :assert-status NOT_FOUND}))
+    (http (str "/tenants/" tenant1 "/permissions/otheruser")
+          {:method :put
+           :json {:scopes ["tenant:view"]
                   :principals [{:type "user" :userId (tenant1-user2 :id)}]}})))
 
 (deftest can-add-user-as-principal-with-overlapping-group
@@ -582,19 +582,19 @@
   (let [tenant1 (create-tenant)
         permission {:scopes ["project:view"]
                     :principals [{:type "project" :tenant tenant1 :project "test1"}]}]
-      (http (str "/tenants/" tenant1 "/projects/test1")
-            {:method :put})
-      (http (str "/tenants/" tenant1 "/projects/test2")
-            {:method :put})
-      (http (str "/tenants/" tenant1 "/projects/test2/permissions/test")
-            {:method :put
-             :json permission})
-      (http (str "/tenants/" tenant1 "/projects/test2/permissions/test")
-            {:assert-body #{permission}})
-      (http (str "/tenants/" tenant1 "/projects/test1")
-            {:method :delete})
-      (http (str "/tenants/" tenant1 "/projects/test2/permissions/test")
-            {:assert-status NOT_FOUND})))
+    (http (str "/tenants/" tenant1 "/projects/test1")
+          {:method :put})
+    (http (str "/tenants/" tenant1 "/projects/test2")
+          {:method :put})
+    (http (str "/tenants/" tenant1 "/projects/test2/permissions/test")
+          {:method :put
+           :json permission})
+    (http (str "/tenants/" tenant1 "/projects/test2/permissions/test")
+          {:assert-body #{permission}})
+    (http (str "/tenants/" tenant1 "/projects/test1")
+          {:method :delete})
+    (http (str "/tenants/" tenant1 "/projects/test2/permissions/test")
+          {:assert-status NOT_FOUND})))
 
 (deftest can-add-viz-group-as-principal
   (let [tenant1 (create-tenant)
@@ -610,7 +610,6 @@
     (http (str "/tenants/" tenant1 "/projects/test2/permissions/test")
           {:assert-body #{permission}})))
 
-
 (deftest forbidden-view-as-not-found
   ; if you can't "view" it you should not be able to know that it exists by looking for FORBIDDEN
   (let [tenant (create-tenant {:groups #{"foo"}})]
@@ -619,7 +618,6 @@
             {:assert-status NOT_FOUND}))))
 
 ;; attributes
-
 
 (deftest can-add-remove-attributes
   (let [tenant (create-tenant)]

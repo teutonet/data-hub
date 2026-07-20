@@ -15,6 +15,7 @@
 	import type { TableHeadItem } from './common/sortingTableUtils';
 	import { caseInsensitiveIncludes } from './stringUtils';
 	import { activeProjectId } from './nav/activeProject';
+	import { projectUrl } from './common/url';
 
 	interface Props {
 		properties: NonNullable<GetAllPropertiesQuery['properties']>;
@@ -95,46 +96,22 @@
 							values: { number: properties.length, filteredNumber: items.length }
 						})}
 					</span>
-					{#if $activeProjectId === 'all'}
-						<div class="mt-2 flex w-full gap-2">
-							<FloatingLabelInput
-								classDiv="xs:w-full sm:w-1/2"
-								style="outlined"
-								bind:value={filteredProject}
-							>
+					<div class="flex flex-col gap-2 xl:flex-row">
+						{#if $activeProjectId === 'all'}
+							<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredProject}>
 								{$_('component.propertiesOverview.projectFilterHeader')}
 							</FloatingLabelInput>
-						</div>
-					{/if}
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredName}
-						>
+						{/if}
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredName}>
 							{$_('component.propertiesOverview.nameFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredMeasure}
-						>
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredMeasure}>
 							{$_('component.propertiesOverview.measureFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full gap-2">
-						<FloatingLabelInput
-							classDiv="xs:w-full sm:w-1/2"
-							style="outlined"
-							bind:value={filteredMetricName}
-						>
+						<FloatingLabelInput classDiv="grow" style="outlined" bind:value={filteredMetricName}>
 							{$_('component.propertiesOverview.metricNameFilterHeader')}
 						</FloatingLabelInput>
-					</div>
-					<div class="mt-2 flex w-full justify-end gap-2">
-						<Button on:click={() => resetFilters()}>
+						<Button color="red" on:click={() => resetFilters()}>
 							{$_('component.propertiesOverview.resetFilters')}
 						</Button>
 					</div>
@@ -145,7 +122,8 @@
 	{#snippet bodyContent(item)}
 		<TableBodyRow
 			class="cursor-pointer"
-			on:click={async () => await goto(`property/${encodeURI(item.id)}`)}
+			on:click={async () =>
+				await goto(projectUrl(item.project ?? 'all', 'property', encodeURI(item.id)))}
 		>
 			{#if $activeProjectId === 'all'}
 				<TableBodyCell>{item.project ?? '-'}</TableBodyCell>

@@ -59,7 +59,12 @@ docker run --rm \
 
 docker run --rm \
 	--network ${NETWORK_NAME} \
-  -e DATABASE_URL=postgres://postgres:postgres@${PGHOST}:5432/mdb \
+  -e PGHOST=${PGHOST} \
+  -e PGUSER=postgres \
+  -e PGPASSWORD=postgres \
+  -e PGDATABASE=mdb \
+  -e PGSSLMODE=disable \
+  -e GRAPHILE_ENV=development \
   -e OUT_SCHEMA_PATH=/frontend/src/lib/common/generated/schema.graphql \
 	-v $FRONTEND_PATH:/frontend \
 	-u `id -u`:`id -g` \

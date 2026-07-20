@@ -23,7 +23,7 @@
   
   More docs for the table component contained here can be found [here](https://flowbite-svelte.com/docs/components/table) 
 -->
-<script lang="ts" generics="T extends object">
+<script lang="ts" generics="T extends Record<string, any>">
 	import { Table, TableHead, TableHeadCell, TableBody, ButtonGroup, Button } from 'flowbite-svelte';
 	import type { PaginationOptions, TableHeadItem } from './sortingTableUtils';
 	import { _ } from 'svelte-i18n';
@@ -92,7 +92,7 @@
 		footer
 	}: Props = $props();
 
-	let sortedItems: T[] = $state(items);
+	let sortedItems: T[] = $derived(sortItems(items, sortKey, sortDirection));
 
 	function setSorting(key: string | null) {
 		if (sortKey === key) {
@@ -108,7 +108,7 @@
 			return items;
 		}
 
-		return items.sort((a, b) => {
+		return [...items].sort((a, b) => {
 			if (sortKey == null) {
 				return sortDirection;
 			}
@@ -144,10 +144,6 @@
 			}
 		}
 	};
-
-	$effect(() => {
-		sortedItems = sortItems(items, sortKey, sortDirection);
-	});
 
 	let finalItems: T[] = $derived(
 		usePgPagination

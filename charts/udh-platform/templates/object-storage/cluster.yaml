@@ -1,37 +1,39 @@
-{{- if .Values.objectStorage.enabled -}}
+{{- if and .Values.objectStorage.enabled (not .Values.objectStorage.reuseClusterFromNamespace) -}}
 {{- $rgwSecretSpec := (merge (dict "name" "rgw-secret") .) -}}
 {{- $rgwSecret := include "udh.secret" $rgwSecretSpec }}
 {{ include "udh.secretManifest" (merge (dict "value" $rgwSecret) $rgwSecretSpec) }}
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: {{ printf "%s-rook" (include "common.names.fullname" .) | quote }}
-spec:
-  interval: 1h0m0s
-  url: https://charts.rook.io/release
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: {{ printf "%s-rook-ceph-cluster" (include "common.names.fullname" .) | quote }}
 spec:
-  releaseName: rook-ceph-cluster
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" "rook-ceph-cluster") }}
+  timeout: 20m
+  targetNamespace: {{ .Release.Namespace }}
   chart:
     spec:
       chart: rook-ceph-cluster
-      version: v1.13.x
+      version: v1.19.5 # renovate: datasource=helm depName=rook-ceph-cluster versioning=helm registryUrl=https://charts.rook.io/release
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
         name: {{ printf "%s-rook" (include "common.names.fullname" .) | quote }}
   interval: 1h0m0s
+  {{- if .Values.objectStorage.operator.enabled }}
+  dependsOn:
+    - name: {{ printf "%s-rook-ceph" (include "common.names.fullname" .) | quote }}
+  {{- end }}
   values:
+    {{- if .Values.objectStorage.operator.enabled }}
+    operatorNamespace: {{ .Release.Namespace }}
+    {{- end }}
     cephClusterSpec:
       {{- if .Values.objectStorage.allowDeletion }}
       cleanupPolicy:
         confirmation: yes-really-destroy-data
       {{- end }}
+      dataDirHostPath: /var/lib/rook/ns/{{ .Release.Namespace }}
       removeOSDsIfOutAndSafeToRemove: true
       cephConfig:
         global:
@@ -45,6 +47,9 @@ spec:
             resources:
               requests:
                 storage: {{ .Values.objectStorage.monStorage }}
+        {{- if .Values.objectStorage.singleNode }}
+        count: 1
+        {{- end }}
       mgr:
         count: 1
         modules:
@@ -107,49 +112,62 @@ spec:
                   accessModes:
                     - ReadWriteOnce
         onlyApplyOSDPlacement: false
+      {{- if .Values.global.testDeployment }}
+      resources:
+        mgr:
+          requests:
+            cpu: "20m"
+        mon:
+          requests:
+            cpu: "20m"
+        osd:
+          requests:
+            cpu: "20m"
+            memory: "1Gi"
+        prepareosd:
+          requests:
+            cpu: "20m"
+        mgr-sidecar:
+          requests:
+            cpu: "20m"
+        crashcollector:
+          requests:
+            cpu: "20m"
+        logcollector:
+          requests:
+            cpu: "20m"
+        cleanup:
+          requests:
+            cpu: "20m"
+        exporter:
+          requests:
+            cpu: "20m"
+      {{- end }}
     toolbox:
       enabled: true
+      {{- if .Values.global.testDeployment }}
+      resources:
+        requests:
+          cpu: "20m"
+      {{- end }}
     dashboard:
       enabled: false
     cephBlockPools: []
     cephFileSystems: []
     cephObjectStores:
       - name: bucket
-        spec:
-          metadataPool:
-            failureDomain: host
-            replicated:
-              size: 1 # backing rbd volume is replicated
-          dataPool:
-            failureDomain: host
-            replicated:
-              size: 1 # backing rbd volume is replicated
-          gateway:
-            port: 80
-            resources:
-              limits:
-                cpu: 2000m
-                memory: 2Gi
-              requests:
-                cpu: 1000m
-                memory: 1Gi
-            instances: 1
-            priorityClassName: system-cluster-critical
+        spec: {{- include "udh.objectstore.spec" . | nindent 10 }}
         storageClass:
-          enabled: true
-          name: {{ include "udh.objectstore.storageclass" . }}
-          reclaimPolicy: Retain
-          volumeBindingMode: Immediate
+          enabled: false
         ingress:
           enabled: true
           annotations:
-            nginx.ingress.kubernetes.io/proxy-body-size: "0"
-            kubernetes.io/tls-acme: "true"
+            {{- include "udh.objectstore.ingress.annotations" . | nindent 12 }}
           host:
-            name: storage.{{ .Values.global.baseDomain }}
+            name: {{ include "data-hub.storage.hostname" . }}
             path: /
           tls:
           - hosts:
-              - storage.{{ .Values.global.baseDomain }}
-            secretName: storage.{{ .Values.global.baseDomain }}-tls
+              - {{ include "data-hub.storage.hostname" . }}
+            secretName: {{ include "data-hub.storage.hostname" . }}-tls
 {{- end -}}

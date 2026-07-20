@@ -1,0 +1,53 @@
+diff --git a/pkg/login/social/connectors/generic_oauth.go b/pkg/login/social/connectors/generic_oauth.go
+index 02b93285e93..92a48df2903 100644
+--- a/pkg/login/social/connectors/generic_oauth.go
++++ b/pkg/login/social/connectors/generic_oauth.go
+@@ -372,7 +372,7 @@ func (s *SocialGenericOAuth) extractUserGroups(userInfo *social.BasicUserInfo, d
+ // postProcessUserInfo handles post-processing of user info (org roles, private email, etc.)
+ func (s *SocialGenericOAuth) postProcessUserInfo(ctx context.Context, client *http.Client, userInfo *social.BasicUserInfo, externalOrgs []string) error {
+ 	if !s.info.SkipOrgRoleSync {
+-		userInfo.OrgRoles = s.orgRoleMapper.MapOrgRoles(s.orgMappingCfg, externalOrgs, userInfo.Role)
++		userInfo.OrgRoles = s.orgRoleMapper.MapOrgRolesDirect(ctx, externalOrgs)
+ 		if s.info.RoleAttributeStrict && len(userInfo.OrgRoles) == 0 {
+ 			return errRoleAttributeStrictViolation.Errorf("could not evaluate any valid roles using IdP provided data")
+ 		}
+diff --git a/pkg/login/social/connectors/org_role_mapper.go b/pkg/login/social/connectors/org_role_mapper.go
+index 0e0a317b644..37aed633418 100644
+--- a/pkg/login/social/connectors/org_role_mapper.go
++++ b/pkg/login/social/connectors/org_role_mapper.go
+@@ -49,6 +49,35 @@ func ProvideOrgRoleMapper(cfg *setting.Cfg, orgService org.Service) *OrgRoleMapp
+ 	}
+ }
+ 
++// external orgs are in the format: `role:orgname`
++func (m *OrgRoleMapper) MapOrgRolesDirect(
++	ctx context.Context,
++	externalOrgs []string,
++) map[int64]org.RoleType {
++	userOrgRoles := map[int64]org.RoleType{}
++
++	for _, entry := range externalOrgs {
++		roleName, orgName, found := strings.Cut(entry, ":")
++		if !found {
++			m.logger.Warn("could not parse", "entry", entry)
++			continue
++		}
++		role := org.RoleType(roleName)
++		if !role.IsValid() {
++			m.logger.Warn("role is invalid", "role", roleName)
++			continue
++		}
++		org, err := m.orgService.GetByName(ctx, &org.GetOrgByNameQuery{Name: orgName})
++		if err != nil {
++			m.logger.Warn("could not find org", "org", orgName)
++			continue
++		}
++		userOrgRoles[org.ID] = role
++	}
++
++	return userOrgRoles
++}
++
+ // MapOrgRoles maps the external orgs/groups to Grafana orgs and roles. It returns a  map or orgID to role.
+ //
+ // mappingCfg: mapping configuration from external orgs to Grafana orgs and roles. Use `ParseOrgMappingSettings` to convert the raw setting to this format.

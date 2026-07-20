@@ -2,8 +2,13 @@
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+.pnpm-store
 
-sensor-ingestion
+sensor-ingestion/charts/sensor-ingestion/templates/
+sensor-ingestion/test-env/chart/templates/
+sensor-ingestion/metadata-db/frontend/.svelte-kit
+sensor-ingestion/metadata-db/frontend/build
+sensor-ingestion/metadata-db/frontend/src/lib/common/generated/
 charts
 
 build

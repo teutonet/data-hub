@@ -11,3 +11,5 @@ export const PROMETHEUS = makeUrl('prometheus');
 export const KEYCLOAK = makeUrl('login');
 export const EXPORT = makeUrl('export');
 export const RESOURCE_API = `${KEYCLOAK}realms/udh/data-hub/`;
+export const JUPYTERHUB = makeUrl(`jupyterhub`);
+export const SMTP = makeUrl(`smtp`);

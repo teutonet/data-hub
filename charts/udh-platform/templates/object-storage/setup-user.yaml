@@ -1,12 +1,20 @@
+{{- define "udh.objectStorage.storeReference" -}}
+{{- if .Values.objectStorage.reuseClusterFromNamespace -}}
+store: {{ printf "ns-%s" .Release.Namespace | quote }}
+clusterNamespace: {{ .Values.objectStorage.reuseClusterFromNamespace | quote }}
+{{- else }}
+store: bucket
+{{- end }}
+{{- end }}
+
 {{- if .Values.objectStorage.enabled -}}
 ---
 apiVersion: ceph.rook.io/v1
 kind: CephObjectStoreUser
 metadata:
   name: {{ printf "%s-oidc-admin" (include "common.names.fullname" .) | quote }}
-spec:
-  store: bucket
-  displayName: "OIDC Admin"
+spec: {{- include "udh.objectStorage.storeReference" . | nindent 2 }}
+  displayName: oidcadmin
   capabilities:
     oidc-provider: "*"
     roles: "*"
@@ -15,9 +23,9 @@ apiVersion: ceph.rook.io/v1
 kind: CephObjectStoreUser
 metadata:
   name: {{ printf "%s-bucket-admin" (include "common.names.fullname" .) | quote }}
-spec:
-  store: bucket
-  displayName: "Bucket Admin"
+spec: {{- include "udh.objectStorage.storeReference" . | nindent 2 }}
+  displayName: bucketadmin
   capabilities:
     buckets: "*"
+    users: "*"
 {{- end -}}

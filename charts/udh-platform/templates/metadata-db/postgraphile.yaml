@@ -1,6 +1,6 @@
 {{- define "sensor-ingestion.mdb.commonEnv" -}}
 - name: PGHOST
-  value: {{ printf "%s-udh-platform-postgres" .Release.Name }}
+  value: {{ include "data-hub.postgres.hostRW" . }}
 - name: PGDATABASE
   value: mdb
 - name: NODE_ENV
@@ -39,12 +39,12 @@ spec:
           - name: PGUSER
             valueFrom:
               secretKeyRef:
-                name: {{ printf "postgres.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                name: {{ include "data-hub.postgres.superuserSecret" .}}
                 key: username
           - name: PGPASSWORD
             valueFrom:
               secretKeyRef:
-                name: {{ printf "postgres.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                name: {{ include "data-hub.postgres.superuserSecret" .}}
                 key: password
         resources: {{- .Values.sensorIngestion.metadataDB.migrations.resources | toYaml | nindent 10 }}
       containers:
@@ -60,15 +60,17 @@ spec:
           - name: PGUSER
             valueFrom:
               secretKeyRef:
-                name: {{ printf "postgraphile.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                name: {{ include "data-hub.postgres.secret" (dict "context" . "name" "postgraphile" ) }}
                 key: username
           - name: PGPASSWORD
             valueFrom:
               secretKeyRef:
-                name: {{ printf "postgraphile.%s-udh-platform-postgres.credentials.postgresql.acid.zalan.do" .Release.Name | quote }}
+                name: {{ include "data-hub.postgres.secret" (dict "context" . "name" "postgraphile" ) }}
                 key: password
           - name: GRAPHIQL
             value: "true"
+          - name: GRAPHILE_ENV
+            value: production
           - name: AUTH_AUDIENCE
             value: {{ .Values.sensorIngestion.metadataDB.postgraphile.auth.audience | quote }}
           - name: AUTH_ISSUER

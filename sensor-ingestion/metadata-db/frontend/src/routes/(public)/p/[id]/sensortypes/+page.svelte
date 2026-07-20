@@ -2,13 +2,11 @@
 	import PageTitle from '$lib/PageTitle.svelte';
 	import SensorsOverview from '$lib/SensorsOverview.svelte';
 	import type {
-		GetSensorsQuery,
-		GetSensorsQueryVariables,
 		ImportSensortypeMutation,
 		ImportSensortypeMutationVariables
 	} from '$lib/common/generated/types';
-	import { GET_SENSORS, SENSORTYPE_IMPORT } from '$lib/common/graphql/queries';
-	import { getContextClient, queryStore } from '@urql/svelte';
+	import { SENSORTYPE_IMPORT } from '$lib/common/graphql/queries';
+	import { getContextClient } from '@urql/svelte';
 	import { Button, Modal, P } from 'flowbite-svelte';
 	import FloatingLabelTextArea from '$lib/flowbite-extensions/FloatingLabelTextArea.svelte';
 	import { _ } from 'svelte-i18n';
@@ -16,7 +14,7 @@
 	import ArrowDownTray from '~icons/heroicons/arrow-down-tray';
 	import type { PageData } from './$types';
 	import { projectUrl } from '$lib/common/url';
-	import { handleCombinedErrors, projectCondition } from '$lib/common/graphql/utils';
+	import { getSensorTypesStore, handleCombinedErrors } from '$lib/common/graphql/utils';
 	import { error, success } from '$lib/common/toast/toast';
 	import { goto } from '$app/navigation';
 
@@ -30,17 +28,7 @@
 
 	let projectId = $derived(data.projectId);
 
-	let sensorQuery = $derived(
-		queryStore<GetSensorsQuery, GetSensorsQueryVariables>({
-			client,
-			query: GET_SENSORS,
-			variables: {
-				condition: {
-					project: projectCondition(data.projectId)
-				}
-			}
-		})
-	);
+	let sensorQuery = $derived(getSensorTypesStore(projectId));
 
 	let sensors = $derived($sensorQuery.data?.sensors ?? []);
 
@@ -73,10 +61,16 @@
 
 		try {
 			await client
-				.mutation<ImportSensortypeMutation, ImportSensortypeMutationVariables>(SENSORTYPE_IMPORT, {
-					currentProject: projectId,
-					data: jsonImport
-				})
+				.mutation<ImportSensortypeMutation, ImportSensortypeMutationVariables>(
+					SENSORTYPE_IMPORT,
+					{
+						currentProject: projectId,
+						data: jsonImport
+					},
+					{
+						additionalTypenames: ['Property', 'SensorType', 'SensorProperties']
+					}
+				)
 				.toPromise()
 				.then((result) => {
 					if (result.error) {
@@ -94,7 +88,7 @@
 						}
 					}
 				});
-		} catch (e) {
+		} catch (e: any) {
 			error(e.message);
 		}
 	}
@@ -107,6 +101,8 @@
 	{#if projectId != 'all'}
 		<div class="flex w-full flex-row">
 			<Button
+				outline
+				color="green"
 				href={projectUrl(projectId, 'sensortype', 'new')}
 				title={$_('page.sensortypes.newSensortype')}
 				class="w-full rounded-none rounded-bl-lg"
@@ -115,6 +111,7 @@
 				{$_('page.sensorTypes.newSensortype')}
 			</Button>
 			<Button
+				outline
 				on:click={() => {
 					importModalOpen = true;
 				}}

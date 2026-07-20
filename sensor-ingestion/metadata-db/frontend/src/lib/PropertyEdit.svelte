@@ -37,31 +37,38 @@
 </script>
 
 <form class="needs-validation" onsubmit={handleFormSubmit} novalidate {id}>
-	<div class="grid grid-cols-1 gap-4 pb-4">
-		<ValidatedFormField
-			bind:value={property.name}
-			required
-			inputLabel={$_('component.propertyEdit.name')}
-			inputId="property-name"
-		/>
-		<ValidatedFormField
-			bind:value={property.measure}
-			inputLabel={$_('component.propertyEdit.measure')}
-			inputId="property-measure"
-		/>
-		<ValidatedFormField
-			bind:value={property.description}
-			inputLabel={$_('component.propertyEdit.description')}
-			inputType="textarea"
-			inputId="property-description"
-		/>
-		<ValidatedFormField
-			bind:value={property.metricName}
-			inputLabel={$_('component.propertyEdit.metricName')}
-			inputId="property-metricname"
-			pattern="^(?![Tt][Ee][Cc][Hh][Nn][Ii][Cc][Aa][Ll]_).*"
-			patternMismatchText={$_('component.propertyEdit.technicalPrefixNotAllowed')}
-		/>
+	<div class="flex flex-row gap-4 pb-4">
+		<div class="flex w-[40%] flex-col gap-4">
+			<ValidatedFormField
+				bind:value={property.name}
+				required
+				inputLabel={$_('component.propertyEdit.name')}
+				inputId="property-name"
+			/>
+			<ValidatedFormField
+				bind:value={property.metricName}
+				inputLabel={$_('component.propertyEdit.metricName')}
+				inputId="property-metricname"
+				pattern="^(?![Tt][Ee][Cc][Hh][Nn][Ii][Cc][Aa][Ll]_).*"
+				patternMismatchText={$_('component.propertyEdit.technicalPrefixNotAllowed')}
+			/>
+			<ValidatedFormField
+				bind:value={property.measure}
+				inputLabel={$_('component.propertyEdit.measure')}
+				inputId="property-measure"
+			/>
+		</div>
+		<div class="flex w-full flex-col">
+			<ValidatedFormField
+				bind:value={property.description}
+				inputLabel={$_('component.propertyEdit.description')}
+				inputType="textarea"
+				inputId="property-description"
+				outerDivClasses="h-full"
+				innerDivClasses="h-full"
+				unWrappedClass="h-full"
+			/>
+		</div>
 	</div>
 	<div class="flex flex-row gap-4">
 		<Button type="submit" color="green" disabled={isPropertyProjectNull}>

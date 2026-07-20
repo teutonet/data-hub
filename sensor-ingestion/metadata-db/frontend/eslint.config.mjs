@@ -41,7 +41,9 @@ export default [
 			}
 		},
 		rules: {
-			'@typescript-eslint/no-unused-expressions': 'off' // Often triggers for expressions that force svelte reactivity
+			'@typescript-eslint/no-unused-expressions': 'off', // Often triggers for expressions that force svelte reactivity
+			'svelte/prefer-writable-derived': 'off', // TODO: svelte reactivity in $derived is bugged
+			'svelte/no-unused-svelte-ignore': 'off' // triggers even when the svelte-ignore is used
 		}
 	},
 	{
@@ -67,6 +69,13 @@ export default [
 			'@typescript-eslint/no-unused-vars': [
 				'error',
 				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+			],
+			'svelte/no-navigation-without-resolve': [
+				'error',
+				{
+					ignoreGoto: true,
+					ignoreLinks: true
+				}
 			]
 		}
 	},
@@ -91,8 +100,15 @@ export default [
 			],
 			camelcase: 'warn',
 			'@typescript-eslint/no-extra-semi': 'off',
-			'@typescript-eslint/no-explicit-any': 'off'
+			'@typescript-eslint/no-explicit-any': 'off',
 			//"no-constant-binary-expression": "off"
+			'svelte/no-navigation-without-resolve': [
+				'error',
+				{
+					ignoreGoto: true,
+					ignoreLinks: true
+				}
+			]
 		}
 	}
 ];

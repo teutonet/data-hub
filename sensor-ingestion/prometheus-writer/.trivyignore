@@ -13,3 +13,9 @@ CVE-2024-45492
 
 # only applies if a user can set the length in XML_Parse, in which case they can already cause a crash/memory fault anyways
 CVE-2024-45490
+
+# we don't use SQLite
+CVE-2025-6965
+
+# false positive https://github.com/madler/zlib/issues/1142#issuecomment-3729902129
+CVE-2026-22184

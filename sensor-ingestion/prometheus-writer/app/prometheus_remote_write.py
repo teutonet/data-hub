@@ -442,14 +442,17 @@ def create_samples(request_payload, id_labels, thing_metadata, last_values,
                 msg = deepcopy(base_msg)
                 if (last_value := last_values.get(variable_name)) is not None and 'value' in last_value:
                     current_value = variables[variable_name]
-                    if last_value['value'] <= current_value:
-                        diff = current_value - last_value['value']
+                    if current_value == last_value['value']:
+                        pass
                     else:
-                        # counters can reset
-                        diff = current_value
-                    msg["value"] = diff
-                    msg["labels"]["__name__"] = metric_name + '_delta'
-                    samples.append(dict(msg=msg, project=thing_metadata["project"]))
+                        if last_value['value'] <= current_value:
+                            diff = current_value - last_value['value']
+                        else:
+                            # counters can reset
+                            diff = current_value
+                        msg["value"] = diff
+                        msg["labels"]["__name__"] = metric_name + '_delta'
+                        samples.append(dict(msg=msg, project=thing_metadata["project"]))
 
             msg = deepcopy(base_msg)
             msg["value"] = 1

@@ -1,35 +1,23 @@
-import { mixed, PostGraphileOptions, PostGraphilePlugin } from 'postgraphile';
-import PgSimplifyInflectorPlugin from '@graphile-contrib/pg-simplify-inflector';
-import { IncomingMessage, ServerResponse } from 'http';
-import PgManyCreateUpdateDeletePlugin from 'postgraphile-plugin-many-create-update-delete';
+import { PostGraphileAmberPreset } from 'postgraphile/presets/amber';
+import { makeV4Preset } from 'postgraphile/presets/v4';
+import { makePgService } from 'postgraphile/adaptors/pg';
+import { PgSimplifyInflectionPreset } from '@graphile/simplify-inflection';
+import { OmitAuditIdsPlugin } from './plugins/omitAuditIds';
+import { IncomingMessage } from 'http';
 import { AuthResult } from 'express-oauth2-jwt-bearer';
-import { AuditPluginOptions, OmitAuditIds } from 'postgraphile-audit-plugin';
+import type {} from 'postgraphile/grafserv/node'; // import all types, so tslint is satisfied
 
 const isDebug = process.env.LOGLEVEL === 'DEBUG';
 const isSchemaWatch = !!process.env.WATCH;
-
-// https://github.com/mayflower/postgraphile-audit-plugin/blob/v1.0.7/src/options.ts
-const auditPlugin: Partial<AuditPluginOptions> = {
-	auditFunctionSchema: 'app_hidden',
-	auditEventConnection: false,
-	firstLastAuditEvent: false,
-	dateProps: true,
-	nameProps: true,
-	nameSource: 'session_info',
-	nameSessionInfoJsonPath: '{origin}',
-	nameFallback: 'System'
-};
+const isDevLocal = process.env.DEV_LOCAL === 'true';
 
 interface ExtendedIncomingMessage extends IncomingMessage {
 	auth?: AuthResult;
-	header: (key: string) => mixed;
+	header: (key: string) => string | undefined;
 }
 
-function projectFromToken<RequestType extends ExtendedIncomingMessage = ExtendedIncomingMessage>(
-	req: RequestType
-): Record<string, string> {
+function projectFromToken(req: ExtendedIncomingMessage): Record<string, string> {
 	const settings: Record<string, string> = {};
-
 	if (req.auth) {
 		settings['jwt.claims.projects'] = JSON.stringify(req.auth.payload.projects);
 		settings['pgmemento.session_info'] = JSON.stringify({
@@ -44,35 +32,25 @@ function projectFromToken<RequestType extends ExtendedIncomingMessage = Extended
 	return settings;
 }
 
-function projectFromHeader<RequestType extends ExtendedIncomingMessage = ExtendedIncomingMessage>(
-	req: RequestType
-): { [key: string]: mixed } {
+function projectFromHeader(req: ExtendedIncomingMessage): Record<string, string> {
 	return {
-		'jwt.claims.projects': req.header('projects')
+		'jwt.claims.projects': req.header('projects') ?? ''
 	};
 }
 
-export default function getPostgraphileConfig(isDevLocal: boolean): {
-	connectionString?: string;
-	schema: string | Array<string>;
-	options: PostGraphileOptions<ExtendedIncomingMessage, ServerResponse>;
-} {
-	return {
-		connectionString: `postgres://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}/${process.env.PGDATABASE}?sslmode=no-verify`,
-		schema: (process.env.PGSCHEMA || 'sensor').split(','),
-		options: {
-			pgSettings: isDevLocal ? projectFromHeader : projectFromToken,
-			graphileBuildOptions: {
-				pgOmitListSuffix: true,
-				auditPlugin,
-				pgSkipInstallingWatchFixtures: !isSchemaWatch
-			},
-			enhanceGraphiql: true,
-			watchPg: true,
+const preset: GraphileConfig.Preset = {
+	extends: [
+		PostGraphileAmberPreset,
+		PgSimplifyInflectionPreset,
+		makeV4Preset({
+			simpleCollections: 'only',
+			graphiql: process.env.GRAPHIQL === 'true',
+			graphiqlRoute: '/',
+			graphqlRoute: '/graphql',
+			ignoreRBAC: false,
 			showErrorStack: isDebug,
-			ownerConnectionString: !isSchemaWatch
-				? undefined
-				: `postgres://${process.env.PGOWNERUSER}:${process.env.PGOWNERPASSWORD}@${process.env.PGHOST}/${process.env.PGDATABASE}?sslmode=no-verify`,
+			subscriptions: false,
+			enhanceGraphiql: true,
 			extendedErrors: isDebug
 				? [
 						'severity',
@@ -93,14 +71,32 @@ export default function getPostgraphileConfig(isDevLocal: boolean): {
 						'routine'
 					]
 				: [],
-			subscriptions: false,
-			appendPlugins: [PgSimplifyInflectorPlugin, PgManyCreateUpdateDeletePlugin, OmitAuditIds],
-			simpleCollections: 'only',
-			graphiql: process.env.GRAPHIQL === 'true',
-			graphiqlRoute: '/',
-			graphqlRoute: '/graphql',
-			ignoreRBAC: false,
-			disableQueryLog: !isDebug
+			graphileBuildOptions: {
+				pgSkipInstallingWatchFixtures: !isSchemaWatch
+			} as Record<string, unknown>
+		})
+	],
+	plugins: [OmitAuditIdsPlugin],
+	schema: {
+		pgOmitListSuffix: true
+	},
+	pgServices: [
+		makePgService({
+			connectionString: `postgres://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}/${process.env.PGDATABASE}?sslmode=${process.env.PGSSLMODE ?? 'no-verify'}`,
+			schemas: (process.env.PGSCHEMA || 'sensor').split(','),
+			superuserConnectionString: isSchemaWatch
+				? `postgres://${process.env.PGOWNERUSER}:${process.env.PGOWNERPASSWORD}@${process.env.PGHOST}/${process.env.PGDATABASE}?sslmode=${process.env.PGSSLMODE ?? 'no-verify'}`
+				: undefined
+		})
+	],
+	grafast: {
+		context(ctx) {
+			const req = ctx.node?.req as ExtendedIncomingMessage | undefined;
+			if (!req) return {};
+			const pgSettings = isDevLocal ? projectFromHeader(req) : projectFromToken(req);
+			return { pgSettings };
 		}
-	};
-}
+	}
+};
+
+export default preset;

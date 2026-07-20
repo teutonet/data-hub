@@ -17,6 +17,17 @@ S3_BLOCKS_BUCKET: mimir-tsdb
 S3_RULER_BUCKET: mimir-ruler
 {{- end }}
 {{- end -}}
+{{- define "udh.mimir.extraValues" -}}
+global:
+  extraEnvFrom:
+    - secretRef:
+        name: {{ include "data-hub.name" (dict "context" . "name" "mimir") }}
+podAnnotations:
+  checksum/mimir-s3-env: {{ include "udh.mimir-s3-env" . | sha256sum | quote }}
+gateway:
+  service:
+    nameOverride: {{ include "data-hub.name" (dict "context" . "name" "mimir-nginx") }}
+{{- end -}}
 ---
 apiVersion: v1
 kind: Secret
@@ -27,22 +38,34 @@ type: Opaque
 stringData:
   {{- include "udh.mimir-s3-env" . | nindent 2 }}
 ---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "mimir-distributed") }}
+spec:
+  interval: 1h0m0s
+  url: oci://ghcr.io/grafana/helm-charts/mimir-distributed
+  ref:
+    tag: 6.1.0 # renovate: datasource=docker depName=ghcr.io/grafana/helm-charts/mimir-distributed
+
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: {{ include "data-hub.name" (dict "context" . "name" "mimir") }}
 spec:
   releaseName: {{ include "data-hub.name" (dict "context" . "name" "mimir") }}
-  chart:
-    spec:
-      chart: mimir-distributed
-      version: 5.7.0 # renovate: datasource=helm depName=mimir-distributed versioning=helm registryUrl=https://grafana.github.io/helm-charts
-      reconcileStrategy: ChartVersion
-      sourceRef:
-        kind: HelmRepository
-        name: {{ include "data-hub.name" (dict "context" . "name" "grafana") }}
+  chartRef:
+    kind: OCIRepository
+    name: {{ include "data-hub.name" (dict "context" . "name" "mimir-distributed") }}
   interval: 1h0m0s
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
   targetNamespace: {{ .Release.Namespace }}
   values:
-    {{- $copiedConfig := mergeOverwrite .Values.mimir.config (dict "global" (dict "extraEnvFrom" (list (dict "secretRef" (dict "name" (include "data-hub.name" (dict "context" . "name" "mimir"))))) "podAnnotations" (dict "checksum/mimir-s3-env" (include "udh.mimir-s3-env" . | sha256sum)) )) }}
+    {{- $copiedConfig := mergeOverwrite
+      .Values.mimir.config
+      ( include "udh.mimir.extraValues" . | fromYaml ) }}
     {{ $copiedConfig | toYaml | nindent 4 }}

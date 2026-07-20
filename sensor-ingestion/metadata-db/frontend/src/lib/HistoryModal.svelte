@@ -19,10 +19,8 @@
 		TableBodyRow
 	} from 'flowbite-svelte';
 	import type {
-		AuditEvent,
 		PropertyChangesQuery,
 		PropertyChangesQueryVariables,
-		Scalars,
 		SensorChangesQuery,
 		SensorChangesQueryVariables,
 		SensorPropertyChangesQuery,
@@ -58,9 +56,8 @@
 	const KEYS_REQUIRING_NAME = ['sensor_id', 'property_id'];
 
 	interface Props {
-		entityId: Scalars['UUID']['input'];
+		entityId: string;
 		excludedKeys?: string[];
-		dataKey: string;
 		query: TypedDocumentNode;
 		additionalNames?: Record<string, string> | undefined;
 		openButtonClass: string | undefined;
@@ -69,7 +66,6 @@
 	let {
 		entityId,
 		excludedKeys = [],
-		dataKey,
 		query,
 		additionalNames = undefined,
 		openButtonClass = undefined
@@ -101,7 +97,7 @@
 		})
 	);
 
-	type ProcessedChange = AuditEvent & {
+	type ProcessedChange = NonNullable<NonNullable<ThingChangesQuery['changes']>[0]> & {
 		table: string;
 		displayName: string;
 		parsedValuesBefore: Record<string, any>;
@@ -238,34 +234,32 @@
 	}
 
 	let changes = $derived(
-		$historyStore.data && dataKey
-			? $historyStore.data[dataKey]
-					?.flatMap((c: AuditEvent): ProcessedChange[] => {
-						if (c) {
-							const before = addNameKeys(filterOutUselessKeys(JSON.parse(c.valuesBefore ?? '{}')));
-							const after = addNameKeys(filterOutUselessKeys(JSON.parse(c.valuesAfter ?? '{}')));
-							const changesTable = zipChanges(before, after);
-							return [
-								{
-									...c,
-									table: getTableName(c.eventKey ?? ''),
-									displayName: formatUser(c.sessionInfo),
-									parsedValuesBefore: before,
-									parsedValuesAfter: after,
-									changesTable
-								}
-							];
-						} else {
-							return [];
+		$historyStore.data?.changes
+			?.flatMap((c): ProcessedChange[] => {
+				if (c) {
+					const before = addNameKeys(filterOutUselessKeys(JSON.parse(c.valuesBefore ?? '{}')));
+					const after = addNameKeys(filterOutUselessKeys(JSON.parse(c.valuesAfter ?? '{}')));
+					const changesTable = zipChanges(before, after);
+					return [
+						{
+							...c,
+							table: getTableName(c.eventKey ?? ''),
+							displayName: formatUser(c.sessionInfo),
+							parsedValuesBefore: before,
+							parsedValuesAfter: after,
+							changesTable
 						}
-					})
-					.filter((c: ProcessedChange) => {
-						return (
-							Object.keys(c.parsedValuesAfter).length > 0 ||
-							Object.keys(c.parsedValuesBefore).length > 0
-						);
-					})
-			: []
+					];
+				} else {
+					return [];
+				}
+			})
+			.filter((c: ProcessedChange) => {
+				return (
+					Object.keys(c.parsedValuesAfter).length > 0 ||
+					Object.keys(c.parsedValuesBefore).length > 0
+				);
+			}) ?? []
 	);
 
 	function attributeFilter(change: ProcessedChange, keyOrString: string) {
@@ -332,7 +326,8 @@
 </script>
 
 <Button
-	color="alternative"
+	outline
+	color="blue"
 	class={openButtonClass}
 	on:click={() => {
 		modalOpen = true;

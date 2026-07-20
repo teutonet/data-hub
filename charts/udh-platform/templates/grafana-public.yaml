@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: grafana
-      version: 8.8.5 # renovate: datasource=helm depName=grafana versioning=helm registryUrl=https://grafana.github.io/helm-charts
+      version: 11.6.1 # renovate: datasource=docker depName=ghcr.io/grafana-community/helm-charts/grafana
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
@@ -20,6 +20,9 @@ spec:
     {{- if gt (.Values.grafanaPublic.replicas | int64) 1 }}
     podDisruptionBudget:
       minAvailable: 1
+    {{- end }}
+    {{- with .Values.grafanaPublic.adminPassword }}
+    adminPassword: {{ . }}
     {{- end }}
     ingress:
       enabled: true
@@ -33,7 +36,7 @@ spec:
     extraSecretMounts:
       - name: secret-files-postgres
         mountPath: /etc/secrets/postgres
-        secretName: {{ printf "grafana-public-owner-user.%s-postgres.credentials.postgresql.acid.zalan.do" (include "common.names.fullname" .) | quote }}
+        secretName: {{ include "data-hub.postgres.secret" (dict "context" . "name" "grafana-public-owner-user" ) }}
         readOnly: true
     grafana.ini:
       auth.anonymous:
@@ -44,7 +47,7 @@ spec:
         ssl_mode: require
         user: $__file{/etc/secrets/postgres/username}
         password: $__file{/etc/secrets/postgres/password}
-        host: {{ printf "%s-postgres:5432" (include "common.names.fullname" .) }}
+        host: {{ printf "%s:5432" (include "data-hub.postgres.hostRW" .) }}
       security:
         allow_embedding: true
     resources: {{- $.Values.grafanaPublic.resources | toYaml | nindent 6 }}

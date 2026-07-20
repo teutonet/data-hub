@@ -1,4 +1,8 @@
 import L from 'leaflet';
+import { writable } from 'svelte/store';
+
+export const mousePosStore = writable([0.0, 0.0]);
+
 // function getAveragePosition(sensorLocations: LatLngLiteral[]) {
 //     let latSum: number = 0;
 //     let lngSum: number = 0;

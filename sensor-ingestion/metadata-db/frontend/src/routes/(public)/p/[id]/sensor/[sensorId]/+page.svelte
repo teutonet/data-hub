@@ -8,7 +8,7 @@
 		UPDATE_THING_BY_ID
 	} from '$lib/common/graphql/queries';
 	import type { PageData } from './$types';
-	import { Button, Alert, Heading, P } from 'flowbite-svelte';
+	import { Button, Alert } from 'flowbite-svelte';
 	import HeroiconsExclamationCircle20Solid from '~icons/heroicons/exclamation-circle-20-solid';
 	import { handleCombinedErrors, performMutation } from '$lib/common/graphql/utils';
 	import ValidatedFormField from '$lib/ValidatedFormField.svelte';
@@ -27,7 +27,6 @@
 	import DeleteButton from '$lib/common/modals/DeleteButton.svelte';
 	import { goto } from '$app/navigation';
 	import SensorForm from '$lib/SensorForm.svelte';
-	import ThingOffsetList from '$lib/ThingOffsetList.svelte';
 	import { emptyToNull, replaceComma } from '$lib/stringUtils';
 	import HistoryModal from '$lib/HistoryModal.svelte';
 	import { formatDatetime } from '$lib/nav/dateUtils';
@@ -53,7 +52,7 @@
 		})
 	);
 
-	let thing: GetThingByIdQuery['thing'] = $state();
+	let thing: GetThingByIdQuery['thing'] | undefined = $state();
 	$effect(() => {
 		thing = $thingStore.data?.thing;
 	});
@@ -149,6 +148,7 @@
 		title={$_('page.sensorPage.title', { values: { name: thing.name, id: thing.id } })}
 		sensorTypes={allSensorTypes}
 		bind:thing
+		thingId={thing.id}
 		{payload}
 	>
 		{#snippet alertTop()}
@@ -159,7 +159,7 @@
 			{/if}
 			{#if thing && thing.latestError !== null}
 				<Alert class="my-4 flex w-full max-w-full items-center border" color="red">
-					<HeroiconsExclamationCircle20Solid class="-ml-1  -mr-2" font-size="20" />
+					<HeroiconsExclamationCircle20Solid class="-mr-2  -ml-1" font-size="20" />
 					{$_('component.thingsError.alert')}
 					{thing.latestError} ({$formatDatetime(thing.errorTimestamp)})
 				</Alert>
@@ -176,7 +176,7 @@
 			{/if}
 		{/snippet}
 		{#snippet bottomButtons()}
-			<Button class="my-4 grow" on:click={() => updateThing(false)}>
+			<Button color="green" class="my-4 grow" on:click={() => updateThing(false)}>
 				{$_('sensorView.saveSensor')}
 			</Button>
 			<DeleteButton
@@ -197,20 +197,10 @@
 				</Button>
 			{/if}
 		{/snippet}
-		{#if thing.sensorId}
-			<Heading tag="h3" class="mb-2">
-				{$_('sensorView.offsetsHeading')}
-			</Heading>
-			<P class="mb-2">
-				{$_('sensorView.editOrDeleteWarning')}
-			</P>
-			<ThingOffsetList thingId={thing.id} sensorTypeId={thing.sensorId} />
-		{/if}
 	</SensorForm>
 	<HistoryModal
 		entityId={thing.id}
 		excludedKeys={['thing_id']}
-		dataKey="thingChanges"
 		query={GET_THING_CHANGES}
 		additionalNames={sensorTypeNames}
 		openButtonClass={undefined}

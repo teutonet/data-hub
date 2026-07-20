@@ -16,6 +16,7 @@
 	import { requestPolicyExchange } from '@urql/exchange-request-policy';
 
 	import * as Sentry from '@sentry/sveltekit';
+	import { setContext } from 'svelte';
 	interface Props {
 		children?: import('svelte').Snippet;
 	}
@@ -32,8 +33,39 @@
 			})
 		});
 
+		const reqPolicyExchange = requestPolicyExchange({
+			// The amount of time in ms that has to go by before upgrading, default is 5 minutes.
+			ttl: 60 * 1000, // 1 minute.
+			// An optional function that allows you to specify whether an operation should be upgraded.
+			shouldUpgrade: (operation) => operation.context.requestPolicy !== 'cache-only'
+		});
+
+		const errExchange = errorExchange({
+			onError(errors, req) {
+				const extra = {
+					networkError: errors.networkError,
+					graphQLErrors: errors.graphQLErrors.map(
+						(e) => `${e.message}, path: ${e.path?.join(',')}`
+					),
+					requestVariables: JSON.stringify(req.variables)
+				};
+				Sentry.captureMessage(
+					`GraphQL error ${extra.networkError || extra.graphQLErrors.join(', ')}`,
+					{
+						level: 'error',
+						extra
+					}
+				);
+				// we never expect errors on queries so handle all of them here
+				if (req.kind === 'query' || req.kind === 'subscription') {
+					handleCombinedErrors(errors, { showToasts: true });
+				}
+			}
+		});
+
 		const client = createClient({
 			url: getConfig('GRAPHQL_HTTP_ENDPOINT'),
+			preferGetMethod: false,
 			fetchOptions: () => {
 				// Set Auth for Fetch requests (query, mutation)
 				return {
@@ -43,35 +75,9 @@
 				};
 			},
 			exchanges: [
-				requestPolicyExchange({
-					// The amount of time in ms that has to go by before upgrading, default is 5 minutes.
-					ttl: 60 * 1000, // 1 minute.
-					// An optional function that allows you to specify whether an operation should be upgraded.
-					shouldUpgrade: (operation) => operation.context.requestPolicy !== 'cache-only'
-				}),
+				reqPolicyExchange,
 				cacheExchange,
-				errorExchange({
-					onError(errors, req) {
-						const extra = {
-							networkError: errors.networkError,
-							graphQLErrors: errors.graphQLErrors.map(
-								(e) => `${e.message}, path: ${e.path?.join(',')}`
-							),
-							requestVariables: JSON.stringify(req.variables)
-						};
-						Sentry.captureMessage(
-							`GraphQL error ${extra.networkError || extra.graphQLErrors.join(', ')}`,
-							{
-								level: 'error',
-								extra
-							}
-						);
-						// we never expect errors on queries so handle all of them here
-						if (req.kind === 'query' || req.kind === 'subscription') {
-							handleCombinedErrors(errors, { showToasts: true });
-						}
-					}
-				}),
+				errExchange,
 				retryExchange({
 					maxNumberAttempts: 10,
 					maxDelayMs: 10000
@@ -95,6 +101,31 @@
 		});
 
 		setContextClient(client);
+
+		const resourceApiClient = createClient({
+			url: getConfig('RESOURCE_API_GRAPHQL_ENDPOINT'),
+			preferGetMethod: false,
+			fetchOptions: () => {
+				// Set Auth for Fetch requests (query, mutation)
+				return {
+					headers: {
+						authorization: $isAuthenticated ? `Bearer ${$accessToken}` : ''
+					}
+				};
+			},
+			exchanges: [
+				reqPolicyExchange,
+				cacheExchange,
+				errExchange,
+				retryExchange({
+					maxNumberAttempts: 10,
+					maxDelayMs: 10000
+				}),
+				fetchExchange
+			]
+		});
+
+		setContext('resourceApiGraphql', resourceApiClient);
 	}
 </script>
 

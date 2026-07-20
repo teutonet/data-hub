@@ -1,33 +1,22 @@
-import { error, success } from '$lib/common/toast/toast';
+import { error } from '$lib/common/toast/toast';
 import { getConfig } from '$lib/config';
 import { getMessageFormatter } from 'svelte-i18n';
 
 export const API_NAME_REGEX = '[a-z0-9]([\\-a-z0-9]{0,34}[a-z0-9])?';
 
-export const deleteResource = async (resourcePath: string, accessToken: string) => {
-	return apiFetchResponse(resourcePath, accessToken, 'DELETE').then(() =>
-		success('shared.message.deletedSuccessfully')
-	);
-};
-
-export type UdhPrincipal = TenantResource | GroupResource;
-
-export interface TenantResource {
-	type: 'tenant';
+export interface ResourceType {
+	type: 'tenant' | 'group' | 'vizGroup' | 'project';
 	tenant: string;
+	resourceName: string;
+	displayName: string;
 }
 
-export interface GroupResource {
-	type: 'group';
+export type UdhPrincipal = {
+	type: 'tenant' | 'group' | 'vizGroup';
 	tenant: string;
-	group: string;
-}
-
-export interface ProjectResource {
-	type: 'project';
-	tenant: string;
-	project: string;
-}
+} & (
+	{ type: 'tenant' } | { type: 'group'; group: string } | { type: 'vizGroup'; vizGroup: string }
+);
 
 export type PermissionItem = {
 	name: string;
@@ -35,21 +24,30 @@ export type PermissionItem = {
 	scopes: string[];
 };
 
-export type ResourceType = TenantResource | GroupResource | ProjectResource;
-
 export function toResourceUrl(resource: ResourceType): string {
-	switch (resource.type) {
-		case 'tenant':
-			return `data-hub/tenants/${resource.tenant}`;
-		case 'group':
-			return `data-hub/tenants/${resource.tenant}/groups/${resource.group}`;
-		case 'project':
-			return `data-hub/tenants/${resource.tenant}/projects/${resource.project}`;
+	if (resource.type === 'tenant') {
+		return `data-hub/tenants/${resource.tenant}`;
+	} else if (resource.type === 'vizGroup') {
+		return `data-hub/tenants/${resource.tenant}/viz-groups/${resource.resourceName}`;
+	} else {
+		return `data-hub/tenants/${resource.tenant}/${resource.type}s/${resource.resourceName}`;
 	}
 }
 
+export const fetchTenants = async (accessToken: string) => {
+	return apiFetch<string[]>(`data-hub/tenants/`, accessToken, true);
+};
+
 export const fetchGroups = async (tenant: string, accessToken: string) => {
 	return apiFetch<string[]>(`data-hub/tenants/${tenant}/groups`, accessToken, true);
+};
+
+export const fetchVizGroups = async (tenant: string, accessToken: string) => {
+	return apiFetch<string[]>(`data-hub/tenants/${tenant}/viz-groups`, accessToken, true);
+};
+
+export const fetchProjects = async (tenant: string, accessToken: string) => {
+	return apiFetch<string[]>(`data-hub/tenants/${tenant}/projects`, accessToken, true);
 };
 
 export const fetchScopes = async (resource: ResourceType, accessToken: string) => {
@@ -81,13 +79,15 @@ export const apiFetchResponse = async (
 	accessToken: string,
 	method?: 'GET' | 'PUT' | 'POST' | 'DELETE',
 	body?: any,
-	baseUrl = getConfig('OIDC_AUTHORITY')
+	baseUrl = getConfig('OIDC_AUTHORITY'),
+	isBodyJson = false
 ) => {
 	const response = await fetch(`${baseUrl}/${path}`, {
 		method,
 		mode: 'cors',
 		headers: {
-			Authorization: `Bearer ${accessToken}`
+			Authorization: `Bearer ${accessToken}`,
+			...(isBodyJson && { 'Content-Type': 'application/json' })
 		},
 		body: JSON.stringify(body)
 	});
@@ -95,15 +95,15 @@ export const apiFetchResponse = async (
 		switch (response.status) {
 			// Unauthorized
 			case 401:
-				error('shared.message.networkError', 'shared.keycloakAPI.requestErros.unauthorized');
+				error('shared.message.networkError', 'shared.keycloakAPI.requestErrors.unauthorized');
 				break;
 			// Forbidden
 			case 403:
-				error('shared.message.networkError', 'shared.keycloakAPI.requestErros.forbidden');
+				error('shared.message.networkError', 'shared.keycloakAPI.requestErrors.forbidden');
 				break;
 			// Conflict
 			case 409:
-				error('shared.message.networkError', 'shared.keycloakAPI.requestErros.conflict');
+				error('shared.message.networkError', 'shared.keycloakAPI.requestErrors.conflict');
 				break;
 			default:
 				error('shared.message.networkError', 'shared.message.networkErrorDetail');

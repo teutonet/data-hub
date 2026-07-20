@@ -21,3 +21,19 @@ mdb.{{ .Values.global.baseDomain }}
 {{- define "data-hub.mailpit.hostname" -}}
 smtp.{{ .Values.global.baseDomain }}
 {{- end -}}
+
+{{- define "data-hub.storage.hostname" -}}
+storage.{{ .Values.global.baseDomain }}
+{{- end -}}
+
+{{- define "data-hub.docs.hostname" -}}
+docs.{{ .Values.global.baseDomain }}
+{{- end -}}
+
+{{- define "sensor-ingestion.prometheusWriter.hostname" -}}
+api.{{ .Values.global.baseDomain }}
+{{- end -}}
+
+{{- define "sensor-ingestion.sensorTransformer.hostname" -}}
+api.{{ .Values.global.baseDomain }}
+{{- end -}}

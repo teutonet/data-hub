@@ -1,0 +1,223 @@
+{{- define "udh.babashkaContainer.env-get-keycloak-fingerprint.clj" -}}
+- name: KEYCLOAK_DOMAIN
+  value: {{ (include "data-hub.keycloak.hostname" .context) | quote }}
+{{- if .context.Values.global.trustCaSecretName }}
+- name: CA_BUNDLE
+  value: /tls/ca.crt
+{{- end }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "migrations") }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ include "data-hub.name" (dict "context" . "name" "migrations") }}
+      initContainers:
+        - name: wait-dependencies
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.global.basePipeline.image "global" .Values.global) }}
+          command:
+            - bash
+            - -ce
+            - |
+              kubectl rollout status deployment &
+              kubectl rollout status statefulset &
+
+              {{- if .Values.objectStorage.reuseClusterFromNamespace }}
+              kubectl rollout status deployment -n {{ .Values.objectStorage.reuseClusterFromNamespace }} {{ printf "rook-ceph-rgw-ns-%s-a" .Release.Namespace }} &
+              {{- end }}
+
+              wait || true
+        {{- if .Values.objectStorage.enabled }}
+        - name: rgw-setup
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.global.basePipeline.image "global" .Values.global) }}
+          command:
+            - bash
+            - -ce
+            - kubectl exec -n {{ coalesce .Values.objectStorage.reuseClusterFromNamespace .Release.Namespace }} deploy/rook-ceph-tools -- bash -c "$0"
+            - |
+              set -eu -o pipefail
+
+              rgwa="radosgw-admin --rgw-realm={{ if .Values.objectStorage.reuseClusterFromNamespace }}{{ printf "ns-%s" .Release.Namespace }}{{ else }}bucket{{ end }}"
+
+              $rgwa account get    --account-id=RGW99999999999999999 ||
+              $rgwa account create --account-id=RGW99999999999999999 --max-users=999999 --max-buckets=999999
+
+              $rgwa user modify --uid={{ printf "%s-bucket-admin" (include "common.names.fullname" .) | quote }} --display-name=bucketadmin --account-id=RGW99999999999999999 --account-root
+              $rgwa user modify --uid={{ printf "%s-oidc-admin" (include "common.names.fullname" .) | quote }} --display-name=oidcadmin --account-id=RGW99999999999999999
+
+              # if role not in account (thus found without account id), delete and re-create correctly (below)
+              $rgwa role delete --role-name usercode || true
+
+              {{- if and .Values.objectStorage.reuseClusterFromNamespace .Values.global.testDeployment }}
+              poolset () {
+                for setting in "${@:2}"
+                do
+                  ceph osd pool set "$1" "${setting%%=*}" "${setting#*=}"
+                done
+              }
+              ceph osd pool ls | grep "^{{ printf "ns-%s" .Release.Namespace }}\\." | tr -d \\r |
+              while read pool
+              do
+                poolset "$pool" pg{_num_min,_num,p_num}=1 pg_autoscale_mode=off
+              done
+              {{- end }}
+        - {{ include "udh.babashkaContainer" (dict "context" . "script" "get-keycloak-fingerprint.clj") | indent 10 | trim }}
+          volumeMounts: &oidcVolumeMounts
+            - mountPath: /fingerprint
+              name: fingerprint
+            {{- if .Values.global.trustCaSecretName }}
+            - mountPath: /tls
+              name: ca-cert
+            {{- end }}
+        - name: configure-rgw-oidc
+          image: public.ecr.aws/aws-cli/aws-cli:2.15.19
+          command:
+            - bash
+            - -ce
+            - |
+              # accept ID tokens from our Keycloak
+              aws iam get-open-id-connect-provider --open-id-connect-provider-arn arn:aws:iam::RGW99999999999999999:oidc-provider/{{ include "data-hub.keycloak.hostname" . }}/realms/udh \
+              || aws iam create-open-id-connect-provider --url https://{{ include "data-hub.keycloak.hostname" . }}/realms/udh --thumbprint-list "`cat /fingerprint/fp`" --client-id-list buckets
+
+              # create the role used by federated users, allowed buckets are passed in session tags https://docs.ceph.com/en/reef/radosgw/session-tags/
+              aws iam get-role --role-name usercode \
+              || aws iam create-role --role-name usercode --max-session-duration $MAX_SESSION_DURATION --assume-role-policy-document "$POLICY"
+
+              # apply changes to MAX_SESSION_DURATION
+              aws iam update-role --role-name usercode --max-session-duration $MAX_SESSION_DURATION
+          env:
+            - name: AWS_ENDPOINT_URL
+              value: {{ print "https://" ( include "data-hub.storage.hostname" . ) | quote }}
+            {{- include "udh.objectstore.userEnv" (dict "user" "oidc-admin" "context" .) | nindent 12 }}
+            - name: POLICY
+              value: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["sts:AssumeRoleWithWebIdentity","sts:TagSession"],"Principal":{"Federated":["arn:aws:iam::RGW99999999999999999:oidc-provider/{{ include "data-hub.keycloak.hostname" . }}/realms/udh"]}}]}'
+            - name: MAX_SESSION_DURATION
+              value: "36000"
+            - name: AWS_REGION
+              value: ""
+            {{- if .Values.global.trustCaSecretName }}
+            - name: AWS_CA_BUNDLE
+              value: /tls/ca.crt
+            {{- end }}
+          volumeMounts: *oidcVolumeMounts
+          {{- end }}
+        {{- if .Values.global.testDeployment }}
+        - name: provision-test-resources
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+          image: blairy/requests:20241008_2116@sha256:db9a5be3bc778b4eca0e59e601519db86c4e36958bbf46265ca2a5c91dfad571
+          command: ["python3"]
+          args:
+            - -c
+            - |
+              {{- .Files.Get "files/resource-auto-provision/queries.py" | nindent 14 }}
+              {{- .Files.Get "files/resource-auto-provision/provision.py" | nindent 14 }}
+              run()
+          env:
+            - name: LOGLEVEL
+              value: info
+            - name: READY_URLS
+              value: {{ include "udh.keycloak.realmUrl" . }}
+            - name: KEYCLOAK_REALM_URL
+              value: {{ include "udh.keycloak.realmUrl" . }}
+            - name: KEYCLOAK_ADMIN_URL
+              value: https://{{ include "data-hub.keycloak.hostname" . }}/admin/realms/{{ .Values.keycloak.realm }}
+            - name: GQL_REQUEST_URL
+              value: https://{{ include "sensor-ingestion.mdb.frontend.hostname" . }}/graphql
+            - name: RESOURCE_GQL_REQUEST_URL
+              value: {{ include "udh.keycloak.realmUrl" . }}/data-hub/graphql
+            - name: LORAWAN_API_URL
+              value: {{ printf "https://api.%s/api/v1/sensordata" .Values.global.baseDomain | quote }}
+            - name: WRITE_SENSOR_DATA
+              value: {{ .Values.testAutoProvision.writeSensorData | quote }}
+            - &clientId
+              name: CLIENT_ID
+              value: auto-provisioning
+            - &clientSecret
+              name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-auto-provisioning-client-secret" (include "common.names.fullname" .) | quote }}
+                  key: auto-provisioning-client-secret
+          {{- if .Values.global.trustCaSecretName }}
+            - name: REQUESTS_CA_BUNDLE
+              value: /tls/ca.crt
+          volumeMounts:
+            - mountPath: /tls
+              name: ca-cert
+          {{- end }}
+        {{- end }}
+      containers:
+        - {{ include "udh.migrations.repair" (dict "context" . "path" "_repair" "name" "repair-resources") | indent 10 | trim }}
+      volumes:
+        - name: fingerprint
+          emptyDir:
+            sizeLimit: 100Mi
+        {{- if .Values.global.trustCaSecretName }}
+        - name: ca-cert
+          secret:
+            secretName: {{ .Values.global.trustCaSecretName }}
+            items:
+            - key: ca.crt
+              path: ca.crt
+        {{- end }}
+      restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "nightly-repair") }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  schedule: "0 3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - {{ include "udh.migrations.repair" (dict "context" . "path" "_repair" "name" "repair-resources") | indent 14 | trim }}
+          {{- if .Values.global.trustCaSecretName }}
+          volumes:
+            - name: ca-cert
+              secret:
+                secretName: {{ .Values.global.trustCaSecretName }}
+                items:
+                - key: ca.crt
+                  path: ca.crt
+          {{- end }}
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "inactivity-check") }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - {{ include "udh.migrations.repair" (dict "context" . "path" "_handle_inactive_users" "name" "inactivity-check") | indent 14 | trim }}
+          {{- if .Values.global.trustCaSecretName }}
+          volumes:
+            - name: ca-cert
+              secret:
+                secretName: {{ .Values.global.trustCaSecretName }}
+                items:
+                - key: ca.crt
+                  path: ca.crt
+          {{- end }}
+          restartPolicy: OnFailure

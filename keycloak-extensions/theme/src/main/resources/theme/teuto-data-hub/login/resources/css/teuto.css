@@ -65,6 +65,7 @@ body {
 .pf-c-button {
 	border-radius: 0.5rem !important;
 	padding: 0.625rem !important;
+	background-color: var(--primary-600-teuto) !important;
 }
 
 .c-form-control {

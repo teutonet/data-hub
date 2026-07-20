@@ -9,7 +9,7 @@
 
 	function generateId(): string {
 		let n = Date.now();
-		return (++n).toString(36);
+		return (n + 1).toString(36);
 	}
 
 	interface Props {

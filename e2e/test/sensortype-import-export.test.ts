@@ -1,13 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { getRandomString } from './helper/util';
-import { KEYCLOAK, MDB_FRONTEND } from './helper/urls';
+import { getRandomString, RandomTenantManager } from './helper/util';
+import { MDB_FRONTEND } from './helper/urls';
 import {
-	createRealmAdminClient,
+	createResources,
+	createResourceToken,
 	DATA_HUB_ADMIN_PASSWORD,
 	DATA_HUB_ADMIN_USERNAME,
 	signInWith
 } from './helper/keycloak';
 import { MdbApi } from './helper/mdb-api';
+
+const TENANT_MGR = new RandomTenantManager();
 
 test('User can export sensortypes', async ({ page, context }) => {
 	if (context.browser().browserType().name() !== 'firefox') {
@@ -33,22 +36,15 @@ test('User can export sensortypes', async ({ page, context }) => {
 		}[];
 	};
 
-	const realmAdminClient = await createRealmAdminClient();
 	const testPostfix = getRandomString(6);
-	const tenantName = `knuffingen-${testPostfix}`;
-	await realmAdminClient.put<string[]>(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenantName}/`);
-	await realmAdminClient.put<string[]>(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/${tenantName}/projects/testproject-${testPostfix}/`
-	);
+	const tenantName = TENANT_MGR.with(testPostfix);
+	await createResources([`tenants/${tenantName}/projects/testproject-${testPostfix}`]);
 
-	await page.goto(`${MDB_FRONTEND}api/tenants/${tenantName}/projects/testproject-${testPostfix}`);
-	await signInWith(page, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
-	await page.getByRole('button', { name: 'Neuen Token anlegen' }).click();
-	await page.getByPlaceholder(' ').fill(`testtoken-${testPostfix}`);
-	await page.getByRole('button', { name: 'Token erzeugen' }).click();
-	const tokenUsername = await page.getByLabel('Username').inputValue();
-	const tokenPassword = await page.getByLabel('Passwort').inputValue();
-	await page.getByRole('button', { name: 'Schließen' }).click();
+	const { username: tokenUsername, password: tokenPassword } = await createResourceToken(
+		tenantName,
+		`testproject-${testPostfix}`,
+		'token'
+	);
 
 	const mdbApi = new MdbApi(
 		`${tenantName}.testproject-${testPostfix}`,
@@ -70,16 +66,15 @@ test('User can export sensortypes', async ({ page, context }) => {
 		}
 	]);
 
-	await page.goto(`${MDB_FRONTEND}overview`);
-	await page.getByText('Projekt auswählen').click();
+	await page.goto(`${MDB_FRONTEND}`);
+	await signInWith(page, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
+	await page.getByRole('button', { name: 'Alle Projekte' }).click();
 	await page
 		.getByRole('tooltip')
-		.getByRole('link', { name: `${tenantName}.testproject-${testPostfix}` })
+		.getByRole('button', { name: `${tenantName}.testproject-${testPostfix}` })
 		.click();
-	await page
-		.locator('a')
-		.filter({ hasText: /^Sensortypen$/ })
-		.click();
+	await page.getByRole('button', { name: 'Sensorverwaltung', exact: true }).click();
+	await page.getByRole('link', { name: 'Sensortypen', exact: true }).click();
 	await expect(page.getByRole('heading', { name: 'Sensortypen' })).toBeVisible();
 	await page.getByRole('cell', { name: `test_sensor-${testPostfix}` }).click();
 
@@ -124,13 +119,9 @@ test('User can export sensortypes', async ({ page, context }) => {
 });
 
 test('User can import sensortypes', async ({ page }) => {
-	const realmAdminClient = await createRealmAdminClient();
 	const testPostfix = getRandomString(6);
-	const tenantName = `knuffingen-${testPostfix}`;
-	await realmAdminClient.put<string[]>(`${KEYCLOAK}realms/udh/data-hub/tenants/${tenantName}/`);
-	await realmAdminClient.put<string[]>(
-		`${KEYCLOAK}realms/udh/data-hub/tenants/${tenantName}/projects/testproject2-${testPostfix}/`
-	);
+	const tenantName = TENANT_MGR.with(testPostfix);
+	await createResources([`tenants/${tenantName}/projects/testproject2-${testPostfix}`]);
 
 	const jsonImport = `{
         "sensordata": {
@@ -161,17 +152,15 @@ test('User can import sensortypes', async ({ page }) => {
         ]
     }`;
 
-	await page.goto(`${MDB_FRONTEND}overview`);
+	await page.goto(`${MDB_FRONTEND}`);
 	await signInWith(page, DATA_HUB_ADMIN_USERNAME, DATA_HUB_ADMIN_PASSWORD);
-	await page.getByText('Projekt auswählen').click();
+	await page.getByRole('button', { name: 'Alle Projekte' }).click();
 	await page
 		.getByRole('tooltip')
-		.getByRole('link', { name: `${tenantName}.testproject2-${testPostfix}` })
+		.getByRole('button', { name: `${tenantName}.testproject2-${testPostfix}` })
 		.click();
-	await page
-		.locator('a')
-		.filter({ hasText: /^Sensortypen$/ })
-		.click();
+	await page.getByRole('button', { name: 'Sensorverwaltung', exact: true }).click();
+	await page.getByRole('link', { name: 'Sensortypen', exact: true }).click();
 	await expect(page.getByRole('heading', { name: 'Sensortypen' })).toBeVisible();
 	await page.getByRole('button', { name: 'Sensortyp Importieren' }).click();
 	await expect(page.getByRole('heading', { name: 'Importiere Sensortyp als JSON' })).toBeVisible();
