@@ -65,19 +65,13 @@ else
   minikube config set driver docker
 
   echo "starting minikube"
-  minikube start --cni=cilium --driver docker --cpus=${MINIKUBE_RESOURCE_CPU} --memory=${MINIKUBE_RESOURCE_RAM} --kubernetes-version=${KUBERNETES_VERSION}
+  minikube start --cni=cilium --driver docker --cpus=${MINIKUBE_RESOURCE_CPU} --memory=${MINIKUBE_RESOURCE_RAM} --kubernetes-version=${KUBERNETES_VERSION} --extra-config=apiserver.service-node-port-range=1-32767
 
   minikube_started=true
 fi
 
 if $minikube_started || [ ${MINIKUBE_SETUP:-0} -eq 1 ]
 then
-  echo "enabling ingress controller"
-  minikube addons enable ingress --images="IngressController=registry.k8s.io/ingress-nginx/controller:v1.13.2"
-
-  # snippet annotations are disabled by default
-  $KUBECTL -n ingress-nginx get configmaps ingress-nginx-controller -ojson | jq '.data["allow-snippet-annotations"] = "true" | .data["annotations-risk-level"] = "Critical"' | $KUBECTL apply -f -
-
   echo "enabling metrics-server"
   minikube addons enable metrics-server
 
@@ -85,13 +79,20 @@ then
   minikube addons enable registry --images="KubeRegistryProxy=registry.k8s.io/minikube/kube-registry-proxy:v0.0.11"
    # Using Cilium as a CNI somehow breaks running the docker registry on localhost:5000 (only on some machines), this is hopefully fixing it 
   $KUBECTL -n kube-system patch svc registry --type json --patch '[{"op":"replace","path":"/spec/type","value":"NodePort"},{"op":"add","path":"/spec/ports/0/nodePort","value":32000}]'
-  $KUBECTL -n ingress-nginx patch svc ingress-nginx-controller -p "{\"spec\":{\"externalIPs\":[\"$(minikube ip)\"]}}"
 
   echo "enabling cert-manager"
   helm upgrade cert-manager --version "$CERT_MANAGER_VERSION" --install --create-namespace -n cert-manager cert-manager --repo https://charts.jetstack.io --set installCRDs=true --wait
 
   echo "enabling cnpg operator"
   helm upgrade cnpg --version "$CNPG_VERSION" --install  --create-namespace -n cnpg-system cloudnative-pg --repo https://cloudnative-pg.github.io/charts --wait
+
+  echo "enabling traefik ingress"
+  helm upgrade traefik --version "$TRAEFIK_VERSION" --install --create-namespace -n traefik traefik --repo https://traefik.github.io/charts --wait \
+    --set service.spec.type=NodePort \
+    --set providers.kubernetesIngressNGINX.enabled=true \
+    --set providers.kubernetesIngressNGINX.watchIngressWithoutClass=true \
+    --set ports.web.nodePort=80 \
+    --set ports.websecure.nodePort=443
 
   echo "install podmonitor crd"
   $KUBECTL apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/refs/heads/main/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
@@ -139,10 +140,10 @@ then
 fi
 
 # make test domain available inside cluster
-if ! $KUBECTL -n kube-system get configmap coredns -oyaml | grep -qF "rewrite name regex ^.*data-hub.local\\.$ ingress-nginx-controller.ingress-nginx.svc.cluster.local answer auto"
+if ! $KUBECTL -n kube-system get configmap coredns -oyaml | grep -qF "rewrite name regex ^.*data-hub.local\\.$ traefik.traefik.svc.cluster.local answer auto"
 then
   $KUBECTL -n kube-system get configmap coredns -oyaml \
-  | sed 's/^\( *\)loadbalance/\1rewrite name regex ^.*data-hub.local\\.$ ingress-nginx-controller.ingress-nginx.svc.cluster.local answer auto\n\0/g' \
+  | sed 's/^\( *\)loadbalance/\1rewrite name regex ^.*data-hub.local\\.$ traefik.traefik.svc.cluster.local answer auto\n\0/g' \
   | $KUBECTL apply -f -
   $KUBECTL rollout restart -n kube-system deployment coredns
 fi

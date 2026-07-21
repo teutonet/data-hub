@@ -27,6 +27,7 @@ spec:
     fullnameOverride: null # default is empty string which removes all prefixes
     ingress:
       enabled: true
+      ingressClassName: nginx
       hosts:
         - {{ include "data-hub.jupyterhub.hostname" . }}
       annotations: {{- include "udh.ingress.annotations" (dict "context" $ "annotations" .Values.jupyterhub.ingress.annotations) | nindent 8 }}
@@ -56,11 +57,19 @@ spec:
               namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: ingress-nginx
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/name: traefik
+              namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: traefik
             ports:
               - protocol: TCP
                 port: 80
               - protocol: TCP
                 port: 443
+              - protocol: TCP
+                port: 8443
         {{- end }}
       config:
         GenericOAuthenticator:
@@ -72,6 +81,7 @@ spec:
           username_claim: sub # ensures that the user ALWAYS keeps their data (and only theirs!) across email address and username changes
           allow_all: true
           login_service: Data HUB
+          oauth_callback_url: {{ printf "https://%s/hub/oauth_callback" (include "data-hub.jupyterhub.hostname" .) }}
           logout_redirect_url: {{ printf "https://%s/realms/udh/protocol/openid-connect/logout?client_id=jupyterhub" (include "data-hub.keycloak.hostname" .) }}
           validate_server_cert: {{ .Values.fakeCa.enabled | ternary "false" "true" }}
         Authenticator:
@@ -164,11 +174,19 @@ spec:
               namespaceSelector:
                 matchLabels:
                   kubernetes.io/metadata.name: ingress-nginx
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/name: traefik
+              namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: traefik
             ports:
               - protocol: TCP
                 port: 80
               - protocol: TCP
                 port: 443
+              - protocol: TCP
+                port: 8443
       {{- end }}
     proxy:
       service:

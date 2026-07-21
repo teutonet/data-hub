@@ -16,3 +16,5 @@ SNAPSHOTTER_VERSION=v8.3.0
 ROOK_CEPH_VERSION=1.19.x
 # renovate: datasource=github-tags depName=squidfunk/mkdocs-material
 MKDOCS_VERSION=9.7.0
+# renovate: datasource=helm depName=traefik versioning=helm registryUrl=https://traefik.github.io/charts
+TRAEFIK_VERSION=41.0.2

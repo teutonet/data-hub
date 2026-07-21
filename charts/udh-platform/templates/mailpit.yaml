@@ -48,6 +48,7 @@ spec:
             {{- end }}
     ingress:
       enabled: true
+      ingressClassName: nginx
       annotations: {{- include "udh.ingress.annotations" (dict "annotations" .Values.mailpit.ingress.annotations "context" .) | nindent 8 }}
         nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       hostname: {{ $url | quote }}

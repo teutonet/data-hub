@@ -26,6 +26,7 @@ spec:
     {{- end }}
     ingress:
       enabled: true
+      ingressClassName: nginx
       hosts:
         - dashboard-public.{{ .Values.global.baseDomain }}
       annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.grafanaPublic.ingress.annotations) | nindent 8 }}

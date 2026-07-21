@@ -33,7 +33,7 @@ spec:
 
             # Wait for keycloak service to be available
             echo "Waiting for keycloak service..."
-            until nc -z {{ include "data-hub.name" (dict "context" . "name" "sso-keycloak") }} 443; do
+            until nc -z {{ include "data-hub.name" (dict "context" . "name" "sso-keycloak") }} 80; do
               echo "waiting for keycloak...";
               sleep 5;
             done;

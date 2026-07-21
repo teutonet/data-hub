@@ -10,6 +10,7 @@ metadata:
   annotations:
     {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.lorawanReceiver.ingress.annotations "context" .) | nindent 4 }}
 spec:
+  ingressClassName: nginx
   rules:
   - host: {{ include "sensor-ingestion.lorawanReceiver.hostname" . }}
     http:

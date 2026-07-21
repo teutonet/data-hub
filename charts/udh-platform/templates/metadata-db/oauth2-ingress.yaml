@@ -86,6 +86,7 @@ spec:
     {{- end }}
     ingress:
       enabled: true
+      className: nginx
       annotations:
         {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.postgraphile.ingress.annotations "context" .) | nindent 8 }}
         nginx.ingress.kubernetes.io/proxy-buffer-size: "64k"

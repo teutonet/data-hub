@@ -95,6 +95,7 @@ metadata:
   annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.prometheus.ingress.annotations) | nindent 4 }}
     nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
+  ingressClassName: nginx
   rules:
   - host: prometheus.{{ .Values.global.baseDomain }}
     http:

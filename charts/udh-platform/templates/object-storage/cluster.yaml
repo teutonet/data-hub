@@ -161,6 +161,7 @@ spec:
           enabled: false
         ingress:
           enabled: true
+          ingressClassName: nginx
           annotations:
             {{- include "udh.objectstore.ingress.annotations" . | nindent 12 }}
           host:

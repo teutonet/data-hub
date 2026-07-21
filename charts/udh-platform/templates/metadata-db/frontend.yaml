@@ -110,6 +110,7 @@ metadata:
   annotations: 
     {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.frontend.ingress.annotations "context" .) | nindent 4 }}
 spec:
+  ingressClassName: nginx
   rules:
     - host: {{ $host | quote }}
       http:
@@ -135,8 +136,14 @@ metadata:
     {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.frontend.ingress.annotations "context" .) | nindent 4 }}
     nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "https://%s/" (include "sensor-ingestion.mdb.frontend.hostname" .) | quote }}
 spec:
+  ingressClassName: nginx
   rules:
-  - host: {{ $host | quote }}
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - backend: {{- include "common.ingress.backend" (dict "serviceName"  $serviceName "servicePort" "http" "context" .) | nindent 14 }}
+            pathType: Prefix
+            path: /
   tls:
   - hosts:
     - {{ $host }}

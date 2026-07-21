@@ -36,18 +36,10 @@ gateway:
 {{- define "udh.objectstore.ingress.annotations" -}}
 {{- include "udh.ingress.annotations" (dict "context" $ "annotations" .Values.objectStorage.ingress.annotations) }}
 nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
-# https://github.com/kubernetes/ingress-nginx/issues/10501
-nginx.ingress.kubernetes.io/configuration-snippet: |
-  more_set_headers 'Access-Control-Allow-Headers: *, Authorization';
-  more_set_headers 'Access-Control-Expose-Headers: *';
-  more_set_headers 'Access-Control-Allow-Origin: https://{{ include "sensor-ingestion.mdb.frontend.hostname" . }}';
-  more_set_headers 'Access-Control-Allow-Credentials: true';
-  more_set_headers 'Access-Control-Allow-Methods: PUT, DELETE, PATCH, HEAD';
-  if ($request_method = 'OPTIONS') {
-    more_set_headers 'Content-Type: text/plain charset=UTF-8';
-    more_set_headers 'Content-Length: 0';
-    return 204;
-  }
+nginx.ingress.kubernetes.io/enable-cors: "true"
+nginx.ingress.kubernetes.io/cors-allow-headers: '*'
+nginx.ingress.kubernetes.io/cors-expose-headers: '*'
+nginx.ingress.kubernetes.io/cors-allow-origin: 'https://{{ include "sensor-ingestion.mdb.frontend.hostname" . }}'
 {{- end -}}
 
 {{- define "udh.objectstore.userSecret" -}}

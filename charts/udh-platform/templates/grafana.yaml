@@ -38,6 +38,7 @@ spec:
       {{- include "udh-platform.imagePullSecrets" (dict "context" .) | replace "imagePullSecrets:" "pullSecrets:" | nindent 6 }}
     ingress:
       enabled: true
+      ingressClassName: nginx
       hosts:
         - {{ include "data-hub.grafana.hostname" . }}
       annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.grafana.ingress.annotations) | nindent 8 }}

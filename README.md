@@ -17,6 +17,10 @@ The main task of the platform is to integrate the different components
 and to provide a uniform authentication and authorization layer
 as well as management infrastructure such as frontends.
 
+## Contact
+
+Questions, issues, or suggestions regarding the teuto DataHub? Reach out at [info@teuto.net](mailto:info@teuto.net).
+
 ## Authorization / Resources
 
 see [Resources and Authorization](doc/resources_authorization.md)
