@@ -46,6 +46,7 @@ sealed interface CommonMutation : HasAttributes {
         dfe: DataFetchingEnvironment,
     ): String {
         val ctx = dfe.getAuthzContextOrThrow()
+        val delayedActionsList = dfe.getFromContext<DelayedActionsList>()!!
         val targetGenResource = getUdhResource(ctx)
         if (!hasPermissionScopes(targetGenResource.kcResource, listOf(ADMIN_SCOPE), ctx, ctx.evaluationContext)) {
             throw ForbiddenException()
@@ -71,10 +72,17 @@ sealed interface CommonMutation : HasAttributes {
                 permission.userPrincipals.orEmpty().map {
                     ensureUserPolicy(it.userId, ctx)
                 }
+        val permissionPrincipals: MutableSet<UdhPrincipal> =
+            permission.vizGroupPrincipals
+                .orEmpty()
+                .map {
+                    UdhVizGroup(it.tenant, it.vizGroup)
+                }.toMutableSet()
         lookupPermission(targetGenResource.kcResource, permission.name, ctx)?.let {
             ctx.policyStore.delete(it.id)
             // without flushing, re-creating with same name in same transaction fails
             ctx.entityManager.flush()
+            permissionPrincipals.addAll(permissionToPrincipals(it, ctx))
         }
         val policy = ScopePermissionRepresentation()
         policy.name = targetGenResource.path.plus("permission", permission.name).toHash()
@@ -84,6 +92,17 @@ sealed interface CommonMutation : HasAttributes {
         policy.decisionStrategy = DecisionStrategy.AFFIRMATIVE
         policy.description = permission.name
         createPolicy(policy, ctx.policyStore, ctx.resourceServer)
+        // without flushing, the permission is ignored during this transaction
+        ctx.entityManager.flush()
+
+        val orgsToSync =
+            permissionPrincipals.flatMap {
+                listOf(it as? UdhVizGroup ?: return@flatMap listOf())
+            }
+        LOGGER.debug("create permission, would sync ${orgsToSync.joinToString()}")
+        delayedActionsList.changes.add {
+            syncGrafanaOrgs(ctx, orgsToSync)
+        }
         return permission.name
     }
 
@@ -92,13 +111,23 @@ sealed interface CommonMutation : HasAttributes {
         dfe: DataFetchingEnvironment,
     ): String {
         val ctx = dfe.getAuthzContextOrThrow()
+        val delayedActionsList = dfe.getFromContext<DelayedActionsList>()!!
         val targetGenResource = getUdhResource(ctx)
         if (!hasPermissionScopes(targetGenResource.kcResource, listOf(ADMIN_SCOPE), ctx, ctx.evaluationContext)) {
             throw ForbiddenException()
         }
         val permissionObj =
             lookupPermission(targetGenResource.kcResource, permission, ctx) ?: throw NotFoundException()
+        val principals = permissionToPrincipals(permissionObj, ctx)
         ctx.policyStore.delete(permissionObj.id)
+        val orgsToSync =
+            principals.flatMap {
+                listOf(it as? UdhVizGroup ?: return@flatMap listOf())
+            }
+        LOGGER.debug("delete permission, would sync ${orgsToSync.joinToString()}")
+        delayedActionsList.changes.add {
+            syncGrafanaOrgs(ctx, orgsToSync)
+        }
 
         return permission
     }

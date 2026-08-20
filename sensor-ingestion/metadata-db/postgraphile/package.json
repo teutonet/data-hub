@@ -8,23 +8,23 @@
 	"scripts": {
 		"build": "tsc"
 	},
-	"packageManager": "pnpm@11.10.0",
+	"packageManager": "pnpm@11.19.0",
 	"dependencies": {
 		"@graphile/simplify-inflection": "8.0.0",
 		"express": "5.2.1",
 		"express-oauth2-jwt-bearer": "1.9.1",
-		"graphile-config": "1.0.1",
+		"graphile-config": "1.1.0",
 		"graphql": "16.14.2",
-		"helmet": "8.2.0",
+		"helmet": "8.3.0",
 		"lil-http-terminator": "1.2.3",
 		"pg": "8.22.0",
 		"pg-sql2": "5.0.1",
-		"postgraphile": "5.0.3",
-		"postgraphile-plugin-connection-filter": "3.0.1"
+		"postgraphile": "5.1.2",
+		"postgraphile-plugin-connection-filter": "3.0.3"
 	},
 	"devDependencies": {
 		"@types/express": "5.0.6",
-		"@types/pg": "8.20.0",
+		"@types/pg": "8.20.3",
 		"@types/ws": "8.18.1",
 		"typescript": "6.0.3"
 	}

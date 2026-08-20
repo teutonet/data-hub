@@ -9,3 +9,6 @@ CVE-2023-45853
 
 # false positive https://github.com/madler/zlib/issues/1142#issuecomment-3729902129
 CVE-2026-22184
+
+# no user controlled tar input
+CVE-2026-59873

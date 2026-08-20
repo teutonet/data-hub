@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: grafana
-      version: 11.6.1 # renovate: datasource=docker depName=ghcr.io/grafana-community/helm-charts/grafana
+      version: 12.1.1 # renovate: datasource=docker depName=ghcr.io/grafana-community/helm-charts/grafana
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
@@ -106,6 +106,8 @@ spec:
       {{- if .Values.global.testDeployment }}
       log:
         level: debug
+      feature_toggles:
+        splashScreen: false
       {{- end }}
       smtp:
         enabled: {{ .Values.grafana.smtp.enabled }}

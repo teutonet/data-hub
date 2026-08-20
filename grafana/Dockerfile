@@ -23,7 +23,7 @@ FROM alpine-base AS source
 
 ARG GRAFANA_REPO=https://github.com/grafana/grafana.git
 # renovate: datasource=github-tags depName=grafana/grafana
-ARG GRAFANA_VERSION=v12.4.5
+ARG GRAFANA_VERSION=v13.0.6
 
 RUN apk add --no-cache git patch
 

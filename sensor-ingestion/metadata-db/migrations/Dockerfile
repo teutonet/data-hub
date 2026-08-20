@@ -1,6 +1,6 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:24.18.0-alpine
+FROM ${REGISTRY_MIRROR_LIB}node:24.19.0-alpine
 
 RUN apk upgrade --no-cache
 

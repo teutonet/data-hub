@@ -92,12 +92,28 @@ spec:
         paths:
           - backend: {{- include "common.ingress.backend" (dict "serviceName"  $serviceName "servicePort" "http" "context" .) | nindent 14 }}
             pathType: Prefix
-            path: /
+            path: /geojson
   tls:
   - hosts:
     - {{ $host }}
     secretName: {{ $host }}-tls
-    
+
+{{- if .Values.geojsonExport.podMonitor }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ printf "%s-geojson-export" (include "common.names.fullname" .) | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  podMetricsEndpoints:
+    - port: http
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+{{- end }}
+
 {{- if gt (.Values.geojsonExport.replicas | int64) 1 }}
 ---
 apiVersion: policy/v1

@@ -1,6 +1,6 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:24.18.0-alpine as build
+FROM ${REGISTRY_MIRROR_LIB}node:24.19.0-alpine as build
 
 COPY package.json pnpm-lock.yaml /postgraphile/
 
@@ -13,7 +13,7 @@ COPY src /postgraphile/src
 
 RUN npm run build
 
-FROM ${REGISTRY_MIRROR_LIB}node:24.18.0-alpine
+FROM ${REGISTRY_MIRROR_LIB}node:24.19.0-alpine
 
 RUN apk upgrade --no-cache
 

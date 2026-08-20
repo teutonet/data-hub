@@ -3,3 +3,6 @@ CVE-2026-22184
 
 # not applicable: https://github.com/grafana/grafana/pull/123181#issue-4305852297
 CVE-2026-33816
+
+# grafana doesn't use ValidationHandler
+GHSA-r277-6w6q-xmqw

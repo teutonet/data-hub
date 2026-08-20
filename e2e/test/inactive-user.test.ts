@@ -88,12 +88,9 @@ async function triggerHandleInactiveUsers() {
 		// got mail
 		const messages = await searchByEmailAndSubject(user.email, '[teuto DataHub] Bevorstehende');
 		expect(messages.messages).toHaveLength(1);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 		const message = await getEmailById(messages.messages[0].ID);
 		const LINK_RE = /(https:\/\/[^ "]+)( |")/g;
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 		const loginLinkText = LINK_RE.exec(message.Text)[1];
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 		const loginLinkHtml = LINK_RE.exec(message.HTML)[1];
 		expect(loginLinkText).toEqual(loginLinkHtml);
 		expect(message.Text).toContain(`${entry.deletionInDays} Tage`);

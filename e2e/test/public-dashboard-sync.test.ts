@@ -56,8 +56,7 @@ test('public-dashboard-sync create', async ({ page, context }) => {
 	await expect(page.getByRole('button', { name: 'Search...' })).toBeVisible();
 	let orgId = Number.parseInt(new URL(page.url()).searchParams.get('orgId'));
 	await page.goto(`${GRAFANA}dashboard/new?orgId=${orgId}&from=now-6h&to=now&timezone=browser`);
-	await page.getByTestId('data-testid Add button').click();
-	await page.getByTestId('data-testid Add new visualization menu item').click();
+	await page.getByTestId('data-testid sidebar add new panel').click();
 	await page.getByRole('button', { name: 'Save' }).click();
 	await page.getByLabel('Save dashboard title field').fill('Test Private Dashboard 1');
 	await page.getByTestId('data-testid Save dashboard drawer button').click();
@@ -71,13 +70,14 @@ test('public-dashboard-sync create', async ({ page, context }) => {
 	await expect(page.getByRole('button', { name: 'Search...' })).toBeVisible();
 	orgId = Number.parseInt(new URL(page.url()).searchParams.get('orgId'));
 	await page.goto(`${GRAFANA}dashboard/new?orgId=${orgId}&from=now-6h&to=now&timezone=browser`);
-	await page.getByTestId('data-testid Add button').click();
-	await page.getByTestId('data-testid Add new visualization menu item').click();
-	await page.getByTestId('data-testid Back to dashboard button').click();
-	await page.getByTestId('data-testid Dashboard settings').click();
-	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByTestId('data-testid sidebar add new panel').click();
+	await page.getByRole('button', { name: 'Save' }).click();
 	await page.getByLabel('Save dashboard title field').fill('Test Public Dashboard 1');
 	await page.getByTestId('data-testid Save dashboard drawer button').click();
+	await checkAndDismissGrafanaAlert('Dashboard saved', page, true, false, true);
+	await page.getByTestId('data-testid Edit dashboard button').click();
+	await page.getByTestId('data-testid Dashboard Sidebar options button').click();
+	await page.getByRole('button', { name: 'Settings' }).click();
 	await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Test Public Dashboard 1');
 	await page.getByRole('textbox', { name: 'Tags' }).click();
 	await page.getByRole('textbox', { name: 'Tags' }).fill('public');
@@ -129,10 +129,13 @@ test('public-dashboard-sync folder', async ({ page, context }) => {
 	await page.getByLabel('Folder name').fill('Unterordner');
 	await page.getByRole('button', { name: 'Create' }).click();
 	await page.getByRole('link', { name: 'Create dashboard' }).click();
-	await page.getByTestId('data-testid Dashboard settings').click();
-	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByRole('button', { name: 'Save' }).click();
 	await page.getByLabel('Save dashboard title field').fill('Unterordner Dashboard');
 	await page.getByTestId('data-testid Save dashboard drawer button').click();
+	await checkAndDismissGrafanaAlert('Dashboard saved', page, true, false, true);
+	await page.getByTestId('data-testid Edit dashboard button').click();
+	await page.getByTestId('data-testid Dashboard Sidebar options button').click();
+	await page.getByRole('button', { name: 'Settings' }).click();
 	await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Unterordner Dashboard');
 	await page.getByRole('textbox', { name: 'Tags' }).click();
 	await page.getByRole('textbox', { name: 'Tags' }).fill('public');
@@ -177,18 +180,21 @@ test('public-dashboard-sync syncs datasource changes', async ({ page, context, b
 	// create a dashboard without data
 	await page.getByLabel('New', { exact: true }).click();
 	await page.getByRole('menuitem', { name: 'New dashboard' }).click();
-	await page.getByTestId('data-testid Add button').click();
-	await page.getByTestId('data-testid Add new visualization menu item').click();
+	await page.getByTestId('data-testid sidebar add new panel').click();
+	await page.getByRole('button', { name: 'Configure visualization' }).click();
 	await page.getByTestId('data-testid Select a data source').click();
 	await page.getByRole('button', { name: 'Prometheus' }).click();
 	await page.getByTestId('data-testid metric select').fill('test_metric');
 	await page.getByText('test_metric', { exact: true }).click();
 	await page.getByRole('button', { name: 'Run queries' }).click();
 	await page.getByTestId('data-testid Back to dashboard button').click();
-	await page.getByTestId('data-testid Dashboard settings').click();
-	await page.getByTestId('data-testid Save dashboard button').click();
+	await page.getByRole('button', { name: 'Save' }).click();
 	await page.getByLabel('Save dashboard title field').fill('Test Dashboard');
 	await page.getByTestId('data-testid Save dashboard drawer button').click();
+	await checkAndDismissGrafanaAlert('Dashboard saved', page, true, false, true);
+	await page.getByTestId('data-testid Edit dashboard button').click();
+	await page.getByTestId('data-testid Dashboard Sidebar options button').click();
+	await page.getByRole('button', { name: 'Settings' }).click();
 	await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Test Dashboard');
 	await page.getByRole('textbox', { name: 'Tags' }).click();
 	await page.getByRole('textbox', { name: 'Tags' }).fill('public');
@@ -196,14 +202,8 @@ test('public-dashboard-sync syncs datasource changes', async ({ page, context, b
 	await page.getByTestId('data-testid Save dashboard button').click();
 	await page.getByTestId('data-testid Save dashboard drawer button').click();
 	await page.getByTestId('data-testid Back to dashboard button').click();
-	await page.getByTestId('data-testid Exit edit mode button').click();
-	// sometimes, there are still unsaved changes, sometimes there are not
-	const discardBtn = page.getByTestId('data-testid Confirm Modal Danger Button');
+	await checkAndDismissGrafanaAlert('Dashboard saved', page, true, false, true);
 	const shareArrowMenu = page.getByTestId('data-testid new share button arrow menu');
-	if ((await discardBtn.or(shareArrowMenu).textContent()).includes('Discard')) {
-		await discardBtn.click();
-	}
-	// shared dashboard publicly
 	await shareArrowMenu.click();
 	const shareMenuOption = page.getByTestId('data-testid new share button share externally');
 	await expect(page.getByTestId('data-testid Alert success')).not.toBeVisible();
@@ -277,14 +277,13 @@ test('public-dashboard-sync syncs datasource changes', async ({ page, context, b
 	// there is data on the public dashboard now
 	await refreshUntil(
 		publicGrafanaPage,
-		() => publicGrafanaPage.getByRole('button', { name: '{__name__="test_metric",' }).isVisible(),
+		() => publicGrafanaPage.getByRole('button', { name: 'All series selected' }).isVisible(),
 		30
 	);
 
 	await refreshUntil(
 		publicSharedGrafanaPage,
-		() =>
-			publicSharedGrafanaPage.getByRole('button', { name: '{__name__="test_metric",' }).isVisible(),
+		() => publicSharedGrafanaPage.getByRole('button', { name: 'All series selected' }).isVisible(),
 		30
 	);
 });

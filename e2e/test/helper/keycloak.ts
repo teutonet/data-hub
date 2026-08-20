@@ -115,7 +115,6 @@ export class KeycloakUser {
 			}
 		);
 
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 		return result?.data?.access_token;
 	}
 }

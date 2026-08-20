@@ -1,7 +1,7 @@
 ARG REGISTRY_MIRROR_LIB=""
 ARG REGISTRY_MIRROR=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:24.18.0-alpine AS build
+FROM ${REGISTRY_MIRROR_LIB}node:24.19.0-alpine AS build
 
 RUN mkdir /app
 WORKDIR /app
@@ -18,6 +18,6 @@ ARG IMAGE_BUILD_VERSION="0.0.0"
 
 RUN VITE_BUILD_VERSION=$IMAGE_BUILD_VERSION npm run build
 
-FROM ${REGISTRY_MIRROR}joseluisq/static-web-server:2.43.0
+FROM ${REGISTRY_MIRROR}joseluisq/static-web-server:2.44.0
 
 COPY --from=build /app/build /public 

@@ -20,7 +20,7 @@ global:
       registry: "docker.io"
       pullPolicy: Always
       repository: "babashka/babashka"
-      tag: 1.12.218
+      tag: 1.13.219
       digest: ""
   basePipeline:
     image:
@@ -76,7 +76,7 @@ mailpit:
   image:
     registry: docker.io
     repository: axllent/mailpit
-    tag: v1.30.4
+    tag: v1.30.7
   readinessProbe:
     initialDelaySeconds: 0
     periodSeconds: 1
@@ -103,7 +103,7 @@ cloudnativePostgres:
   image:
     registry: ghcr.io
     repository: teutonet/oci-images/cnpg
-    tag: 16.1.2
+    tag: 16.2.0
   replicas: 1
   persistence:
     size: 4Gi
@@ -151,7 +151,7 @@ grafanaPublic:
       cpu: 20m
       memory: 256Mi
     limits:
-      memory: 256Mi
+      memory: 1Gi
   plugins:
     - volkovlabs-echarts-panel
     - marcusolsson-dynamictext-panel
@@ -244,6 +244,9 @@ mimir:
         limits:
           # Enable TSDB block upload
           compactor_block_upload_enabled: true
+          out_of_order_time_window: 24h
+        query_scheduler:
+          max_outstanding_requests_per_tenant: 10000
         alertmanager_storage:
           backend: s3
           s3:
@@ -297,6 +300,7 @@ grafanaPublicSync:
     repository: 4teuto/dev/udh/teuto-data-hub/grafana-public-sync
 
 geojsonExport:
+  podMonitor: true
   replicas: 1
   image:
     registry: "registry-gitlab.teuto.net"

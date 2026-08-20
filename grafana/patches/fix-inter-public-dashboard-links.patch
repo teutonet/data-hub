@@ -1,0 +1,21 @@
+diff --git a/public/app/features/dashboard-scene/pages/PublicDashboardScenePage.tsx b/public/app/features/dashboard-scene/pages/PublicDashboardScenePage.tsx
+index 4996f7f88cb..edae8e2926d 100644
+--- a/public/app/features/dashboard-scene/pages/PublicDashboardScenePage.tsx
++++ b/public/app/features/dashboard-scene/pages/PublicDashboardScenePage.tsx
+@@ -22,6 +22,7 @@ import { DashboardRoutes } from 'app/types/dashboard';
+ import { type DashboardScene } from '../scene/DashboardScene';
+ 
+ import { getDashboardScenePageStateManager, type LoadError } from './DashboardScenePageStateManager';
++import { config } from '@grafana/runtime';
+ 
+ const selectors = e2eSelectors.pages.PublicDashboardScene;
+ 
+@@ -37,6 +38,8 @@ export function PublicDashboardScenePage({ route }: Props) {
+   const { dashboard, isLoading, loadError } = stateManager.useState();
+ 
+   useEffect(() => {
++    // otherwise this might have stale infos when using links in public dashboards
++    config.publicDashboardAccessToken = accessToken;
+     stateManager.loadDashboard({ uid: accessToken, route: DashboardRoutes.Public });
+ 
+     return () => {

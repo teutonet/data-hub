@@ -39,6 +39,9 @@ nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
 nginx.ingress.kubernetes.io/enable-cors: "true"
 nginx.ingress.kubernetes.io/cors-allow-headers: '*'
 nginx.ingress.kubernetes.io/cors-expose-headers: '*'
+# explicit because the default is true, which disallows '*' for headers
+# see https://github.com/traefik/traefik/pull/13368
+nginx.ingress.kubernetes.io/cors-allow-credentials: 'false'
 nginx.ingress.kubernetes.io/cors-allow-origin: 'https://{{ include "sensor-ingestion.mdb.frontend.hostname" . }}'
 {{- end -}}
 

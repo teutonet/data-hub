@@ -11,9 +11,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "form"] }
 thiserror = "2"
-jsonschema = "0.47"
+jsonschema = "0.49"
 url = "2"
-base64 = "0.22"
+base64 = "0.23"
 
 [dev-dependencies]
 httpmock = "0.8"

@@ -22,7 +22,7 @@ async function expectGrafanaWorking(page: Page): Promise<void> {
 		.getByTestId('data-testid navigation mega-menu')
 		.getByRole('link', { name: 'Drilldown' })
 		.click();
-	await page.getByRole('heading', { name: 'Metrics' }).getByRole('link').click();
+	await page.locator('#pageContent').getByRole('link', { name: 'Metrics' }).click();
 	await page.locator('#ds').click();
 	await page.getByTestId('data-testid Select option').getByText('Prometheus').click();
 
@@ -365,7 +365,7 @@ test('resource-api-cross-tenant', async ({ page }) => {
 		.getByTestId('data-testid navigation mega-menu')
 		.getByRole('link', { name: 'Drilldown' })
 		.click();
-	await page.getByRole('heading', { name: 'Metrics' }).getByRole('link').click();
+	await page.locator('#pageContent').getByRole('link', { name: 'Metrics' }).click();
 	// we need to make sure the page loaded before doing a reload
 	await expect(page.locator('#ds')).toBeVisible();
 

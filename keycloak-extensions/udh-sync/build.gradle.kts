@@ -1,8 +1,8 @@
 plugins {
-    kotlin("jvm") version "2.4.0"
-    kotlin("plugin.serialization") version "2.4.0"
+    kotlin("jvm") version "2.4.10"
+    kotlin("plugin.serialization") version "2.4.10"
 }
-val keycloakVersion = "26.7.0"
+val keycloakVersion = "26.7.1"
 
 repositories {
     mavenCentral()
@@ -19,11 +19,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("io.github.reactivecircus.cache4k:cache4k:0.14.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    implementation("aws.sdk.kotlin:s3:1.8.4")
-    implementation("aws.sdk.kotlin:iam:1.8.4")
+    implementation("aws.sdk.kotlin:s3:1.8.26")
+    implementation("aws.sdk.kotlin:iam:1.8.26")
 
-    implementation("com.expediagroup:graphql-kotlin-schema-generator:10.1.2")
-    implementation("com.expediagroup:graphql-kotlin-server:10.1.2")
+    implementation("com.expediagroup:graphql-kotlin-schema-generator:10.2.0")
+    implementation("com.expediagroup:graphql-kotlin-server:10.2.0")
 }
 
 tasks.test {

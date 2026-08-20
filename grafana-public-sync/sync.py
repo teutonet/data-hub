@@ -123,7 +123,7 @@ def main():
           existing_version = datasource_name_to_version.get(prometheus_datasource['name'])
           if existing_version != prometheus_datasource_version:
             logging.info(f'updating datasource {org_prometheus_name}')
-            changed_datasource = tenant_public_grafana_api.datasource.update_datasource(datasource_id_uid['id'], prometheus_datasource)
+            changed_datasource = tenant_public_grafana_api.datasource.update_datasource_by_uid(datasource_id_uid['uid'], prometheus_datasource)
             datasource_name_to_version[prometheus_datasource['name']] = prometheus_datasource_version
             logging.info(f'datasource {org_prometheus_name} updated')
           else:

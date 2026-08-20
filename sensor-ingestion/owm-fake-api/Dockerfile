@@ -1,6 +1,6 @@
 ARG REGISTRY_MIRROR_LIB=""
 
-FROM ${REGISTRY_MIRROR_LIB}python:3.14.6-alpine
+FROM ${REGISTRY_MIRROR_LIB}python:3.14.7-alpine
 
 WORKDIR /python_app
 

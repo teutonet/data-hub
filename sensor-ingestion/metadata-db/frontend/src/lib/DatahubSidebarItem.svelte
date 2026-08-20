@@ -53,6 +53,7 @@
 	data-sveltekit-preload-data={preload}
 	{target}
 	href={isDisabled ? undefined : href}
+	aria-disabled={isDisabled}
 >
 	<span slot="icon">
 		{#if Icon}

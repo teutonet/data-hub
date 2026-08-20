@@ -122,7 +122,7 @@
 				</div>
 			</AccordionItem>
 		{:else}
-			<Alert color="blue" class="inline-flex gap-2 w-full mb-2">
+			<Alert color="blue" class="mb-2 inline-flex w-full gap-2">
 				<InfoIcon class="h-5 w-5" />
 				<p>{$_('component.permissions.list.noExistingPermissions')}</p>
 			</Alert>

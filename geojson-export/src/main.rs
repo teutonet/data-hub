@@ -8,6 +8,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use axum_prometheus::{PrometheusMetricLayer, metrics};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use geojson::{Feature, Geometry};
 use prometheus_http_query::response::PromqlResult;
@@ -88,14 +89,19 @@ async fn main() -> anyhow::Result<()> {
         prometheus_client,
         pool,
     });
+
+    let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
+
     // build our application with a route
     let app = Router::new()
         .route("/geojson", get(geojson_handler))
         .route("/livez", get(live_handler))
         .route("/readyz", get(ready_handler))
+        .route("/metrics", get(|| async move { metric_handle.render() }))
         .layer(CompressionLayer::new())
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
+        .layer(prometheus_layer)
         .with_state(state);
 
     // run our app with hyper, listening globally on port 3001
@@ -187,7 +193,7 @@ async fn geojson_handler(
     Query(query): Query<GeojsonHandlerQuery>,
     State(state): State<ArcAppState>,
 ) -> Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let start = Instant::now();
+    let db_start = Instant::now();
     let Ok(project) = HeaderValue::from_str(&query.project) else {
         warn!(error = "invalid project", project = query.project);
         return Err((StatusCode::BAD_REQUEST, "invalid project"));
@@ -248,6 +254,8 @@ async fn geojson_handler(
             "Either \"name\" or \"query\" needs to be given!",
         ));
     };
+    metrics::histogram!("geojson_database_time").record(db_start.elapsed());
+    let prom_start = Instant::now();
     let result = state
         .prometheus_client
         .query(&prom_query)
@@ -257,8 +265,9 @@ async fn geojson_handler(
         .await
         .inspect_err(|e| error!(error = ?e, "prometheus error"))
         .map_err(|_| (StatusCode::BAD_REQUEST, "underlying server error"))?;
+    metrics::histogram!("geojson_prometheus_time").record(prom_start.elapsed());
     info!(
-        time = start.elapsed().as_secs_f32(),
+        time = db_start.elapsed().as_secs_f32(),
         query = prom_query,
         project = query.project,
         "query time"

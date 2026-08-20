@@ -108,7 +108,7 @@ test('label names are escaped', async ({ page }) => {
 		.getByTestId('data-testid navigation mega-menu')
 		.getByRole('link', { name: 'Drilldown' })
 		.click();
-	await page.getByRole('heading', { name: 'Metrics' }).getByRole('link').click();
+	await page.locator('#pageContent').getByRole('link', { name: 'Metrics' }).click();
 
 	await page.locator('#ds').click();
 	await page.getByTestId('data-testid Select option').getByText('Prometheus').click();
