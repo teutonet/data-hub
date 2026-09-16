@@ -18,15 +18,15 @@ global:
   babashka:
     image:
       registry: "docker.io"
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
       repository: "babashka/babashka"
-      tag: 1.13.219
+      tag: 1.13.220
       digest: ""
   basePipeline:
     image:
       registry: tickets.teuto.net:5050
       repository: teuto-public/base-pipeline/base-pipeline
-      tag: v2.0.28
+      tag: v2.0.30
   busybox:
     image:
       registry: "docker.io"
@@ -36,6 +36,9 @@ global:
   ingress:
     annotations:
       kubernetes.io/tls-acme: "true"
+  gateway:
+    className: default
+    annotations: {}
   loglevel: info
   testDeployment: false
 keycloak:
@@ -46,7 +49,7 @@ keycloak:
   extensions:
     image:
       registry: "registry-gitlab.teuto.net"
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
       repository: "4teuto/dev/udh/teuto-data-hub/keycloak-extensions"
       tag: ""
       digest: ""
@@ -76,7 +79,7 @@ mailpit:
   image:
     registry: docker.io
     repository: axllent/mailpit
-    tag: v1.30.7
+    tag: v1.31.1
   readinessProbe:
     initialDelaySeconds: 0
     periodSeconds: 1
@@ -103,7 +106,7 @@ cloudnativePostgres:
   image:
     registry: ghcr.io
     repository: teutonet/oci-images/cnpg
-    tag: 16.2.0
+    tag: 16.2.1
   replicas: 1
   persistence:
     size: 4Gi
@@ -211,7 +214,7 @@ jupyterhub:
   notebook:
     image:
       registry: "registry-gitlab.teuto.net"
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
       repository: "4teuto/dev/udh/teuto-data-hub/jupyterhub-notebook"
       tag: ""
       digest: ""

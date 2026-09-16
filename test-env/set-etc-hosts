@@ -7,7 +7,7 @@ cd "$REPO"
 export MINIKUBE_IP=`minikube ip | grep '^[0-9]*.[0-9]*.[0-9]*.[0-9]*$'` # grep to be sure we have an IP to feed into sed
 
 # /etc/hosts
-HOSTS=$($KUBECTL get ingress --all-namespaces -o=go-template='{{range .items}}{{range .spec.rules}}{{.host}} {{end}}{{end}}')
+HOSTS=$(jq -sr '[.[0].items[].spec.rules[].host, .[1].items[].spec.listeners[].hostname | select(.)] | unique | join(" ")' <(kubectl get ingress --all-namespaces -ojson) <(kubectl get gateways --all-namespaces -ojson))
 DESIRED_LINE="$MINIKUBE_IP $HOSTS"
 if grep -Fx "$DESIRED_LINE" /etc/hosts >/dev/null
 then

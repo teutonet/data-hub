@@ -1,0 +1,25 @@
+{{- if .Values.sensorIngestion.prometheusWriter.ingress.enabled -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "data-hub.name" (dict "context" . "name" "prometheus-writer") }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ "prometheus-writer" }}
+spec:
+  hostnames:
+  - {{ include "sensor-ingestion.api.hostname" . }}
+  parentRefs:
+  - name: {{ include "data-hub.name" (dict "context" . "name" "api") }}
+    sectionName: https
+  rules:
+  - backendRefs:
+    - name: {{ include "data-hub.name" (dict "context" . "name" "prometheus-writer") }}
+      port: 80
+    matches:
+    - path:
+        type: Exact
+        value: /readyz
+    - path:
+        type: Exact
+        value: /api/v1/write
+{{- end -}}

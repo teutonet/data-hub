@@ -1,0 +1,5 @@
+{{- if or .Values.sensorIngestion.lorawanReceiver.ingress.enabled .Values.sensorIngestion.prometheusWriter.ingress.enabled .Values.sensorIngestion.sensorTransformer.ingress.enabled -}}
+{{- $host := include "sensor-ingestion.api.hostname" . -}}
+{{ include "udh.gatewayapi.gateway" (dict "context" $ "name" "api" "host" $host) }}
+{{ include "udh.gatewayapi.https-redirect" (dict "context" $ "name" "api" "host" $host) }}
+{{- end -}}

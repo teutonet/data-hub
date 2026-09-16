@@ -1,7 +1,7 @@
 ARG REGISTRY_MIRROR_LIB=""
 ARG REGISTRY_MIRROR=""
 
-FROM ${REGISTRY_MIRROR_LIB}node:24.19.0-alpine AS build
+FROM ${REGISTRY_MIRROR_LIB}node:24.21.0-alpine AS build
 
 RUN mkdir /app
 WORKDIR /app

@@ -100,54 +100,36 @@ spec:
     app.kubernetes.io/part-of: metadata-db
 ---
 {{- $host := include "sensor-ingestion.mdb.frontend.hostname" . -}}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+{{ include "udh.gatewayapi.gateway" (dict "context" $ "name" $name "host" $host) }}
+{{ include "udh.gatewayapi.https-redirect" (dict "context" $ "name" $name "host" $host) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
-  name: {{ printf "%s-frontend" (include "common.names.fullname" .) | quote }}
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: {{ $name }}
-    app.kubernetes.io/part-of: metadata-db
-  annotations: 
-    {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.frontend.ingress.annotations "context" .) | nindent 4 }}
 spec:
-  ingressClassName: nginx
+  hostnames:
+  - {{ $host }}
+  parentRefs:
+  - name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+    sectionName: https
   rules:
-    - host: {{ $host | quote }}
-      http:
-        paths:
-          - backend: {{- include "common.ingress.backend" (dict "serviceName"  $serviceName "servicePort" "http" "context" .) | nindent 14 }}
-            pathType: Prefix
-            path: /
-          - backend: {{- include "common.ingress.backend" (dict "serviceName" (printf "%s-mdb" (include "common.names.fullname" .)) "servicePort" 80 "context" .) | nindent 14 }}
-            pathType: Prefix
-            path: /graphql
-  tls:
-  - hosts:
-    - {{ $host }}
-    secretName: {{ $host }}-tls
----
-{{- $host := .Values.global.baseDomain -}}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{ printf "%s-landing-page" (include "common.names.fullname" .) }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-  annotations: 
-    {{- include "sensor-ingestion.ingress.annotations" (dict "annotations" .Values.sensorIngestion.metadataDB.frontend.ingress.annotations "context" .) | nindent 4 }}
-    nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "https://%s/" (include "sensor-ingestion.mdb.frontend.hostname" .) | quote }}
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: {{ $host | quote }}
-      http:
-        paths:
-          - backend: {{- include "common.ingress.backend" (dict "serviceName"  $serviceName "servicePort" "http" "context" .) | nindent 14 }}
-            pathType: Prefix
-            path: /
-  tls:
-  - hosts:
-    - {{ $host }}
-    secretName: {{ $host }}-tls
+  - backendRefs:
+    - name: {{ printf "%s-mdb" (include "common.names.fullname" .) }}
+      port: 80
+    matches:
+    - path:
+        type: PathPrefix
+        value: /graphql
+  - backendRefs:
+    - name: {{ $serviceName }}
+      port: 80
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
 {{- if gt ( .Values.sensorIngestion.metadataDB.frontend.replicas | int64) 1 }}
 ---
 apiVersion: policy/v1
@@ -161,3 +143,35 @@ spec:
       app.kubernetes.io/component: {{ $name }}
       app.kubernetes.io/part-of: metadata-db
 {{- end }}
+---
+{{- $name := "landing-page" -}}
+{{- $host := .Values.global.baseDomain -}}
+{{ include "udh.gatewayapi.gateway" (dict "context" $ "name" $name "host" $host) }}
+{{ include "udh.gatewayapi.https-redirect" (dict "context" $ "name" $name "host" $host) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  hostnames:
+  - {{ $host }}
+  parentRefs:
+  - name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+    sectionName: https
+  rules:
+  - filters:
+    - requestRedirect:
+        hostname: {{ include "sensor-ingestion.mdb.frontend.hostname" . }}
+        path:
+          replaceFullPath: /
+          type: ReplaceFullPath
+        scheme: https
+        statusCode: 301
+      type: RequestRedirect
+    matches:
+    - path:
+        type: PathPrefix
+        value: /

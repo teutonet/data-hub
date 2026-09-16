@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: grafana
-      version: 12.1.1 # renovate: datasource=docker depName=ghcr.io/grafana-community/helm-charts/grafana
+      version: 13.2.4 # renovate: datasource=docker depName=ghcr.io/grafana-community/helm-charts/grafana
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
@@ -36,16 +36,6 @@ spec:
       {{- end }}
       pullPolicy: {{ .Values.grafana.image.pullPolicy | quote }}
       {{- include "udh-platform.imagePullSecrets" (dict "context" .) | replace "imagePullSecrets:" "pullSecrets:" | nindent 6 }}
-    ingress:
-      enabled: true
-      ingressClassName: nginx
-      hosts:
-        - {{ include "data-hub.grafana.hostname" . }}
-      annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.grafana.ingress.annotations) | nindent 8 }}
-      tls:
-        - hosts:
-          - {{ include "data-hub.grafana.hostname" . }}
-          secretName: {{ include "data-hub.grafana.hostname" . }}-tls
     resources: {{- $.Values.grafana.resources | toYaml | nindent 6 }}
     rbac:
       create: false
@@ -142,3 +132,29 @@ metadata:
   namespace: {{ .Release.Namespace }}
 stringData:
   password: {{ .Values.grafana.smtp.password | quote}}
+
+{{ $host := printf "dashboard.%s" .Values.global.baseDomain }}
+{{ $name := "grafana" }}
+{{ include "udh.gatewayapi.gateway" (dict "context" $ "name" $name "host" $host) }}
+{{ include "udh.gatewayapi.https-redirect" (dict "context" $ "name" $name "host" $host) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  hostnames:
+  - {{ $host }}
+  parentRefs:
+  - name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+    sectionName: https
+  rules:
+  - backendRefs:
+    - name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+      port: 80
+    matches:
+    - path:
+        type: PathPrefix
+        value: /

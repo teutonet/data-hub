@@ -85,7 +85,7 @@ def main():
     with termination_lock:
       unused_folders = set(public_folder_cache.keys())
       unused_datasources = set(datasource_name_to_id.keys())
-      unused_dashboards = {dashboard['uid'] for dashboard in tenant_public_grafana_api.search.search_dashboards(query='%', type_='dash-db')}
+      unused_dashboards = {dashboard['uid'] for dashboard in tenant_public_grafana_api.search.search_dashboards(type_='dash-db')}
 
       for private_org in main_grafana.organizations.list_organization():
         logging.debug(f'reconciling {private_org}')

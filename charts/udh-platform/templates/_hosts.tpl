@@ -30,10 +30,6 @@ storage.{{ .Values.global.baseDomain }}
 docs.{{ .Values.global.baseDomain }}
 {{- end -}}
 
-{{- define "sensor-ingestion.prometheusWriter.hostname" -}}
-api.{{ .Values.global.baseDomain }}
-{{- end -}}
-
-{{- define "sensor-ingestion.sensorTransformer.hostname" -}}
+{{- define "sensor-ingestion.api.hostname" -}}
 api.{{ .Values.global.baseDomain }}
 {{- end -}}

@@ -195,9 +195,11 @@
 
 	let offsets = $derived($offsetsAndMetricNamesStore.data?.thingOffsets ?? []);
 	let metricNames = $derived(
-		$offsetsAndMetricNamesStore.data?.sensorProperties?.map(
-			(prop) => prop.property?.metricName ?? '-'
-		) ?? []
+		$offsetsAndMetricNamesStore.data?.sensorProperties?.flatMap((prop) => {
+			// filter out null and empty metric names
+			const metricName = prop.property?.metricName;
+			return metricName ? [metricName] : [];
+		}) ?? []
 	);
 </script>
 
@@ -301,12 +303,12 @@
 							size="lg"
 							disabled={showNewOffsetRow}
 							on:click={() => editOffset(item, index)}
-							title={$_('thingOffsetList.editButton')}
+							title={$_('shared.action.edit')}
 						>
 							<EditIcon class="h-5 w-5" />
 						</Button>
 						<DeleteButton
-							buttonTitle={$_('thingOffsetList.deleteButton')}
+							buttonTitle={$_('shared.action.delete')}
 							isIcon
 							submitFunction={() => deleteOffset(item.id)}
 							modalTitle={$_('thingOffsetList.deleteModalTitle')}

@@ -65,7 +65,7 @@ else
   minikube config set driver docker
 
   echo "starting minikube"
-  minikube start --cni=cilium --driver docker --cpus=${MINIKUBE_RESOURCE_CPU} --memory=${MINIKUBE_RESOURCE_RAM} --kubernetes-version=${KUBERNETES_VERSION} --extra-config=apiserver.service-node-port-range=1-32767
+  minikube start --mount-string="/run/udev/data:/run/udev/data:ro" --cni=cilium --driver docker --cpus=${MINIKUBE_RESOURCE_CPU} --memory=${MINIKUBE_RESOURCE_RAM} --kubernetes-version=${KUBERNETES_VERSION} --extra-config=apiserver.service-node-port-range=1-32767
 
   minikube_started=true
 fi
@@ -80,8 +80,11 @@ then
    # Using Cilium as a CNI somehow breaks running the docker registry on localhost:5000 (only on some machines), this is hopefully fixing it 
   $KUBECTL -n kube-system patch svc registry --type json --patch '[{"op":"replace","path":"/spec/type","value":"NodePort"},{"op":"add","path":"/spec/ports/0/nodePort","value":32000}]'
 
+  echo "installing gateway api crds"
+  $KUBECTL apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/standard-install.yaml
+
   echo "enabling cert-manager"
-  helm upgrade cert-manager --version "$CERT_MANAGER_VERSION" --install --create-namespace -n cert-manager cert-manager --repo https://charts.jetstack.io --set installCRDs=true --wait
+  helm upgrade cert-manager --version "$CERT_MANAGER_VERSION" --install --create-namespace -n cert-manager cert-manager --repo https://charts.jetstack.io --set installCRDs=true --set config.enableGatewayAPI=true --wait
 
   echo "enabling cnpg operator"
   helm upgrade cnpg --version "$CNPG_VERSION" --install  --create-namespace -n cnpg-system cloudnative-pg --repo https://cloudnative-pg.github.io/charts --wait
@@ -89,11 +92,11 @@ then
   echo "enabling traefik ingress"
   helm upgrade traefik --version "$TRAEFIK_VERSION" --install --create-namespace -n traefik traefik --repo https://traefik.github.io/charts --wait \
     --set service.spec.type=NodePort \
+    --set providers.kubernetesGateway.enabled=true \
     --set providers.kubernetesIngressNGINX.enabled=true \
     --set providers.kubernetesIngressNGINX.watchIngressWithoutClass=true \
     --set ports.web.nodePort=80 \
     --set ports.websecure.nodePort=443
-
   echo "install podmonitor crd"
   $KUBECTL apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/refs/heads/main/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
 

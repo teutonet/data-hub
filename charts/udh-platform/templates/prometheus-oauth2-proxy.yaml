@@ -1,4 +1,4 @@
-{{- define "udh.jwtIngress" -}}
+{{- define "udh.prometheusOauthProxy" -}}
 {{- $cookieSecretMimirOauthProxySpec := (merge (dict "name" (printf "cookie-secret-mimir-oauth-%s" .name)) .) -}}
 {{- $cookieSecretMimirOauthProxy := include "udh.secret" $cookieSecretMimirOauthProxySpec }}
 {{ include "udh.secretManifest" (merge (dict "value" $cookieSecretMimirOauthProxy) $cookieSecretMimirOauthProxySpec) }}
@@ -77,51 +77,48 @@ spec:
 {{- end -}}
 {{- $readPathRegex := "/(api/v1/(?:query|query_range|format_query|query_exemplars|series|labels?)(?:/.*)?)$" -}}
 {{- $writePathRegex := "/api/v1/write$" -}}
-{{ include "udh.jwtIngress" (merge (dict
+{{ include "udh.prometheusOauthProxy" (merge (dict
   "name" "read"
   "target" "/prometheus/$1"
   "path" $readPathRegex) .) }}
-{{ include "udh.jwtIngress" (merge (dict
+{{ include "udh.prometheusOauthProxy" (merge (dict
   "name" "write"
   "target" "/api/v1/push"
   "path" $writePathRegex) .) }}
 
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+{{- $host := printf "prometheus.%s" .Values.global.baseDomain -}}
+{{- $name := "prometheus" -}}
+{{ include "udh.gatewayapi.gateway" (dict "context" $ "name" $name "host" $host) }}
+{{ include "udh.gatewayapi.https-redirect" (dict "context" $ "name" $name "host" $host) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
-  name: {{ include "data-hub.name" (dict "context" . "name" "prometheus") }}
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-  annotations: {{- include "udh.ingress.annotations" (dict "context" . "annotations" .Values.prometheus.ingress.annotations) | nindent 4 }}
-    nginx.ingress.kubernetes.io/use-regex: "true"
+    app.kubernetes.io/component: {{ $name }}
 spec:
-  ingressClassName: nginx
+  hostnames:
+  - {{ $host }}
+  parentRefs:
+  - name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+    sectionName: https
   rules:
-  - host: prometheus.{{ .Values.global.baseDomain }}
-    http:
-      paths:
-      - backend:
-          service:
-            name: {{ include "data-hub.name" (dict "context" . "name" "mimir-auth-read-oauth2-proxy") }}
-            port:
-              number: 80
-        path: {{ $readPathRegex | quote }}
-        pathType: ImplementationSpecific
-      - backend:
-          service:
-            name: {{ include "data-hub.name" (dict "context" . "name" "mimir-auth-write-oauth2-proxy") }}
-            port:
-              number: 80
-        path: {{ $writePathRegex | quote }}
-        pathType: ImplementationSpecific
-      - backend:
-          service:
-            name: {{ include "data-hub.name" (dict "context" . "name" "mimir-auth-write-oauth2-proxy") }}
-            port:
-              number: 80
-        path: /ready$
-        pathType: ImplementationSpecific
-  tls:
-  - hosts:
-    - prometheus.{{ .Values.global.baseDomain }}
-    secretName: prometheus.{{ .Values.global.baseDomain }}-tls
+  - backendRefs:
+      - name: {{ include "data-hub.name" (dict "context" . "name" "mimir-auth-read-oauth2-proxy") }}
+        port: 80
+    matches:
+      - path:
+          type: RegularExpression
+          value: {{ $readPathRegex | quote }}
+  - backendRefs:
+      - name: {{ include "data-hub.name" (dict "context" . "name" "mimir-auth-write-oauth2-proxy") }}
+        port: 80
+    matches:
+      - path:
+          type: RegularExpression
+          value: {{ $writePathRegex | quote }}
+      - path:
+          type: RegularExpression
+          value: /ready$

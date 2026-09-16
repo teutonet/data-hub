@@ -1,8 +1,12 @@
+{{- $name := "jupyterhub" -}}
+{{- $host := include "data-hub.jupyterhub.hostname" . -}}
+{{ include "udh.gatewayapi.gateway" (dict "context" $ "name" $name "host" $host) }}
+{{ include "udh.gatewayapi.https-redirect" (dict "context" $ "name" $name "host" $host) }}
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+  name: {{ include "data-hub.name" (dict "context" . "name" $name) }}
 spec:
   interval: 1h0m0s
   url: https://jupyterhub.github.io/helm-chart/
@@ -10,31 +14,29 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+  name: {{ include "data-hub.name" (dict "context" . "name" $name) }}
 spec:
-  releaseName: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+  releaseName: {{ include "data-hub.name" (dict "context" . "name" $name) }}
   chart:
     spec:
       chart: jupyterhub
-      version: 4.4.0 # renovate: datasource=helm depName=jupyterhub versioning=helm registryUrl=https://jupyterhub.github.io/helm-chart/
+      version: 4.4.2 # renovate: datasource=helm depName=jupyterhub versioning=helm registryUrl=https://jupyterhub.github.io/helm-chart/
       reconcileStrategy: ChartVersion
       sourceRef:
         kind: HelmRepository
-        name: {{ include "data-hub.name" (dict "context" . "name" "jupyterhub") }}
+        name: {{ include "data-hub.name" (dict "context" . "name" $name) }}
   interval: 1h0m0s
   targetNamespace: {{ .Release.Namespace }}
   values:
     fullnameOverride: null # default is empty string which removes all prefixes
-    ingress:
+    httpRoute:
       enabled: true
-      ingressClassName: nginx
-      hosts:
-        - {{ include "data-hub.jupyterhub.hostname" . }}
-      annotations: {{- include "udh.ingress.annotations" (dict "context" $ "annotations" .Values.jupyterhub.ingress.annotations) | nindent 8 }}
-      tls:
-        - hosts:
-          - {{ include "data-hub.jupyterhub.hostname" . }}
-          secretName: {{ include "data-hub.jupyterhub.hostname" . }}-tls
+      hostnames:
+        - {{ $host }}
+      gateway:
+        name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+        namespace: {{ .Release.Namespace }}
+        sectionName: https
     hub:
       networkPolicy:
         egress:

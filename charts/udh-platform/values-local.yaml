@@ -11,6 +11,10 @@ global:
     annotations:
       kubernetes.io/tls-acme: "true"
       cert-manager.io/issuer: "udh-test-iss"
+  gateway:
+    className: traefik
+    annotations:
+      cert-manager.io/issuer: "udh-test-iss"
   testDeployment: true
 grafana:
   # only takes effect after completely reinstalling grafana

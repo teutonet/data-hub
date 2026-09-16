@@ -1,1 +1,1 @@
-grafana-client==5.1.0
+grafana-client==5.1.2

@@ -41,27 +41,28 @@ spec:
     targetPort: http
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
     app.kubernetes.io/component: {{ $name }}
----
 {{ $host := include "data-hub.docs.hostname" . -}}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+{{ include "udh.gatewayapi.gateway" (dict "context" $ "name" $name "host" $host) }}
+{{ include "udh.gatewayapi.https-redirect" (dict "context" $ "name" $name "host" $host) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
-  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name | quote }}
+  name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: {{ $name }}
-  annotations:
-    {{- include "udh.ingress.annotations" (dict "annotations" .Values.doc.ingress.annotations "context" .) | nindent 4 }}
 spec:
-  ingressClassName: nginx
+  hostnames:
+  - {{ $host }}
+  parentRefs:
+  - name: {{ printf "%s-%s" (include "common.names.fullname" .) $name }}
+    sectionName: https
   rules:
-    - host: {{ $host | quote }}
-      http:
-        paths:
-          - backend: {{- include "common.ingress.backend" (dict "serviceName"  $serviceName "servicePort" "http" "context" .) | nindent 14 }}
-            pathType: Prefix
-            path: /
-  tls:
-  - hosts:
-    - {{ $host }}
-    secretName: {{ $host }}-tls
+  - backendRefs:
+    - name: {{ $serviceName }}
+      port: 80
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
 {{- end -}}

@@ -46,7 +46,7 @@ spec:
   interval: 1h0m0s
   url: oci://ghcr.io/grafana/helm-charts/mimir-distributed
   ref:
-    tag: 6.1.0 # renovate: datasource=docker depName=ghcr.io/grafana/helm-charts/mimir-distributed
+    tag: 6.2.0 # renovate: datasource=docker depName=ghcr.io/grafana/helm-charts/mimir-distributed
 
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2

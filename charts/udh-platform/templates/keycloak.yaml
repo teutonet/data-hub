@@ -72,7 +72,7 @@ spec:
       type: ClusterIP
     resources: {{- $.Values.keycloak.resources | toYaml | nindent 6 }}
     image:
-      tag: 26.7.1 # renovate: datasource=docker depName=keycloak/keycloak
+      tag: 26.7.2 # renovate: datasource=docker depName=keycloak/keycloak
     ingress:
       enabled: true
       ingressClassName: nginx
